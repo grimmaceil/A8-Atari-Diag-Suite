@@ -17,9 +17,10 @@ slow (about 3K a minute), so there are three sets, by RAM size: the more
 RAM, the fewer tapes. Each set works on every machine with at least that
 much RAM, newer models included. With a disk drive, the 32k+ tape and the
 memory test also come as **disk files** (`.xex`, in `disks/`) that load in
-seconds.
+seconds. All of it is also on one **cartridge** (`carts/diag-cart.car`):
+plug it in, switch on, pick a test.
 
-Version 0.2.
+Version 0.3.
 
 ![The menu](docs/img/system-01-menu.png)
 
@@ -34,6 +35,7 @@ Version 0.2.
    | 32K or more (an 800 with 32K-48K, any 64K or 128K XL/XE) | the 32k+ tape: `diag-32k-xl-xe`, one tape, about 6 min; long test `diag-memtest` |
    | keyboard, joysticks, paddles only (16K or more) | `diag-controls`: no test harness needed; goes with Atari's SALT disks |
    | with a disk drive or a MiSTer: 32K or more | `disks/diag-32k-xl-xe.xex` (the 32k+ tape); long test `disks/diag-memtest.xex` (16K) |
+   | a MiSTer, or an AtariMax 128K flash cartridge: 16K or more | `carts/diag-cart.car`: the 32k+ tests (32K) and the long test (16K) behind one menu |
 
    A machine that won't get through its own set: use the 400 set. A tape
    that needs more RAM than the machine has stops at once: red border, a
@@ -51,6 +53,18 @@ and beeps, loading from a PC, and what to do when something fails.
 
 ## Versions
 
+- **0.3** (2026-11-08)
+  - Fixed: on a 130XE the 32k+ tape and `diag-32k-xl-xe.xex` crashed as
+    the RAM test went from the RAM under the OS to extended bank 5. Their
+    stage 2 kept its working storage at $4F00, inside the $4000-$7FFF
+    window that a 130XE bank switch takes over, so switching in bank 5 lost
+    it. That storage now sits in low RAM ($0600). The same mistake made
+    their FOUND line say `RAM 64K` on a 130XE; it now says 128K. The other
+    tapes and `diag-memtest.xex` are byte for byte the same as 0.2.
+  - The cartridge, `carts/diag-cart.car` (AtariMax 128K, `.car` type 41):
+    START runs the 32k+ tests (RAM, ROMs, keyboard, console keys,
+    joysticks, paddles, sound, video), SELECT the long memory test. The
+    title bars say CART.
 - **0.2** (2026-11-08)
   - Disk files: `diag-32k-xl-xe.xex` (32K) and `diag-memtest.xex` (16K),
     for DOS 2.0S/2.5, MyDOS, the MiSTer's XEX loader, AspeQt and FujiNet.

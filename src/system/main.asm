@@ -188,6 +188,8 @@ NPAT	= *-pats
 	.if SETNO=4
 	.ifdef XEX			; the disk file (build.py)
 s_hpre	dta d' DIAG-32K-XEX  ',$FF
+	.elseif .def CART		; the cartridge (build.py)
+s_hpre	dta d' DIAG-32K-CART  ',$FF
 	.else
 s_hpre	dta d' DIAG-32K-XL-XE  ',$FF
 	.endif

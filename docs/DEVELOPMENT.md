@@ -1,6 +1,6 @@
 # Development
 
-Version 0.2. This is for anyone who wants to build the tapes from source,
+Version 0.3. This is for anyone who wants to build the tapes from source,
 change them, or check how they work. To test a machine you only need the `.cas` files in
 `cassettes/` (or the `.xex` files in `disks/`) and the [user guide](USER-GUIDE.md).
 
@@ -27,7 +27,7 @@ The tapes were built and tested with:
 ## Building
 
 ```
-python tools/build.py              # every tape and disk file: build/ (all output), cassettes/ and disks/ (the releases)
+python tools/build.py              # every tape, disk file and the cartridge: build/ (all output), cassettes/, disks/ and carts/ (the releases)
 python tools/build.py --nodeploy   # the same, without copying the changed tapes to the MiSTer share
 python tools/build.py --fault 2,5  # extra builds with a stuck bit 5 in bank 2, to hear a fail code
 python tools/build.py --fast       # skip the $55/$AA march pass (quicker runs)
@@ -77,6 +77,43 @@ loads, so the file has three parts (`src/disk/xexwrap.asm`):
 
 The design and its reasons: `Atari-diag-disk-scope.md`.
 
+### The cartridge
+
+`carts/diag-cart.car` is an AtariMax 128K (`.car` type 41: 16 banks of 8K
+at $A000-$BFFF; an access to $D500+n selects bank n, $D510-$D51F switches
+the cartridge off). `build.py` builds the 32k+ image and `diag-memtest`
+again with `CART=1` (the title bar only, as XEX) and `tools/mkcar.py`
+packs them:
+- each bank's $A000-$B7FF holds 24 pages of the images: the 32k+ image
+  from bank 0 (71 pages, banks 0-2), the memory test from bank 3 (27
+  pages, banks 3-4); the rest is $FF;
+- each bank's $B800-$BFFF is the same menu and loader
+  (`src/cart/cart.asm`) with the cartridge header (flags $04: run, no disk
+  boot). Being the same in every bank, it runs whichever bank the cartridge
+  starts in and keeps running while it switches banks to copy.
+
+START or SELECT: RAMTOP (below the cartridge, so at most $A0) against the
+need ($80 or $40), else the too-little-RAM line and halt as the disk
+guard's. Then interrupts off, the image copied to $0800, COLDST = 1, and
+from $0680 in RAM: the cartridge off, GINTLK = TRIG3 (an XL OS halts if
+TRIG3 changes from GINTLK), and a jump to $0806.
+
+### 130XE banks and the 32k+ image
+
+The 32k+ image runs from $0800 to $4EFF and stage 1's BSS page is the one
+after it, $4F00. That is inside $4000-$7FFF, the window a 130XE bank switch
+gives to an extended bank, so stage 2 (which tests the banks) can't use it.
+With ONE32, stage 2 has its own BSS at $0600 (low RAM, tested by stage 1
+by then): its start copies stage 1's results there, and the system tests
+take them over from there (`PREVBSS`, from stage 2's label table). The
+code needs no change: all of stage 2 sits below $4000. Stage 1's RAM size
+probe (`boot.asm`) had the same fault: it added the 64K to RAMK with bank 0
+still in; with ONE32 it switches main RAM back first.
+
+`sim.py --xejunk` fills the extended RAM with random bytes, as real RAM is
+at power-on. Without it the banks start as zeros, and the old fault read
+zeros and got through.
+
 `tools/gen_kbmap.py` regenerates `src/system/kbmap.asm`, the keyboard map.
 
 ## Source layout
@@ -87,10 +124,12 @@ The design and its reasons: `Atari-diag-disk-scope.md`.
 | `src/tape1/` | the RAM tape: stage 1, and stage 2 (relocated test, RAM under the OS, 130XE banks) |
 | `src/tape2/` | the memory test (one source, two builds: `diag-400-memtest` with OWNTEST and NOXL, `diag-memtest` with BOUNCE) |
 | `src/disk/` | the disk files' guard and mover (`xexwrap.asm`) |
+| `src/cart/` | the cartridge's menu and loader (`cart.asm`) |
 | `src/system/` | the system tests: `main.asm` builds a tape from the tests that `WANT_*` defines pick; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia`); `common.asm` has the test flow and the menu |
 | `tools/` | build, CAS writer, simulator, keyboard map, documentation pictures |
 | `cassettes/` | the release tapes |
 | `disks/` | the release disk files |
+| `carts/` | the release cartridge |
 | `Atari-diag-cassette-scope.md` | the design: constraints, the feedback code, memory use, the ROM table, open items |
 | `Atari-diag-disk-scope.md` | the disk port's design |
 
@@ -103,6 +142,10 @@ scan line and a floating bus. It models:
 - a `.xex` loaded as DOS loads it: segment by segment, INITAD after a
   segment that sets it, RUNAD at the end; `--memlo` sets MEMLO (default
   $1CFC, DOS 2.5)
+- a `.car` (AtariMax 128K): the OS's cold start runs it, RAMTOP stops at
+  $A000, and `--pick START:1` (or `SELECT:1`) presses that key at the menu;
+  the end report lists the bank switches; `--con START:52` presses a console
+  key at any time (e.g. START at the 32k+ summary)
 - RAMTOP ($6A) as the OS sizes it at power-on: `--ram`, capped at $A000
   with `--basic`
 - RAM faults: stuck bits (`--stuck`), flaky bits (`--flaky`), mirrored banks

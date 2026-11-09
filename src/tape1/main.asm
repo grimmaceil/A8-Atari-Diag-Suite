@@ -471,6 +471,8 @@ rs_bad	lda #<s_somefail
 	.if .def ONE32			; header prefix: the tape's name
 	.ifdef XEX			; the disk file (build.py)
 s_hpre	dta d' DIAG-32K-XEX  ',$FF
+	.elseif .def CART		; the cartridge (build.py)
+s_hpre	dta d' DIAG-32K-CART  ',$FF
 	.else
 s_hpre	dta d' DIAG-32K-XL-XE  ',$FF
 	.endif

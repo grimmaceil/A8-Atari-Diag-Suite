@@ -54,6 +54,27 @@ class Atari:
         self.osrom = None        # --osrom: a real OS image (10K or 16K)
         self.basic = None        # --basic: a real 8K BASIC (or cartridge)
         self.pm = {}            # GRACTL, PMBASE: for the P/M color mask in screen()
+        self.car = None          # .car: an AtariMax 128K (16 x 8K at $A000)
+        self.carbank, self.caron = 0, False
+        self.carlog = []         # (line, 'bank n' / 'off')
+
+    def _carsel(self, a):
+        """AtariMax: an access to $D500-$D50F selects bank n, $D510-$D51F
+        switches the cartridge off."""
+        if self.car is not None and a & 0xFF < 0x20:
+            on, bank = not a & 0x10, a & 0x0F
+            if (on, bank) != (self.caron, self.carbank):
+                self.carlog.append((self.line, f'bank {bank}' if on else 'off'))
+            self.caron = on
+            if on:
+                self.carbank = bank
+
+    def peek(self, a):
+        """What ANTIC sees: the cartridge ROM where it is mapped, else RAM."""
+        a &= 0xFFFF
+        if self.caron and 0xA000 <= a < 0xC000:
+            return self.car[self.carbank * 0x2000 + a - 0xA000]
+        return self.ram[a]
 
     def active(self, kind):
         ln = self.line
@@ -100,6 +121,9 @@ class Atari:
                 return 0x01 if self.pal else 0x0F
             if a == 0xD301:
                 return self.regs.get(a, 0xFF)
+            if 0xD500 <= a < 0xD600:
+                self._carsel(a)
+                return 0xFF
             if a == 0xD20E:      # IRQST: bit 6 latches a keypress while the
                 ln = self.line   # keyboard IRQ is enabled (masked or not),
                 v = 0xFF         # bit 7 BREAK, bit 0 timer 1 (~4 ms after STIMER)
@@ -139,6 +163,8 @@ class Atari:
         if (self.xl and self.osrom is not None and len(self.osrom) == 0x4000
                 and 0x5000 <= a < 0x5800 and pb & 0x81 == 0x01):
             return self.osrom[a - 0x4000]   # the self-test ROM (PORTB bit 7 = 0)
+        if self.caron and 0xA000 <= a < 0xC000:
+            return self.car[self.carbank * 0x2000 + a - 0xA000]
         if self.basic is not None and 0xA000 <= a < 0xC000 and (
                 not self.xl or not pb & 0x02):
             return self.basic[a - 0xA000]   # BASIC (XL/XE: PORTB bit 1 = 0) or a cartridge
@@ -166,6 +192,8 @@ class Atari:
                 self.stimer = self.line
             if a in (0xD01D, 0xD407):
                 self.pm[a] = v
+            if 0xD500 <= a < 0xD600:
+                self._carsel(a)
             if a == 0xD40A:
                 self.mpu.processorCycles = (self.line + 1) * 114
             elif a in (0xD01A, 0xD200, 0xD201, 0xD01F, 0xD40E, 0xD400,
@@ -179,7 +207,7 @@ class Atari:
             if self.ramtop >= 0xC000:
                 self.ram[a] = v
             return
-        if a >= self.ramtop or a >= 0xC000:
+        if a >= self.ramtop or a >= 0xC000 or self.caron and a >= 0xA000:
             return
         x = self._ext(a)
         if x is not None:
@@ -229,7 +257,7 @@ class Atari:
             dl = self.regs.get(0xD402, 0) | self.regs.get(0xD403, 0) << 8
             addr, scan = 0, 8
             for _ in range(64):
-                op = self.ram[dl]
+                op = self.peek(dl)
                 if op == 0x41:
                     break
                 if op & 0x0F == 0:
@@ -237,7 +265,7 @@ class Atari:
                     scan += (op >> 4 & 7) + 1
                     continue
                 if op & 0x40:
-                    addr = self.ram[dl + 1] | self.ram[dl + 2] << 8
+                    addr = self.peek(dl + 1) | self.peek(dl + 2) << 8
                     dl += 3
                 else:
                     dl += 1
@@ -257,7 +285,7 @@ class Atari:
             addr, r = rows[sl]
             pf1, pf2 = p[0xD017], p[0xD018]
             for c in range(40):
-                code = self.ram[(addr + c) & 0xFFFF]
+                code = self.peek(addr + c)
                 bits = font[(code & 0x7F) * 8 + r]
                 if code & 0x80 and p[0xD401] & 2:
                     bits ^= 0xFF
@@ -289,7 +317,7 @@ class Atari:
         # responder finishes the keyboard test before most snapshot times)
         pmb = self.pm.get(0xD407, 0) << 8 if self.pm.get(0xD01D, 0) == 3 or os.environ.get('SIM_PMKEEP') and 0xD407 in self.pm else None
         for _ in range(64):
-            op = self.ram[dl]
+            op = self.peek(dl)
             if op == 0x41:
                 break
             if op & 0x0F == 0:
@@ -297,12 +325,12 @@ class Atari:
                 scan += (op >> 4 & 7) + 1
                 continue
             if op & 0x40:
-                addr = self.ram[dl + 1] | self.ram[dl + 2] << 8
+                addr = self.peek(dl + 1) | self.peek(dl + 2) << 8
                 dl += 3
             else:
                 dl += 1
             row = ''
-            for c in self.ram[addr:addr + 40]:
+            for c in [self.peek(addr + i) for i in range(40)]:
                 ch = c & 0x7F
                 ch = chr(ch + 32) if ch < 64 else '^v[]'[ch - 0x5C] if 0x5C <= ch < 0x60 else '~'
                 row += ch.lower() if c & 0x80 and ch.isalpha() else (
@@ -575,6 +603,8 @@ def main():
     ap.add_argument('--xl', action='store_true', help='ROM at $C000 (XL/XE)')
     ap.add_argument('--xe', action='store_true', help='130XE: --xl plus 64K extended RAM')
     ap.add_argument('--xealias', action='store_true', help='extended bank 3 is bank 2')
+    ap.add_argument('--xejunk', action='store_true',
+                    help='130XE: extended RAM holds random bytes at power-on, as real RAM does')
     ap.add_argument('--pal', action='store_true')
     ap.add_argument('--key', default='', help='seconds at which a key is pressed, e.g. 3,30')
     ap.add_argument('--snap', default='', help='seconds at which to print the screen')
@@ -598,6 +628,10 @@ def main():
                     help='with --auto: run the menu tests one at a time by their keys')
     ap.add_argument('--peek', help='LO-HI: print these BSS bytes (hex offsets) at the end')
     ap.add_argument('--forge', help='ADDR=CRC32,...: stand-in 400/800 OS chips with these CRCs')
+    ap.add_argument('--pick', default='START:1',
+                    help='.car: the console key pressed at the menu, and when (s): START or SELECT')
+    ap.add_argument('--con', default='',
+                    help='console keys pressed, e.g. START:52,SELECT:60 (seconds)')
     ap.add_argument('-v', action='store_true')
     a = ap.parse_args()
 
@@ -617,7 +651,7 @@ def main():
         stuck = (lo, hi, 0xFF if lvl else 0xFF ^ m, m if lvl else 0)
 
     stream = []                            # records left on the tape
-    xex = None
+    xex = car = None
     if a.tape.lower().endswith('.xex'):
         # Load it as DOS does: segment by segment, INITAD after any segment
         # that sets it, RUNAD at the end (xex_next, in the main loop). The
@@ -632,6 +666,14 @@ def main():
             xex.append((st, raw[i + 4:i + 5 + en - st]))
             i += 5 + en - st
         img = max((d for _, d in xex), key=len)
+    elif a.tape.lower().endswith('.car'):
+        # The OS's cold start finds the cartridge and runs it (CARTRUN at
+        # $BFFA, in the bank it starts in: 0); RAMTOP stops below it.
+        raw = open(a.tape, 'rb').read()
+        assert raw[:4] == b'CART' and struct.unpack('>I', raw[4:8])[0] == 41, 'not an AtariMax 128K .car'
+        car = raw[16:]
+        assert len(car) == 0x20000
+        img = bytes(6)                     # (the image: whichever the menu copies)
     elif a.tape.lower().endswith('.cas'):
         recs = cas_records(a.tape)
         nrec = recs[0][4]
@@ -667,6 +709,8 @@ def main():
     if a.forge:
         forge(hw, a.forge)
     hw.xealias = a.xealias
+    if a.xejunk:
+        hw.ext[:] = random.Random(7).randbytes(0x10000)
     if a.flaky:
         bank, bit, prob = a.flaky.split(':')
         random.seed(1)
@@ -676,7 +720,7 @@ def main():
         hw.ram[i] = (i * 7 + 3) & 0xFF
     # RAMTOP ($6A), as the OS sized it at power-on: the RAM, up to $C000,
     # and $A000 with BASIC or a cartridge in (the tapes' NEEDPG check)
-    hw.ram[0x6A] = min(a.ram, 0xC000, 0xA000 if a.basic else 0xC000) >> 8
+    hw.ram[0x6A] = min(a.ram, 0xC000, 0xA000 if a.basic or car else 0xC000) >> 8
     lowram_before = bytes(hw.ram[:0x800])
     mpu = MPU(memory=hw, pc=load + 6)
     hw.mpu = mpu
@@ -699,8 +743,16 @@ def main():
             mpu.pc = hw.ram[0x2E0] | hw.ram[0x2E1] << 8
             print(f'xex loaded at {hw.line / LINES_PER_MS / 1000:.1f} s, run ${mpu.pc:04X}')
         xex_next()
+    elif car is not None:
+        hw.car, hw.caron = car, True
+        mpu.pc = car[0x1FFA] | car[0x1FFB] << 8
+        key, at = a.pick.split(':')
+        hw.press(to_line(at), 'CON', {'START': 1, 'SELECT': 2}[key.upper()])
     else:
         hw.ram[load:load + len(img)] = img
+    for kv in (x for x in a.con.split(',') if x):
+        key, at = kv.split(':')
+        hw.press(to_line(at), 'CON', {'START': 1, 'SELECT': 2, 'OPTION': 4}[key.upper()])
     limit = None
     steps = 0
     entered = set()
@@ -734,7 +786,7 @@ def main():
         if mpu.pc == SIOV:
             siov(mpu, hw, stream)
             continue
-        if mpu.pc == 0x2006 and 0x2006 not in entered and xex is None:   # (not .xex: its program has code there)
+        if mpu.pc == 0x2006 and 0x2006 not in entered and xex is None and car is None:   # (not .xex: its program has code there)
             entered.add(0x2006)
             print(f'stage 2 entered at {hw.line / LINES_PER_MS / 1000:.1f} s')
         mpu.step()
@@ -757,7 +809,10 @@ def main():
                   f'  COLBK ${hw.regs.get(0xD01A, 0):02X}')
             print(hw.screen())
         # The tests are over once the reporter starts its first flash.
-        if limit is None and any(r == 0xD201 and v & 0x0F and ln > 4000
+        base = 4000                    # .car: from when the cartridge handed over
+        if hw.carlog and hw.carlog[-1][1] == 'off':
+            base += hw.carlog[-1][0]
+        if limit is None and any(r == 0xD201 and v & 0x0F and ln > base
                                  for ln, r, v in hw.events):
             limit = hw.line + a.seconds * 1000 * LINES_PER_MS
             t_done = hw.line / LINES_PER_MS / 1000
@@ -774,6 +829,10 @@ def main():
     if a.v:
         for t in ts:
             print(f'{t[0]:9.0f} ms {t[1]:5.0f} ms audf {t[2]:3d} colbk ${t[3]:02X}')
+    if car is not None:                  # the image the menu copied to $0800
+        print('cartridge:', ', '.join(f'{ln / LINES_PER_MS / 1000:.2f} s {w}' for ln, w in hw.carlog))
+        img = bytes(hw.ram[0x801] * 128)
+        load = 0x0800
     bss = load + len(img)
     if 0x2006 in entered:                  # stage 2's BSS follows its image
         bss = 0x2000 + hw.ram[0x2001] * 128
@@ -800,9 +859,13 @@ def main():
           0x2C5, 0x2C6, 0x2C8, 0x2F3, 0x2F4, 0x4D, 0x222, 0x223} | set(range(0x500, 0x700))
     if xex is not None:                  # the loader's RUNAD/INITAD; the mover's COLDST
         sio |= {0x2E0, 0x2E1, 0x2E2, 0x2E3, 0x244}
+    if car is not None:                  # the cartridge's COLDST, GINTLK, message line, trampoline
+        sio |= {0x244, 0x3FA} | set(range(0x600, 0x700))
     keep = [i for i in range(0x800) if not (0x80 <= i < 0x90 or 0x100 <= i < 0x200
                                             or i in sio)]
-    print('low RAM preserved:', all(hw.ram[i] == lowram_before[i] for i in keep))
+    changed = [i for i in keep if hw.ram[i] != lowram_before[i]]
+    print('low RAM preserved:', not changed,
+          ' '.join(f'${i:04X}' for i in changed[:12]) if changed else '')
     print('code:', decode(ts))
 
 

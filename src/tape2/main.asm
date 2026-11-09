@@ -1182,6 +1182,8 @@ s_hpre	dta d' DIAG-400-MEMTEST  ',$FF
 	.else
 	.ifdef XEX			; the disk file (build.py)
 s_hpre	dta d' DIAG-MEMTEST-XEX  ',$FF
+	.elseif .def CART		; the cartridge (build.py)
+s_hpre	dta d' DIAG-MEMTEST-CART  ',$FF
 	.else
 s_hpre	dta d' DIAG-MEMTEST  ',$FF
 	.endif

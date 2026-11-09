@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Build the diag tapes and disk files: assemble with MADS, wrap as .cas
-(mkcas.py) and .xex (mkxex.py, XEXES), optionally deploy.
+"""Build the diag tapes, disk files and cartridge: assemble with MADS, wrap
+as .cas (mkcas.py), .xex (mkxex.py, XEXES) and .car (mkcar.py, CAR),
+optionally deploy.
 
   python tools/build.py                 normal tapes into build/
   python tools/build.py --fault 2,5     also tapes with an injected fault
@@ -23,6 +24,7 @@ MADS = ROOT / 'tools' / 'bin' / 'mads.exe'
 BUILD = ROOT / 'build'          # everything the assembler makes (not in git)
 CASSETTES = ROOT / 'cassettes'  # the release tapes (in git): what users load
 DISKS = ROOT / 'disks'          # the release disk files (.xex, in git)
+CARTS = ROOT / 'carts'          # the release cartridge (.car, in git)
 SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTer Atari800 core's folder
 
 # Each tape: source dir, name, stages (first = boot), defines. A later stage
@@ -61,6 +63,9 @@ TAPES = [('tape1', 'diag-400-01-ram', ['main.asm', 'stage2.asm'], {}),
 # checks the RAM before the file loads) and wrapped by mkxex.py.
 XEXES = [('one32', 'diag-32k-xl-xe', {}, 0x80),
          ('bounce', 'diag-memtest', dict(BOUNCE=1, BIGSTAGE=1, OWNTEST=1), 0x40)]
+# The cartridge (mkcar.py): the same two programs, built with CART (their
+# own title bar), behind one menu.
+CAR = 'diag-cart'
 
 
 def mads(src, asm, out, defines):
@@ -196,9 +201,11 @@ def build_one32(name, defines, label, xex=None):
         d2['SYS32'] = f'${sysat:04X}'
         mads('tape1', 'stage2.asm', s2, d2)
         b2 = Path(f'{s2}.bin').read_bytes()
+        s2bss = labels(f'{s2}.lab')['BSS']   # stage 2's own page (130XE banks)
         dsy = dict(ALL7, SETNO=4, MENU=1, CHAIN=1, SYSAT=f'${sysat:04X}',
-                   SHAREBSS=f"${s1['BSS']:04X}", PREVBSS=f"${s1['BSS']:04X}",
-                   RAMAGAIN=f"${s1['AGAIN']:04X}", **({'XEX': 1} if xex else {}))
+                   SHAREBSS=f"${s1['BSS']:04X}", PREVBSS=f"${s2bss:04X}",
+                   RAMAGAIN=f"${s1['AGAIN']:04X}",
+                   **{k: 1 for k in ('XEX', 'CART') if k in defines})
         mads('system', 'main.asm', sy, dsy)
         pay.write_bytes(b2 + Path(f'{sy}.bin').read_bytes())
         mads('tape1', 'main.asm', out, d1)
@@ -213,7 +220,9 @@ def build_one32(name, defines, label, xex=None):
 
 def wrap(out, label, xex):
     """The boot image as a tape, or with xex (the RAM needed, in pages) as a
-    disk file, out.xex."""
+    disk file, out.xex; xex 'img': just the image (.bin, .lab), for mkcar.py."""
+    if xex == 'img':
+        return [Path(f'{out}.bin'), Path(f'{out}.lab')]
     if xex:
         subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkxex.py'), f'{out}.xex',
                         '--boot', f'{out}.bin', f'{out}.lab', '--needpg', str(xex)], check=True)
@@ -263,6 +272,12 @@ def main():
         for f in b(f'{name}-xex', d, '', need):
             f = f.replace(f.with_name(f'{name}.xex'))
             xexes.append(f)
+    cd = dict(CART=1, **({'FAST': 1} if a.fast else {}))
+    di = build_one32('diag-32k-cart', cd, '', 'img')
+    me = build_bounce('diag-memtest-cart', dict(XEXES[1][2], **cd), '', 'img')
+    car = BUILD / f'{CAR}.car'
+    subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkcar.py'), str(car),
+                    '--diag', *map(str, di), '--mem', *map(str, me)], check=True)
     CASSETTES.mkdir(exist_ok=True)
     DISKS.mkdir(exist_ok=True)
     for c in cas:
@@ -270,7 +285,9 @@ def main():
             shutil.copy2(c, CASSETTES / c.name)
     for x in xexes:
         shutil.copy2(x, DISKS / x.name)
-    cas += xexes
+    CARTS.mkdir(exist_ok=True)
+    shutil.copy2(car, CARTS / car.name)
+    cas += xexes + [car]
     if a.nodeploy or a.fast:        # (FAST tapes skip test patterns: not for use)
         return
     for c in cas:                   # the release tapes to the share, for testing

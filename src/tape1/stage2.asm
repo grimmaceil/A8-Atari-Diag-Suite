@@ -467,6 +467,8 @@ puts_st	pha
 	.if .def ONE32			; the tape's name
 	.ifdef XEX			; the disk file (build.py)
 s_hpre	dta d' DIAG-32K-XEX  ',$FF
+	.elseif .def CART		; the cartridge (build.py)
+s_hpre	dta d' DIAG-32K-CART  ',$FF
 	.else
 s_hpre	dta d' DIAG-32K-XL-XE  ',$FF
 	.endif
@@ -524,7 +526,13 @@ PADTO	= [[*+2+$FF]/$100]*$100
 IMGSUM	.word 0			; mkcas.py: sum of every byte before this
 IMGEND
 NREC	= [IMGEND-S2LOAD]/128
-	.ifdef ONE16
+	.if .def ONE32
+BSS	= $0600			; its own page, in low RAM: stage 1's ($4F00
+				; here) is inside $4000-$7FFF, which a 130XE
+				; bank switch takes away from the CPU. (Low RAM
+				; is tested by then; the system tests take the
+				; results over from here, PREVBSS.)
+	.elseif .def ONE16
 BSS	= S1BSS			; one image: stage 1's BSS page is this one's
 	.else
 BSS	= IMGEND

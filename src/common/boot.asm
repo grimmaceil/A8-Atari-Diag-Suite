@@ -287,6 +287,11 @@ rk_xe	pla			; extended RAM: put its byte back
 	and #$E2
 	sta PORTB
 	stx $4000
+	.ifdef ONE32		; the 32k+ image: RAMK ($4Fxx) is in the bank
+	pla			; window, so main RAM back first
+	pha
+	sta PORTB
+	.endif
 	lda RAMK		; 128K
 	clc
 	adc #64
