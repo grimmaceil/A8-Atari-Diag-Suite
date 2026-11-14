@@ -30,6 +30,13 @@ RESTART	= 1			; report.asm: the end waits for START: again
 ENDING	= BSS+$F7		; nonzero: the end (START runs it all again)
 	.endif
 SROW	= BSS+$DB		; summary: row of the item being printed
+	.ifdef ONE32		; START at the summary goes to the menu
+GOMENU	= 1
+	.elseif .def ROM	; (the cartridge: in another bank, cart/romsum.asm)
+GOMENU	= 1
+XBANK	= $BFF0
+XREQ	= BSS+$FC
+	.endif
 	.if .def ONE32
 FONT	= $7800			; ROM font copy while the OS is out (above the
 S2LOAD	= S2AT			; image, the screen and the BSS page)
@@ -65,6 +72,17 @@ tk_lp	lda S1BSS,x
 	bne tk_lp
 	lda #0			; this stage's result is the tape's last
 	sta CONTVEC+1
+	.ifdef ROM		; CTRL+S in stage 1: no RAM test, on to the menu
+	lda SKIPRAM
+	beq noskip
+	jmp tomenu
+noskip
+	.elseif .def XEX
+	lda SKIPRAM
+	beq noskip
+	jmp SYS32+6
+noskip
+	.endif
 
 	lda #C_YELLOW
 	sta COLBK
@@ -78,12 +96,16 @@ tk_lp	lda S1BSS,x
 	jsr machinfo
 	lda #3
 	jsr chinfo
+	.ifndef ROM
 	PRINT 5, 0, s_tldr
 	jsr ldrend
+	.endif
 
 ; Relocate test: the area stage 1 ran from. Errors are charged to the loader
 ; area's own entry, so the summary can tell it apart from the rest of bank 1.
-	.ifdef ONE16
+	.ifdef ROM
+rl_go				; (in ROM: no loader area to test)
+	.elseif .def ONE16
 rl_go	ldx #0			; the page and NOT tests into low RAM
 rl_cp	lda pgsrc,x
 	sta PGCODE,x
@@ -176,7 +198,14 @@ no_os	lda DISPOK
 	beq fin
 	jsr summary
 fin
-	.ifdef ONE32
+	.ifdef ROM
+	lda #<tomenu		; START: the menu, in its bank
+	sta CONTVEC
+	lda #>tomenu
+	sta CONTVEC+1
+	lda #1			; the summary stays up till then
+	sta ENDING
+	.elseif .def ONE32
 	lda #<[SYS32+6]		; START: the system tests, in this image (they
 	sta CONTVEC		; take the RAM results over as test 8)
 	lda #>[SYS32+6]
@@ -200,6 +229,28 @@ fin_lp	lda BADMASK,x
 fin_bad	jmp report
 
 redraw	= summary		; scrtoggle's text screen
+
+	.ifdef ROM
+; tomenu: the RAM faults (banks 1-8) become test 0's items (kept at index
+; 8: item = bank), as the system tests' results have them; then the menu.
+tomenu	lda #0
+	sta MTMP
+	ldx #8
+tm_lp	asl MTMP
+	lda BADMASK,x
+	beq tm_n
+	inc MTMP
+	lda #0
+	sta BADMASK,x
+tm_n	dex
+	bne tm_lp
+	lda MTMP
+	sta BADMASK+8
+	lda #0			; (XREQ 0: the menu)
+	sta XREQ
+	ldx #SYSA
+	jmp XBANK
+	.endif
 
 
 ; Progress lines for xlram.asm.
@@ -297,6 +348,7 @@ su_next	inc CURBANK
 	cmp #4
 	bne su_bk
 
+	.ifndef ROM
 	lda #10
 	sta SROW
 	PRINT 10, 0, s_i7	; loader area
@@ -304,6 +356,7 @@ su_next	inc CURBANK
 	lda #LDRIDX
 	sta CURBANK
 	jsr bankstat
+	.endif
 	lda OSRAM
 	beq su_cnt
 	lda #11
@@ -449,10 +502,14 @@ puts_st	pha
 	icl '../common/detail.asm'
 	icl '../common/xlram.asm'
 	.ifdef ONE16
+	.ifndef ROM
 	icl '../common/pagetest.asm'
 	.endif
+	.endif
 
-	.if .def ONE32			; the tape's name
+	.if .def ROM			; the tape's name
+s_hpre	dta d' DIAG-CART  ',$FF
+	.elseif .def ONE32
 	.ifdef XEX			; the disk file (build.py)
 s_hpre	dta d' DIAG-32K-XEX  ',$FF
 	.elseif .def CART		; the cartridge (build.py)
@@ -465,7 +522,11 @@ s_hpre	dta d' DIAG-16K-01-RAM  ',$FF
 	.else
 s_hpre	dta d' DIAG-400-01-RAM  ',$FF
 	.endif
+	.ifdef ROM
+s_hrel	dta d'RAM TEST',$FF
+	.else
 s_hrel	dta d'LOADER AREA',$FF
+	.endif
 s_hsum	dta d'SUMMARY',$FF
 s_tldr	dta d'TESTING LOADER AREA $0800-$',$FF
 s_i1	dta d'1 LOW RAM $0000-$07FF',$FF
@@ -486,7 +547,7 @@ s_tos	dta d'TESTING RAM UNDER THE OS ROM',$FF
 s_txe	dta d'TESTING 130XE BANKS',$FF
 s_nfail	dta d'FAILURES: ',$FF
 s_detail dta d'DETAIL:',$FF
-	.ifdef ONE32
+	.ifdef GOMENU
 s_nextok dta d'ALL PASSED. START: THE MENU',$FF
 s_nextbad dta d'FIX THIS FIRST, OR START: THE MENU',$FF
 	.elseif .def ONE16
@@ -496,7 +557,7 @@ s_nextbad dta d'NEXT: FIX THIS ONE FIRST, THEN RE-RUN',$FF
 s_nextok dta d'ALL PASSED. NEXT: DIAG-400-02-ROM',$FF
 s_nextbad dta d'NEXT: FIX THIS ONE FIRST, THEN RE-RUN',$FF
 	.endif
-	.ifdef ONE32
+	.ifdef GOMENU
 s_toggle2 dta d'START=MENU  SELECT=RE-BEEP',$FF
 	.elseif .def ONE16
 s_toggle2 dta d'START=AGAIN SELECT=RE-BEEP OPTION=FLASH',$FF

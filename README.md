@@ -20,10 +20,10 @@ memory test also come as **disk files** (`.xex`, in `disks/`) that load in
 seconds. All of it is also on one **cartridge** (in `carts/`): plug it in,
 switch on, pick a test.
 
-Version 0.4. Every file has its version in its name
-(`diag-32k-xl-xe-v0.4.xex`) and every screen shows it at the right of the
-title bar (`V0.4`), so you can tell which one you are running. The names
-below leave the `-v0.4` out.
+Version 0.5. Every file has its version in its name
+(`diag-32k-xl-xe-v0.5.xex`) and every screen shows it at the right of the
+title bar (`V0.5`), so you can tell which one you are running. The names
+below leave the `-v0.5` out.
 
 ![The menu](docs/img/system-01-menu.png)
 
@@ -38,7 +38,7 @@ below leave the `-v0.4` out.
    | 32K or more (an 800 with 32K-48K, any 64K or 128K XL/XE) | the 32k+ tape: `diag-32k-xl-xe`, one tape, about 6 min; long test `diag-memtest` |
    | keyboard, joysticks, paddles only (16K or more) | `diag-controls`: no test harness needed; goes with Atari's SALT disks |
    | with a disk drive or a MiSTer: 32K or more | `disks/diag-32k-xl-xe.xex` (the 32k+ tape); long test `disks/diag-memtest.xex` (16K) |
-   | a MiSTer, or an AtariMax 128K flash cartridge: 16K or more | `carts/diag-cart.car`: the 32k+ tests (32K) and the long test (16K) behind one menu |
+   | a MiSTer, or an AtariMax 128K flash cartridge: any machine, 8K or more | `carts/diag-cart.car`: every test, run from ROM, with the menu; the long test from its line 8 (16K) |
 
    A machine that won't get through its own set: use the 400 set. A tape
    that needs more RAM than the machine has stops at once: red border, a
@@ -56,6 +56,27 @@ and beeps, loading from a PC, and what to do when something fails.
 
 ## Versions
 
+- **0.5** (2026-11-14)
+  - The cartridge runs from ROM: it needs 8K of RAM, not 32K, and works on
+    a machine whose RAM can't hold a program. Power on goes straight into
+    the RAM test; the START/SELECT start screen is gone. Only the long
+    memory test (menu line 8) copies itself to RAM. The RAM test also tests
+    the 8K under the cartridge (it switches itself off for a moment), so a
+    48K machine shows as 48K.
+  - CTRL+S skips the first RAM test on the cartridge and the disk file.
+  - One menu, numbered in order: 0 RAM, 1 ROMs, 2 keyboard, 3 console
+    keys, 4 joysticks, 5 paddles, 6 POKEY, 7 GTIA (and 8, the long memory
+    test, on the cartridge). Joysticks, paddles and POKEY changed numbers.
+  - No video check screen. The RAM result is the first screen, and START
+    there says the picture can be read.
+  - Beep codes only for the RAM and the ROMs, in different pitches. Other
+    tests show their result: a jingle for a pass, one low beep for a fail.
+  - Keyboard test: the key click sounds on the console speaker and POKEY.
+  - POKEY test: each voice plays a scale, not one note.
+  - GTIA test: ramps and sprites on one screen, one question.
+  - ROM test: the cartridge slot is named only for BASIC A, B and C; the
+    diagnostic cartridge names itself.
+  - The 16K and 32K images are smaller (an unused results screen removed).
 - **0.4** (2026-11-14)
   - Fixed: a real 800 could be taken for an XL/XE. The test looked at what
     `$C000` reads, where a 400/800 has nothing, and an idle bus can read

@@ -69,9 +69,12 @@ TAPES = [('tape1', 'diag-400-01-ram', ['main.asm', 'stage2.asm'], {}),
 # checks the RAM before the file loads) and wrapped by mkxex.py.
 XEXES = [('one32', 'diag-32k-xl-xe', {}, 0x80),
          ('bounce', 'diag-memtest', dict(BOUNCE=1, BIGSTAGE=1, OWNTEST=1), 0x40)]
-# The cartridge (mkcar.py): the same two programs, built with CART (their
-# own title bar), behind one menu.
+# The cartridge (mkcar.py, src/cart/romsum.asm): the tests run from ROM,
+# one program to an 8K bank (build_car), and need 8K of RAM. Only the long
+# memory test is copied to RAM, as it tests the RAM under the cartridge too.
 CAR = 'diag-cart'
+CARMEMBK = 3                    # the memory test's image: from this bank on
+CARDATAPG = 0x1F                # (mkcar.DATAPG)
 
 
 def mads(src, asm, out, defines):
@@ -224,6 +227,48 @@ def build_one32(name, defines, label, xex=None):
     return wrap(out, label, xex)
 
 
+def build_car(fast):
+    """The cartridge's three code banks and the memory test's image.
+    Bank 0, the RAM test: tape 1's stage 1 with stage 2 in the same image,
+    as build_one16, but assembled for ROM at $A000. Banks 1 and 2: the
+    system tests, three and four of them, each with the menu."""
+    f = {'FAST': 1} if fast else {}
+    me = build_bounce('diag-memtest-cart', dict(XEXES[1][2], CART=1, **f), '', 'img')
+    mempg = -(-len(me[0].read_bytes()) // 256)
+    if CARMEMBK + -(-mempg // CARDATAPG) > 16:
+        sys.exit('build_car: the memory test does not fit')
+    out = BUILD / 'cart-ram'
+    s2, pay = Path(f'{out}.s2'), BUILD / 'payload16.bin'
+    pay.write_bytes(bytes(0x100))
+    d1 = dict(f, ONE16=1, ROM=1, SYSA=1)
+    mads('tape1', 'main.asm', out, d1)
+    s1 = labels(f'{out}.lab')
+    for _ in range(4):
+        d2 = dict(d1, S2AT=f"${s1['PAYAT']:04X}", S1AGAIN=f"${s1['AGAIN']:04X}",
+                  S1BSS=f"${s1['BSS']:04X}", S1TSTART=f"${s1['TSTART']:02X}")
+        mads('tape1', 'stage2.asm', s2, d2)
+        pay.write_bytes(Path(f'{s2}.bin').read_bytes())
+        mads('tape1', 'main.asm', out, d1)
+        new = labels(f'{out}.lab')
+        if new['PAYAT'] == s1['PAYAT']:
+            break
+        s1 = new
+    else:
+        sys.exit('build_car: did not settle')
+    common = dict(f, ROM=1, MENU=1, SETNO=0, TAPENO=0, MEMBK=CARMEMBK, MEMPG=mempg,
+                  DATAPG=CARDATAPG)
+    mads('system', 'main.asm', BUILD / 'cart-sysa',
+         dict(common, WANT_ROM=1, WANT_KB=1, WANT_CON=1, OTHER=2))
+    mads('system', 'main.asm', BUILD / 'cart-sysb',
+         dict(common, WANT_JOY=1, WANT_PAD=1, WANT_POK=1, WANT_GTIA=1, OTHER=1, HASLDR=1))
+    car = BUILD / f'{CAR}.car'
+    subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkcar.py'), str(car),
+                    *[x for b in ('cart-ram', 'cart-sysa', 'cart-sysb')
+                      for x in ('--bank', str(BUILD / f'{b}.bin'))],
+                    '--mem', *map(str, me)], check=True)
+    return car
+
+
 def wrap(out, label, xex):
     """The boot image as a tape, or with xex (the RAM needed, in pages) as a
     disk file, out.xex; xex 'img': just the image (.bin, .lab), for mkcar.py."""
@@ -278,13 +323,7 @@ def main():
         for f in b(f'{name}-xex', d, '', need):
             f = f.replace(f.with_name(f'{name}.xex'))
             xexes.append(f)
-    cd = dict(CART=1, **({'FAST': 1} if a.fast else {}))
-    di = build_one32('diag-32k-cart', cd, '', 'img')
-    me = build_bounce('diag-memtest-cart', dict(XEXES[1][2], **cd), '', 'img')
-    car = BUILD / f'{CAR}.car'
-    subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkcar.py'), str(car),
-                    '--diag', *map(str, di), '--mem', *map(str, me),
-                    '--version', VERSION], check=True)
+    car = build_car(a.fast)
     if a.fast:                      # FAST builds skip test patterns: not for use,
         return                      # so they stay in build/
     rel = []                        # the release files, named with the version

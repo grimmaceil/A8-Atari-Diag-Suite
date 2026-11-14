@@ -19,22 +19,13 @@ NPORT	= T3D+$02		; joystick ports on this machine (paddles: twice)
 TSCR	= T3D+$20		; $20-$5F: scratch, each test its own use
 
 ; trun: from the boot, the first test on the list.
-trun	lda #2			; ports: 4 on the 400/800, 2 on the XL/XE
-	ldx MACHINE
-	bne tst_xl
-	lda #4
-tst_xl	sta NPORT
+trun	jsr tinit
 	lda #0
 	sta TIDX
 	.ifdef MENU
 	sta MRUN
 	sta MMODE
-	tax			; MNT: the tests on the tape
-tst_n	lda ttests,x
-	beq tst_nt
-	inx
-	bne tst_n
-tst_nt	stx MNT
+	ldx MNT
 	stx MSEL		; the ALL line first
 	lda DISPOK		; no picture: no menu, all of them in order
 	beq tst_all
@@ -43,6 +34,22 @@ tst_all	inc MMODE
 	.endif
 	jsr tnextv
 	jmp (NEXTVEC)
+
+; tinit: what the tests need to know about the machine and the tape.
+tinit	lda #2			; ports: 4 on the 400/800, 2 on the XL/XE
+	ldx MACHINE
+	bne tst_xl
+	lda #4
+tst_xl	sta NPORT
+	.ifdef MENU
+	ldx #0			; MNT: the tests on the tape
+tst_n	lda ttests,x
+	beq tst_nt
+	inx
+	bne tst_n
+tst_nt	stx MNT
+	.endif
+	rts
 
 ; trestart: the tape's tests again from the first, with fresh results (not
 ; test 8, the 32k+ tape's RAM).
@@ -385,6 +392,7 @@ pi_nx	inx
 redraw	= tshow			; scrtoggle's text screen
 
 ; ---------------------------------------------------------------------------
+	.ifndef XFINAL
 ; final: past the last test: the results. A ROM or RAM fault plays its code;
 ; any other failed test: one low tone and a red border; all passed: the
 ; jingle and green.
@@ -412,7 +420,7 @@ fi_n	stx NBANKS
 	beq fi_chk
 	jsr results
 fi_chk	lda BADMASK+1
-	.ifdef CHAIN
+	.ifdef RAM8
 	ora BADMASK+8		; (the RAM)
 	.endif
 	bne fi_bad
@@ -424,6 +432,7 @@ fi_lp	lda BADMASK,x
 	jmp pass
 fi_nc	jmp nocode
 fi_bad	jmp report
+	.endif
 
 	.ifdef MENU
 ; ---------------------------------------------------------------------------
@@ -466,6 +475,13 @@ mn_lp	jsr vsync
 	jmp RAMAGAIN
 mn_n0
 	.endif
+	.ifdef ROM
+	cmp #$35		; 8: the long memory test
+	bne mn_n8
+	jsr waitrel
+	jmp golong
+mn_n8
+	.endif
 	ldx #6
 mn_dig	cmp kdigit,x
 	beq mn_d
@@ -486,8 +502,11 @@ mn_con	lsr
 	lsr
 	bcc mn_up
 	ldx MNT			; SELECT: down (the last line is MNT+1, the
-	inx			; results, or MNT+2, the RAM test again),
-	.ifdef RAMAGAIN		; round to the top
+	inx			; results; then the long memory test and the RAM
+	.ifdef RAMAGAIN		; test, where the tape has them), round to the top
+	inx
+	.endif
+	.ifdef ROM
 	inx
 	.endif
 	stx MTMP
@@ -505,6 +524,9 @@ mn_up	ldx MSEL		; OPTION: up, round to the bottom
 	.ifdef RAMAGAIN
 	inx
 	.endif
+	.ifdef ROM
+	inx
+	.endif
 mn_set	stx MSEL
 	jsr mlines		; just the lines: no blanking, no flicker
 	jmp mn_rel
@@ -518,8 +540,15 @@ mgo	jsr waitrel
 	bcc mr_t
 	beq mr_all
 	.ifdef RAMAGAIN
-	sbc MNT			; (carry set) 1: the results, 2: the RAM test
+	sbc MNT			; (carry set) 1: the results, then (the
+	.ifdef ROM		; cartridge) 2: the long memory test; last:
+	cmp #2			; the RAM test
+	bne mg_r
+	jmp golong
+mg_r	cmp #3
+	.else
 	cmp #2
+	.endif
 	bne mg_fin
 	jmp RAMAGAIN
 mg_fin
@@ -542,6 +571,15 @@ mr_go	asl
 	sta TIDX
 	jsr tnextv
 	jmp (NEXTVEC)
+
+	.ifdef ROM
+; golong: the long memory test (it copies itself to RAM: 16K or more).
+golong	lda RAMTOP
+	cmp #$40
+	bcs gl_ok
+	jmp menu
+gl_ok	jmp xmem
+	.endif
 
 ; mdraw: the menu screen.
 mdraw	jsr scr_on
@@ -625,12 +663,50 @@ md_r	txa
 	lda #<s_mres
 	ldy #>s_mres
 	jsr puts
+	.ifdef ROM		; the cartridge: the long memory test, as key 8
+	lda #0
+	sta INV
+	ldx MNT
+	inx
+	inx
+	cpx MSEL
+	bne md_l
+	lda #$80
+	sta INV
+md_l	txa
+	clc
+	adc #MROW0
+	ldx #0
+	jsr at
+	lda #0
+	jsr putc
+	lda #<s_mlong
+	ldy #>s_mlong
+	jsr puts
+	lda #0
+	sta INV
+	lda RAMTOP
+	cmp #$40
+	bcs md_lx
+	lda MNT
+	clc
+	adc #MROW0+2
+	ldx #20
+	jsr at
+	lda #<s_m16
+	ldy #>s_m16
+	jsr puts
+md_lx
+	.endif
 	.ifdef RAMAGAIN		; the 32k+ tape: the RAM test too, as key 0,
 	lda #0			; with its result so far (test 8)
 	sta INV
 	ldx MNT
 	inx
 	inx
+	.ifdef ROM
+	inx
+	.endif
 	cpx MSEL
 	bne md_g
 	lda #$80
@@ -648,6 +724,15 @@ md_g	lda #4			; (the top line; SELECT reaches it from the
 	lda #4
 	ldx #20
 	jsr at
+	.ifdef SKIPKEY
+	lda SKIPRAM
+	beq md_gr
+	lda #<s_skipd
+	ldy #>s_skipd
+	jsr puts
+	jmp md_gx
+md_gr
+	.endif
 	lda BADMASK+8
 	bne md_gf
 	lda #<s_pass
@@ -672,7 +757,12 @@ s_notrun dta d'-',$FF
 s_mall	dta d'ALL OF THEM, IN ORDER',$FF
 s_mres	dta d'RESULTS AND THE FINAL CODE',$FF
 s_m1	dta d'START=RUN  SELECT=DOWN  OPTION=UP',$FF
-	.ifdef RAMAGAIN
+	.ifdef ROM
+s_m2	dta d'OR PRESS 0-8 TO RUN THAT TEST',$FF
+s_mram	dta d'0 RAM',$FF
+s_mlong	dta d'8 LONG RAM TEST',$FF
+s_m16	dta d'NEEDS 16K',$FF
+	.elseif .def RAMAGAIN
 s_m2	dta d'OR PRESS 0-7 TO RUN THAT TEST',$FF
 s_mram	dta d'0 RAM',$FF
 	.else
@@ -683,7 +773,7 @@ s_toggle3 dta d'START = MENU',$FF
 
 ; results: every test on the tape, PASS or FAIL and its items, then the ROM
 ; names if test 1 ran.
-	.ifdef CHAIN		; the first test's row: under the RAM line (0)
+	.ifdef RAM8		; the first test's row: under the RAM line (0)
 RZROW0	= 5
 	.else
 RZROW0	= 4
@@ -742,7 +832,7 @@ rz_f	pha
 rz_n	ldx CNT
 	inx
 	bne rz_lp
-rz_end	.ifdef CHAIN
+rz_end	.ifdef RAM8
 	lda #4			; the 32k+ tape: RAM from stages 1-2, as test 0,
 	ldx #0			; on top
 	jsr at
@@ -752,6 +842,15 @@ rz_end	.ifdef CHAIN
 	lda #4
 	ldx #18
 	jsr at
+	.ifdef SKIPKEY
+	lda SKIPRAM
+	beq rz_rr
+	lda #<s_skipd
+	ldy #>s_skipd
+	jsr puts
+	jmp rz_rd
+rz_rr
+	.endif
 	lda BADMASK+8
 	bne rz_rf
 	lda #<s_pass
@@ -800,8 +899,11 @@ s_tjoy	dta d'4 JOYSTICKS',$FF
 s_tpad	dta d'5 PADDLES',$FF
 s_tpok	dta d'6 POKEY',$FF
 s_t7	dta d'7 GTIA',$FF
-	.ifdef CHAIN
+	.ifdef RAM8
 s_t8	dta d'0 RAM, BANKS',$FF
+	.endif
+	.ifdef SKIPKEY
+s_skipd	dta d'SKIPPED',$FF
 	.endif
 s_test	dta d'TEST ',$FF
 s_pass	dta d'PASS',$FF

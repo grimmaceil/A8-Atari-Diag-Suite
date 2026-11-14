@@ -1,72 +1,82 @@
 #!/usr/bin/env python3
-"""Build the cartridge: an AtariMax 128K (.car type 41) holding the 32k
-diag image and the memory test's (the same kind of boot image mkcas.py
-wraps as a tape), with the menu and loader of src/cart/cart.asm at
-STUB-$BFFF in every bank.
+"""Build the cartridge: an AtariMax 128K (.car type 41), 16 banks of 8K at
+$A000-$BFFF. The tests run from ROM (src/cart/romsum.asm has the layout):
 
-  bank n, $A000-STUB-1   DATAPG pages of the images, the diag's from bank 0,
-                         the memory test's from the next free bank
-  bank n, STUB-$BFFF     the menu, the loader and the cartridge header
-  banks not needed       $FF, then the menu
+  the code banks    one program each, assembled at $A000 (build.py):
+                    0 the RAM test, 1 and 2 the system tests and the menu
+  the next banks    the long memory test's boot image (the same kind
+                    mkcas.py wraps as a tape), DATAPG pages to a bank; the
+                    menu's loader copies it to RAM (src/cart/ldmem.asm)
+  every bank        the same 32-byte tail at $BFE0: the power-on jump to
+                    bank 0, the bank's sum, the bank switch (XBANK) and
+                    the cartridge header
 """
 import argparse
 import struct
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from mkcas import patch_boot   # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-MADS = ROOT / 'tools' / 'bin' / 'mads.exe'
-STUB = 0xB800
-DATAPG = (STUB - 0xA000) // 256
+BANK = 0x2000
 NBANKS = 16
+TAILAT = 0x1FE0                # $BFE0
+DATAPG = 0x1F                  # image pages in a data bank ($A000-$BEFF)
 CARTYPE = 41                   # AtariMax 128K
+TAIL = bytes([0xA2, 0x00,              # $BFE0  ldx #0
+              0x9D, 0x00, 0xD5,        #        sta $D500,x   (bank 0)
+              0x4C, 0x00, 0xA0,        #        jmp $A000     its cold start
+              0x60,                    # $BFE8  rts           (the OS's init)
+              0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+              0x00, 0x00,              # $BFEE  the bank's sum
+              0x9D, 0x00, 0xD5,        # $BFF0  sta $D500,x   XBANK
+              0x4C, 0x03, 0xA0,        #        jmp $A003     the warm entry
+              0xFF, 0xFF, 0xFF, 0xFF,
+              0xE0, 0xBF,              # $BFFA  run address
+              0x00,                    # $BFFC  a cartridge is in
+              0x04,                    # $BFFD  start it, no disk boot
+              0xE8, 0xBF])             # $BFFE  init address
+assert len(TAIL) == BANK - TAILAT
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('car')
-    ap.add_argument('--diag', nargs=2, metavar=('BIN', 'LAB'), required=True)
+    ap.add_argument('--bank', action='append', required=True, metavar='BIN',
+                    help='a code bank, assembled at $A000 (in bank order)')
     ap.add_argument('--mem', nargs=2, metavar=('BIN', 'LAB'), required=True)
-    ap.add_argument('--version', default='0.0', help='MAJOR.MINOR, shown on the menu')
     a = ap.parse_args()
 
-    imgs = []
-    for bl in (a.diag, a.mem):
-        img, nrec, load, s = patch_boot(*bl)
-        if load != 0x0800:
-            sys.exit('an image must run at $0800')
-        imgs.append(img + bytes(-len(img) % 256))
-    data = bytearray(b'\xff' * (NBANKS * DATAPG * 256))
-    vmaj, vmin = a.version.split('.')
-    defs, bank = {'VMAJ': vmaj, 'VMIN': vmin}, 0
-    for img, tag in zip(imgs, ('DIAG', 'MEM')):
-        npg = len(img) // 256
-        defs[f'{tag}BK'], defs[f'{tag}PG'] = bank, npg
-        data[bank * DATAPG * 256:bank * DATAPG * 256 + len(img)] = img
-        bank += -(-npg // DATAPG)
-    if bank > NBANKS:
-        sys.exit('the images do not fit in the cartridge')
+    banks = []
+    for path in a.bank:
+        code = Path(path).read_bytes()
+        if len(code) > TAILAT:
+            sys.exit(f'{path}: {len(code)} bytes, a bank holds {TAILAT}')
+        banks.append(bytearray(code + b'\xff' * (TAILAT - len(code))))
+    img, nrec, load, s = patch_boot(*a.mem)
+    if load != 0x0800:
+        sys.exit('the memory test must run at $0800')
+    img += bytes(-len(img) % 256)
+    membk = len(banks)
+    for i in range(0, len(img), DATAPG * 256):
+        part = img[i:i + DATAPG * 256]
+        banks.append(bytearray(part + b'\xff' * (TAILAT - len(part))))
+    if len(banks) > NBANKS:
+        sys.exit('the programs do not fit in the cartridge')
+    while len(banks) < NBANKS:
+        banks.append(bytearray(b'\xff' * TAILAT))
+    for b in banks:
+        b += TAIL
+        sm = sum(b) & 0xFFFF           # (the sum's own two bytes are 0 here)
+        b[0x1FEE:0x1FF0] = struct.pack('<H', sm)
 
-    out = str(Path(a.car).resolve())[:-4]
-    args = [str(MADS), 'cart.asm', f'-o:{out}.stub.bin', f'-l:{out}.stub.lst',
-            f'-d:STUB=${STUB:04X}', f'-d:DATAPG={DATAPG}'] + [f'-d:{k}={v}' for k, v in defs.items()]
-    r = subprocess.run(args, cwd=ROOT / 'src' / 'cart', capture_output=True, text=True)
-    if r.returncode:
-        sys.exit('cart.asm:\n' + r.stdout + r.stderr)
-    stub = Path(f'{out}.stub.bin').read_bytes()
-    if len(stub) != 0xC000 - STUB:
-        sys.exit(f'cart.asm: {len(stub)} bytes, expected {0xC000 - STUB}')
-
-    rom = b''.join(bytes(data[b * DATAPG * 256:(b + 1) * DATAPG * 256]) + stub
-                   for b in range(NBANKS))
+    rom = b''.join(bytes(b) for b in banks)
     head = b'CART' + struct.pack('>II', CARTYPE, sum(rom) & 0xFFFFFFFF) + bytes(4)
     open(a.car, 'wb').write(head + rom)
-    print(f'{a.car}: AtariMax 128K, diag {defs["DIAGPG"]} pages from bank {defs["DIAGBK"]}, '
-          f'memtest {defs["MEMPG"]} pages from bank {defs["MEMBK"]}, banks used {bank} of {NBANKS}')
+    print(f'{a.car}: AtariMax 128K, code banks 0-{membk - 1} ('
+          + ', '.join(f'{len(Path(p).read_bytes())} bytes' for p in a.bank)
+          + f' of {TAILAT}), memtest {len(img) // 256} pages from bank {membk}')
 
 
 if __name__ == '__main__':

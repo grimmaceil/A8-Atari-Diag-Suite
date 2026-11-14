@@ -26,6 +26,13 @@
 ; SYSAT, entered by its stage 2. It takes over stage 2's results; their RAM
 ; faults become test 8, item = bank, on the results screen and in the final
 ; code. Built with -d:PREVBSS=... (stage 2's BSS).
+;
+; ROM (the cartridge): one of its code banks (cart/romsum.asm), running at
+; $A000 with BSS at $0800. The seven tests are split over two banks (the
+; WANT_* defines say which are in this one); the menu is in both and lists
+; all seven. A test in the other bank is a thunk that asks for it (XREQ)
+; and switches to that bank (OTHER), whose warm entry runs it. HASLDR: this
+; bank holds the long memory test's loader (cart/ldmem.asm).
 
 	icl '../common/hw.asm'
 	icl '../common/vars.asm'
@@ -35,6 +42,17 @@ QUICKSCR = 1			; display.asm: quick screen-block test
 RESTART	= 1			; report.asm: the end waits for START (see final)
 SYSCODES = 1			; report.asm: beep codes for the ROMs (test 1) and
 				; the RAM (index 8) only, each with its own tones
+	.ifdef CHAIN		; common.asm: the RAM's result is here too, as
+RAM8	= 1			; test 0 (kept at index 8)
+	.elseif .def ROM
+RAM8	= 1
+RAMAGAIN = xram			; and the RAM test again is in bank 0
+	.endif
+	.ifdef ROM		; common.asm: the RAM test can be skipped (CTRL+S,
+SKIPKEY	= 1			; tape1/main.asm): its line says so
+	.elseif .def XEX
+SKIPKEY	= 1
+	.endif
 	.ifdef WANT_CON		; common.asm: the tests that ask Y/N
 NEEDYN	= 1
 	.elseif .def WANT_POK
@@ -47,7 +65,9 @@ NOFONT	= 1			; display.asm, info.asm: only the ROM test shows
 	.endif			; the font's sum (the 400 tapes are short of room)
 
 	opt h-
-	.if .def SYSAT
+	.if .def ROM
+LOAD	= $A000
+	.elseif .def SYSAT
 LOAD	= SYSAT			; the 32k+ one-load tape: in tape 1's image,
 				; after its stage 2 (build.py's build_one32)
 	.else
@@ -55,7 +75,97 @@ LOAD	= $0800
 	.endif
 	org LOAD
 
-	.ifdef CHAIN
+	.ifdef ROM
+	jmp $BFE0		; power-on in this bank: on to bank 0 (the tail)
+	jmp warm
+; warm: from another bank. This bank's checksum, then what was asked for.
+warm	sei
+	cld
+	ldx #$FF
+	txs
+	jsr romsum
+	beq wm_ok
+	inc LOADERR
+	jmp report
+wm_ok	lda DISPOK		; (START at the RAM summary: the picture is seen)
+	sta VIDEOOK
+	lda XREQ
+	bne wm_t
+	jmp trun		; 0: the menu
+wm_t
+	.ifdef HASLDR
+	cmp #8			; 8: the long memory test
+	bne wm_f
+	jmp ldmem
+wm_f
+	.endif
+	.ifdef WANT_ROM
+	cmp #9			; 9: the results (this bank has the ROM names)
+	bne wm_r
+	jsr tinit
+	jmp final
+wm_r
+	.endif
+	pha			; 1-7: that test (it is in this bank)
+	jsr tinit
+	pla
+	ldx #0
+wm_fd	cmp ttests,x
+	beq wm_go
+	inx
+	bne wm_fd
+wm_go	txa
+	asl
+	sta TIDX
+	jsr tnextv
+	jmp (NEXTVEC)
+
+; The other bank's tests, the RAM test (bank 0) and the long memory test.
+xgo	sta XREQ
+	ldx #OTHER
+	jmp XBANK
+xram	ldx #0
+	jmp XBANK
+	.ifndef WANT_ROM	; the results are the ROM test's bank's
+XFINAL	= 1
+final	lda #9
+	bne xgo
+	.endif
+	.ifdef HASLDR
+xmem	= ldmem
+	.else
+xmem	lda #8
+	bne xgo
+	.endif
+	.ifndef WANT_ROM
+xt1	lda #1
+	bne xgo
+	.endif
+	.ifndef WANT_KB
+xt2	lda #2
+	bne xgo
+	.endif
+	.ifndef WANT_CON
+xt3	lda #3
+	bne xgo
+	.endif
+	.ifndef WANT_JOY
+xt4	lda #4
+	bne xgo
+	.endif
+	.ifndef WANT_PAD
+xt5	lda #5
+	bne xgo
+	.endif
+	.ifndef WANT_POK
+xt6	lda #6
+	bne xgo
+	.endif
+	.ifndef WANT_GTIA
+xt7	lda #7
+	bne xgo
+	.endif
+	.elseif .def CHAIN
 ; Same header layout as a boot file: the loader checks the record count and
 ; load address, then jumps to LOAD+6.
 	.byte 0
@@ -115,47 +225,75 @@ ch_r9	lda MTMP
 tlist
 	.ifdef WANT_ROM
 	.word t_rom
+	.elseif .def ROM
+	.word xt1
 	.endif
 	.ifdef WANT_KB
 	.word t_kb
+	.elseif .def ROM
+	.word xt2
 	.endif
 	.ifdef WANT_CON
 	.word t_con
+	.elseif .def ROM
+	.word xt3
 	.endif
 	.ifdef WANT_JOY
 	.word t_joy
+	.elseif .def ROM
+	.word xt4
 	.endif
 	.ifdef WANT_PAD
 	.word t_pad
+	.elseif .def ROM
+	.word xt5
 	.endif
 	.ifdef WANT_POK
 	.word t_pok
+	.elseif .def ROM
+	.word xt6
 	.endif
 	.ifdef WANT_GTIA
 	.word t_gtia
+	.elseif .def ROM
+	.word xt7
 	.endif
 	.word final
 
 ttests
 	.ifdef WANT_ROM
 	.byte 1
+	.elseif .def ROM
+	.byte 1
 	.endif
 	.ifdef WANT_KB
+	.byte 2
+	.elseif .def ROM
 	.byte 2
 	.endif
 	.ifdef WANT_CON
 	.byte 3
+	.elseif .def ROM
+	.byte 3
 	.endif
 	.ifdef WANT_JOY
+	.byte 4
+	.elseif .def ROM
 	.byte 4
 	.endif
 	.ifdef WANT_PAD
 	.byte 5
+	.elseif .def ROM
+	.byte 5
 	.endif
 	.ifdef WANT_POK
 	.byte 6
+	.elseif .def ROM
+	.byte 6
 	.endif
 	.ifdef WANT_GTIA
+	.byte 7
+	.elseif .def ROM
 	.byte 7
 	.endif
 	.byte 0
@@ -182,7 +320,12 @@ ttests
 	icl 't_gtia.asm'
 	.endif
 
-	.ifndef CHAIN
+	.ifdef ROM		; (no boot here: bank 0 did it)
+	icl '../cart/romsum.asm'
+	.ifdef HASLDR
+	icl '../cart/ldmem.asm'
+	.endif
+	.elseif .not .def CHAIN
 	icl '../common/display.asm'
 
 init_rts rts
@@ -202,7 +345,9 @@ NPAT	= *-pats
 ; The header bar names the tape, as its file is named (SETNO 0 = the 400
 ; set, 1 = 16K, 3 = controls, 4 = 32k+), so it can't
 ; be taken for the machine found: that is the FOUND line below it.
-	.if SETNO=4
+	.if .def ROM
+s_hpre	dta d' DIAG-CART  ',$FF
+	.elseif SETNO=4
 	.ifdef XEX			; the disk file (build.py)
 s_hpre	dta d' DIAG-32K-XEX  ',$FF
 	.elseif .def CART		; the cartridge (build.py)
@@ -227,6 +372,14 @@ s_hpre	dta d' DIAG-400-0',[TAPENO+$10]
 	.endif
 	.endif
 
+	.ifdef ROM
+	.if *>$BFE0
+	.error "this cartridge bank is over 8K (the tail starts at $BFE0)"
+	.endif
+IMGEND
+BSS	= $0800			; in RAM, shared by the banks
+TSTART	= [>BSS]+1
+	.else
 ; Pad to a whole page; the last two bytes hold the image sum (mkcas.py).
 PADTO	= [[*+2+$FF]/$100]*$100
 	.if PADTO-*-2>0
@@ -241,3 +394,4 @@ BSS	= SHAREBSS		; one image: tape 1's BSS page is this one's
 BSS	= IMGEND
 	.endif
 TSTART	= [>BSS]+1
+	.endif

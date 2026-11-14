@@ -31,7 +31,6 @@ BASIC = 'BASIC - Revision A.rom'
 # of the simulator's time (py65 is slow on a big march).
 RUNS = {
     'ram-pass': ('diag-400-01-ram', ['--ram', '0x4000', '--key', '10', '--until', '300'], [
-        ('CAN YOU READ', 2, 'ram-01-video-check'),
         ('TESTING BANK 1', 1, 'ram-02-testing'),
         ('ALL RAM PASSED', 2, 'ram-03-pass'),       # (past the jingle: steady
         ('ALL PASSED. NEXT', 2, 'ram-04-summary')]),  # green, not a flash gap)
@@ -47,25 +46,27 @@ RUNS = {
         ('HEARD IT?', 1, 'input-02-console'),
         ('3 CONSOLE KEYS', 1, 'input-03-results')]),
     'input-fail': ('diag-400-03-input', ['--auto', '--skip', '5', '--until', '60'], [
-        ('START=GO ON', 1, 'input-04-fail')]),
+        ('START = GO ON', 1, 'input-04-fail')]),
     'ports': ('diag-400-04-ports', ['--auto', '--until', '90'], [
         ('STICK 4', 1, 'ports-01-joysticks'),
         ('VAL MIN MAX', 2, 'ports-02-paddles')]),
     'av': ('diag-400-05-av', ['--auto', '--until', '120'], [
         ('PLAYING VOICE 2', 0.4, 'av-01-pokey'),
-        ('RAMPS RIGHT?', 1, 'av-02-gtia')]),
+        ('LOOKS RIGHT?', 1, 'av-02-gtia')]),
+    'cart': ('diag-cart.car', ['--ram', '0x4000', '--pick', 'START:9', '--until', '16'], [   # (no --auto: it
+        ('^START=RUN', 1, 'cart-01-menu')]),                      # would run ALL at once)
     'menu': ('diag-16k-02-system', ['--ram', '0x8000', '--auto', '--until', '400'], [
         ('^START=RUN', 0.5, 'system-01-menu'),
-        ('^START=MENU', 1, 'system-02-results')]),
+        ('^START = MENU', 1, 'system-02-results')]),
     '16k': ('build/t16-fast', ['--ram', '0x4000', '--key', '10', '--until', '400'], [
         ('^START=AGAIN', 2, '16k-01-summary')]),
     '32k-sum': ('build/t32-fast', ['--xl', '--basic', '@BASIC', '--key', '10',
                                    '--until', '600'], [        # (no --auto: it waits)
-        ('^START=SYSTEM TESTS', 2, '32k-01-summary')]),
+        ('^START=MENU  SELECT', 2, '32k-01-summary')]),
     '32k': ('build/t32-fast', ['--xl', '--auto', '--basic', '@BASIC', '--key', '10',
                                '--until', '1200'], [
         ('^START=RUN', 0.5, '32k-02-menu'),
-        ('^START=MENU', 1, '32k-03-results')]),
+        ('^START = MENU', 1, '32k-03-results')]),
     'memtest': ('diag-memtest', ['--ram', '0x8000', '--stuck', '6FFC-6FFF:3:1',
                                  '--key', '150', '--until', '220'], [
         ('PASS 4', 3, 'memtest-01-running'),
@@ -79,10 +80,10 @@ RUNS = {
 # The guide's callouts: picture -> [(first text row, last text row, number)].
 # Each is a bracket in the right border beside those rows, with its number.
 ANNOT = {
-    'ram-01-video-check': [(2, 4, 1), (6, 6, 2), (8, 11, 3), (12, 13, 4), (14, 21, 5)],
+    'cart-01-menu': [(4, 4, 1), (5, 11, 2), (12, 13, 3), (14, 14, 4), (18, 19, 5)],
     'ram-02-testing': [(2, 3, 1), (5, 5, 2)],
     'ram-03-pass': [(4, 4, 1), (6, 9, 2), (20, 21, 3), (23, 23, 4)],
-    'ram-04-summary': [(5, 7, 1), (8, 11, 2), (14, 16, 3)],
+    'ram-04-summary': [(5, 6, 1), (7, 10, 2), (14, 16, 3)],
     'ram-05-fail': [(4, 4, 1), (6, 7, 2), (20, 21, 3)],
     'rom-01-400': [(5, 7, 1), (8, 8, 2), (9, 9, 3), (21, 23, 4)],
     'rom-02-xl': [(5, 5, 1), (6, 6, 2), (7, 7, 3), (21, 23, 4)],
@@ -92,13 +93,13 @@ ANNOT = {
     'ports-01-joysticks': [(7, 10, 1)],
     'ports-02-paddles': [(5, 5, 1), (7, 7, 2), (8, 15, 3)],
     'av-01-pokey': [(5, 5, 1), (7, 7, 2), (8, 8, 3)],
-    'av-02-gtia': [(3, 3, 1), (5, 11, 2), (13, 20, 3), (21, 21, 4)],
+    'av-02-gtia': [(3, 3, 1), (5, 11, 2), (13, 20, 3), (21, 22, 4), (23, 23, 5)],
     'system-01-menu': [(4, 10, 1), (11, 11, 2), (12, 12, 3), (18, 19, 4)],
     'system-02-results': [(4, 10, 1), (12, 16, 2)],
-    '16k-01-summary': [(5, 7, 1), (8, 11, 2), (14, 16, 3), (23, 23, 4)],
-    '32k-01-summary': [(5, 7, 1), (8, 12, 2), (14, 16, 3), (23, 23, 4)],
-    '32k-02-menu': [(4, 10, 1), (11, 11, 2), (12, 12, 3), (13, 13, 4), (18, 19, 5)],
-    '32k-03-results': [(4, 10, 1), (11, 11, 2), (13, 16, 3)],
+    '16k-01-summary': [(5, 6, 1), (7, 10, 2), (14, 16, 3), (23, 23, 4)],
+    '32k-01-summary': [(5, 6, 1), (7, 11, 2), (14, 16, 3), (23, 23, 4)],
+    '32k-02-menu': [(4, 4, 1), (5, 11, 2), (12, 12, 3), (13, 13, 4), (18, 19, 5)],
+    '32k-03-results': [(4, 4, 1), (5, 11, 2), (13, 16, 3)],
     'memtest-01-running': [(5, 5, 1), (6, 6, 2), (8, 9, 3), (23, 23, 4)],
     'memtest-02-summary': [(5, 6, 1), (8, 9, 2)],
     'memtest-03-sweep': [(13, 13, 1)],
@@ -145,7 +146,8 @@ def run(name, sysroms, palette):
     osrom = OSXL if '--xl' in args or '--xe' in args else OS800
     args = [str(sysroms / BASIC) if x == '@BASIC' else x.replace('@RAW', str(RAW))
             for x in args]
-    cas = ROOT / f'{tape}.cas' if '/' in tape else CAS / f'{tape}.cas'
+    cas = (CAS / tape if tape.endswith('.car') else
+           ROOT / f'{tape}.cas' if '/' in tape else CAS / f'{tape}.cas')
     cmd = [sys.executable, str(ROOT / 'tools' / 'sim.py'), str(cas),
            '--osrom', str(sysroms / osrom), '--palette', str(palette),
            '--seconds', '999', *args]

@@ -27,6 +27,9 @@ mi_p	jsr puts
 mi_n	lda #<s_ntsc
 	ldy #>s_ntsc
 mi_v	jsr puts
+	.ifdef ROM		; (the cartridge build: it is the cartridge)
+	rts
+	.else
 	lda RAMTOP		; a cartridge, the way the OS tells: RAM ends
 	cmp #$C0		; below $C000 and $BFFC holds 0. Its 8K of RAM
 	bcs mi_x		; at $A000 isn't tested: remove it for a full test
@@ -36,6 +39,7 @@ mi_v	jsr puts
 	ldy #>s_cartin
 	jmp puts
 mi_x	rts
+	.endif
 
 	.ifndef NOFONT
 ; chinfo: "CHAR ROM $xxxx  SCREEN $xx00" on row A.
@@ -68,7 +72,9 @@ s_xl	dta d'FOUND: XL/XE',$FF
 s_ram	dta d'  RAM ',$FF
 s_pal	dta d'K  PAL',$FF
 s_ntsc	dta d'K  NTSC',$FF
+	.ifndef ROM
 s_cartin dta d'  CART IN'*,$FF
+	.endif
 	.ifndef NOFONT
 s_chrom	dta d'CHAR ROM $',$FF
 s_unstab dta d' UNSTABLE',$FF

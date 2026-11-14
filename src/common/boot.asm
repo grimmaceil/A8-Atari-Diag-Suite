@@ -4,6 +4,10 @@
 ; end, with RAMTOP set. Needs LOAD, IMGEND, CKSUM, BSS from the stage.
 ; LRCALL: lowram may also be called with JSR once STACKOK is set; it then
 ; returns (errors are charged to bank 1 as at boot).
+; ROM (the cartridge): the code can't change itself, so the low RAM test
+; does page 0 by fixed addresses and pages 1-7 through a pointer in page 0,
+; and the checksum (of this 8K bank, cart/romsum.asm) comes after it, once
+; the stack is allowed.
 
 ; ---------------------------------------------------------------------------
 ; Nothing below may use the stack or zero page until low RAM passes.
@@ -82,6 +86,7 @@ ch_line	sta WSYNC
 	lda #C_YELLOW
 	sta COLBK
 
+	.ifndef ROM
 ; ---------------------------------------------------------------------------
 ; Image checksum. The OS checks each record in the cassette buffer, but not
 ; the copy to LOAD, so the copy is verified here. 16-bit sum of every image
@@ -124,6 +129,7 @@ ck_s2	lda SUM
 	beq lowram
 ck_bad	inc LOADERR
 	jmp report
+	.endif
 
 ; ---------------------------------------------------------------------------
 ; Low RAM, $0000-$07FF: zero page, stack, OS variables, cassette buffer.
@@ -131,6 +137,77 @@ ck_bad	inc LOADERR
 ; Bytes are tested one at a time, so this finds stuck and shorted bits, not
 ; address faults; the march and address tests in main RAM cover those.
 ; The page operands of lr_a..lr_d walk $00-$07.
+	.ifdef ROM
+lowram	ldx #0			; page 0: X = the byte, Y = the pattern
+lz_byte	lda a:$0000,x
+	sta MTMP
+	ldy #NPAT-1
+lz_pat	lda pats,y
+	sta a:$0000,x
+	eor a:$0000,x
+	beq lz_ok
+	sta LXOR
+	ora BADMASK+1
+	sta BADMASK+1
+	lda ECNTLO+1
+	ora ECNTHI+1
+	bne lz_cnt
+	stx EADRLO+1		; first error only (EADRHI stays 0)
+	lda pats,y
+	sta EWROTE+1
+	eor LXOR
+	sta EREAD+1
+lz_cnt	inc ECNTLO+1
+	bne lz_ok
+	inc ECNTHI+1
+lz_ok	dey
+	bpl lz_pat
+	lda MTMP
+	sta a:$0000,x
+	inx
+	bne lz_byte
+	lda BADMASK+1		; page 0 bad: no pointer to go on with
+	beq lz_go
+	jmp report
+lz_go	lda #0			; pages 1-7: Y = the byte, X = the pattern
+	sta PTR
+	tay
+	lda #1
+	sta PTR+1
+lr_byte	lda (PTR),y
+	sta MTMP
+	ldx #NPAT-1
+lr_pat	lda pats,x
+	sta (PTR),y
+	eor (PTR),y
+	beq lr_ok
+	sta LXOR
+	ora BADMASK+1
+	sta BADMASK+1
+	lda ECNTLO+1
+	ora ECNTHI+1
+	bne lr_cnt
+	sty EADRLO+1		; first error only
+	lda PTR+1
+	sta EADRHI+1
+	lda pats,x
+	sta EWROTE+1
+	eor LXOR
+	sta EREAD+1
+lr_cnt	inc ECNTLO+1
+	bne lr_ok
+	inc ECNTHI+1
+lr_ok	dex
+	bpl lr_pat
+	lda MTMP
+	sta (PTR),y
+	iny
+	bne lr_byte
+	inc PTR+1
+	lda PTR+1
+	cmp #8
+	bne lr_byte
+	.else
 lowram	lda #0
 	sta lr_a+2
 	sta lr_b+2
@@ -177,6 +254,7 @@ lr_d	sta $FF00,x
 	lda lr_a+2
 	cmp #8
 	bne lr_byte
+	.endif
 
 	.if .def LRCALL
 	lda STACKOK		; called again later (burn-in): just return
@@ -193,6 +271,13 @@ lr_boot
 lr_pass	ldx #$FF
 	txs
 	inc STACKOK
+	.ifdef ROM		; this bank's checksum
+	jsr romsum
+	beq rs_ok
+	inc LOADERR
+	jmp report
+rs_ok
+	.endif
 	lda PORTB		; XL/XE: built-in BASIC out (PORTB bit 1), so the
 	ora #$02		; RAM under it is found and tested. (400/800: the
 	sta PORTB		; PIA port is input, the write does nothing.) A

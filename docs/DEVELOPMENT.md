@@ -86,23 +86,32 @@ The design and its reasons: `Atari-diag-disk-scope.md`.
 ### The cartridge
 
 `carts/diag-cart.car` is an AtariMax 128K (`.car` type 41: 16 banks of 8K
-at $A000-$BFFF; an access to $D500+n selects bank n, $D510-$D51F switches
-the cartridge off). `build.py` builds the 32k+ image and `diag-memtest`
-again with `CART=1` (the title bar only, as XEX) and `tools/mkcar.py`
-packs them:
-- each bank's $A000-$B7FF holds 24 pages of the images: the 32k+ image
-  from bank 0 (71 pages, banks 0-2), the memory test from bank 3 (27
-  pages, banks 3-4); the rest is $FF;
-- each bank's $B800-$BFFF is the same menu and loader
-  (`src/cart/cart.asm`) with the cartridge header (flags $04: run, no disk
-  boot). Being the same in every bank, it runs whichever bank the cartridge
-  starts in and keeps running while it switches banks to copy.
+at $A000-$BFFF; a write to $D500+n selects bank n, $D510 switches the
+cartridge off). The tests run from ROM, so they need 8K of RAM and no
+loading. `build.py`'s `build_car` assembles three code banks with `ROM=1`
+and `tools/mkcar.py` packs them (`src/cart/romsum.asm` has the layout):
 
-START or SELECT: RAMTOP (below the cartridge, so at most $A0) against the
-need ($80 or $40), else the too-little-RAM line and halt as the disk
-guard's. Then interrupts off, the image copied to $0800, COLDST = 1, and
-from $0680 in RAM: the cartridge off, GINTLK = TRIG3 (an XL OS halts if
-TRIG3 changes from GINTLK), and a jump to $0806.
+- **Bank 0, the RAM test:** `tape1/main.asm` with `stage2.asm` in the same
+  image, as the one-load 16k tape, at $A000. `boot.asm`'s ROM variant
+  doesn't change its own code: low RAM page 0 by fixed addresses, pages
+  1-7 through a pointer, then the bank's checksum.
+- **Banks 1 and 2, the system tests:** `system/main.asm` twice, with tests
+  1-3 and 4-7. Both have the menu and list all seven; a test in the other
+  bank is a thunk that sets `XREQ` and switches (`OTHER`). The results
+  screen is always bank 1's (it has the ROM names).
+- **From bank 3:** the long memory test's boot image, 31 pages to a bank.
+  `src/cart/ldmem.asm` (bank 2) copies it to $0800 from a loop in low RAM,
+  switches the cartridge off and starts it, as the old cartridge did.
+
+BSS is one page of RAM at $0800 shared by all the banks, so results travel
+with a bank switch. Every bank ends with the same 32 bytes (mkcar's
+`TAIL`): the power-on jump to bank 0's $A000, the bank's sum at $BFEE, the
+switch at $BFF0 (`sta $D500,x` / `jmp $A003`: the instruction after the
+write comes from the new bank, which holds the same bytes) and the
+cartridge header. Each code bank starts `jmp cold` / `jmp warm`.
+
+Code that only one format can use is left out of the others with `.ifdef
+ROM`, `XEX`, `ONE16`, `ONE32` and the `WANT_*` defines.
 
 ### 130XE banks and the 32k+ image
 
@@ -130,7 +139,7 @@ zeros and got through.
 | `src/tape1/` | the RAM tape: stage 1, and stage 2 (relocated test, RAM under the OS, 130XE banks) |
 | `src/tape2/` | the memory test (one source, two builds: `diag-400-memtest` with OWNTEST and NOXL, `diag-memtest` with BOUNCE) |
 | `src/disk/` | the disk files' guard and mover (`xexwrap.asm`) |
-| `src/cart/` | the cartridge's menu and loader (`cart.asm`) |
+| `src/cart/` | the cartridge's bank layout and checksum (`romsum.asm`) and the long memory test's loader (`ldmem.asm`) |
 | `src/system/` | the system tests: `main.asm` builds a tape from the tests that `WANT_*` defines pick; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia`); `common.asm` has the test flow and the menu |
 | `tools/` | build, CAS writer, simulator, keyboard map, documentation pictures |
 | `cassettes/` | the release tapes |

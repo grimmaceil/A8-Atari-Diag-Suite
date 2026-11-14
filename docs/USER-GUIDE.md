@@ -1,11 +1,11 @@
 # A8 Cassette Diagnostics: User Guide
 
-Version 0.4
+Version 0.5
 
-Every file has its version in its name (`diag-32k-xl-xe-v0.4.cas`), and
-every screen shows it at the right of the title bar (`V0.4`). If the two
+Every file has its version in its name (`diag-32k-xl-xe-v0.5.cas`), and
+every screen shows it at the right of the title bar (`V0.5`). If the two
 don't match, or a screen shows no version, you are running an older file.
-This guide leaves the `-v0.4` out of the names.
+This guide leaves the `-v0.5` out of the names.
 
 These tapes test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
 800XL, 65XE, 800XE, 130XE and XE Game System. You load them like any
@@ -102,14 +102,14 @@ All the tapes:
 | `diag-400-01-ram` | 8K | 2 min, then 1.5 min for part 2 | the video check and all the RAM. Part 2 (machines with 16K or more): the RAM the tape itself used, the RAM under an XL/XE's OS and a 130XE's extra RAM |
 | `diag-400-02-rom` | 8K | 2 min | test 1, the ROMs |
 | `diag-400-03-input` | 8K | 2 min | tests 2 and 3, the keyboard and the console keys |
-| `diag-400-04-ports` | 8K | 2 min | tests 5 and 6, the joysticks and the paddles |
-| `diag-400-05-av` | 8K | 2 min | tests 4 and 7, the sound (POKEY) and the video (GTIA) |
+| `diag-400-04-ports` | 8K | 2 min | tests 4 and 5, the joysticks and the paddles |
+| `diag-400-05-av` | 8K | 2 min | tests 6 and 7, the sound (POKEY) and the video (GTIA) |
 | `diag-400-memtest` | 8K | 2 min | the memory test, until you stop it (main RAM only) |
 | `diag-16k-01-ram` | 16K | 3.5 min | the whole RAM test in one load: all the RAM, the tape's own, under an XL/XE's OS, and a 130XE's extra RAM |
 | `diag-16k-02-system` | 16K | 3.5 min | tests 1-7, with a menu |
 | `diag-32k-xl-xe` | 32K | 6 min | the whole RAM test, then tests 1-7 with a menu, in one load |
 | `diag-memtest` | 16K | 2.5 min | the memory test, until you stop it (all the RAM) |
-| `diag-controls` | 16K | 2 min | tests 2, 5 and 6 only: keyboard, joysticks, paddles |
+| `diag-controls` | 16K | 2 min | tests 2, 4 and 5 only: keyboard, joysticks, paddles |
 
 `diag-controls` is a companion to Atari's SALT diagnostic disks: their
 controller tests need a test harness plugged in, and this tape doesn't.
@@ -228,37 +228,49 @@ RAM too). Pressing RESET then starts the machine again, as if switched on.
 
 ### From the cartridge
 
-`diag-cart.car`, in the `carts` folder, holds the 32k+ tests and the long
-memory test. It is an AtariMax 128K cartridge image (`.car` type 41):
+`diag-cart.car`, in the `carts` folder, holds all the tests. It is an
+AtariMax 128K cartridge image (`.car` type 41):
 
 - **MiSTer:** load it from the core's cartridge menu, then reset the
   machine.
 - **A real Atari:** write it to an AtariMax 128K flash cartridge (its own
   flasher does this).
 
-Switch on with the cartridge in and a menu comes up, with a blue border.
-It waits as long as you like:
+The tests run from the cartridge itself, not from RAM, so it works on any
+Atari, an 8K 400 included, and on a machine whose RAM is too sick to load
+a tape into. Switch on with the cartridge in:
 
-- **START:** the diagnostic tests: RAM, ROMs, keyboard, console keys,
-  joysticks, paddles, sound and video, with the menu of the 32k+ tape.
-  Needs 32K.
-- **SELECT:** the long memory test, pass after pass until a key is pressed.
-  Needs 16K.
+1. The RAM test starts at once (green border and a chirp, then yellow
+   while it tests), and ends on the RAM summary.
+2. START goes to the menu: lines 0 to 8.
 
-The cartridge copies the test into RAM and then switches itself off, so the
-test sees all of the machine's RAM, and no `CART IN`. Everything on screen
-is the same as on the tape, except the title bar: ` DIAG-32K-CART ` and
-` DIAG-MEMTEST-CART `.
+![Cartridge menu](img/cart-01-menu.png)
 
-Too little RAM for the test picked: `NEEDS 32K RAM. THIS MACHINE HAS 16K.`
-under the menu, a red border and the low tone on and off. With the
-cartridge in, the machine counts its RAM only up to the cartridge ($A000,
-40K), which is plenty for both tests. An 8K machine shows the menu but runs
-neither test; use the 400 tapes.
+1. `0 RAM`: the RAM test again, with its result so far.
+2. Tests 1 to 7.
+3. All of them in order, and the results.
+4. `8 LONG RAM TEST`: the long memory test, pass after pass until a key
+   is pressed. It needs 16K (the line says so on a smaller machine).
+5. The keys.
 
-Once a test is running, the cartridge stays off until the power goes off.
-RESET starts the machine from cold, without the cartridge; to get back to
-the menu, switch off and on again.
+A cartridge switches off the 8K of RAM it sits over ($A000-$BFFF), which
+is why a 48K machine with a BASIC cartridge shows 40K. This cartridge
+switches itself off for a moment during the RAM test, tests that 8K too,
+and switches back on, so the machine shows its real size (48K, or 64K on
+an XL/XE) and a fault there is reported in bank 3.
+
+**CTRL+S skips the RAM test.** Hold CTRL and S as you switch on (or while
+the RAM test runs: it is looked at between banks) and the menu comes up at
+once, with line 0 showing `SKIPPED`. The disk file `diag-32k-xl-xe` does
+the same. The tapes don't: their wait is the load.
+
+The long test, line 8, copies itself into RAM and switches the cartridge
+off for good. After it, RESET starts the machine from cold without the
+cartridge; to get back to the menu, switch off and on again.
+
+In the ROM test the cartridge line shows `DIAG` and its CRC. An
+XL/XE's built-in BASIC can't be read while a cartridge is plugged in; the
+tape and disk versions check it.
 
 ## Reading the results
 
@@ -314,19 +326,25 @@ Every flash comes with a beep, so you can read the code by eye or by ear.
 A fault plays as: long beeps (where), a pause, short beeps (what), and so
 on for each bad bit or item, then the low end beep.
 
-What happens next depends on whether the tape knows you can read the
-screen. It does once you have pressed a key at the video check, or, on the
-tapes that have no video check, once the display checks have passed:
+Only two things have a beep code: the RAM and the ROMs. They are what a
+machine with no picture can still tell you about.
 
-- **Picture confirmed:** the code plays once, without flashing the border.
-  Then the border stays steady red and silent, with the result on the
-  screen. SELECT plays the code again. A pass at the end of a tape stays
-  steady green and silent, and the memory test doesn't beep after each
-  pass.
-- **Picture not confirmed, or full-screen flashes chosen with OPTION:** the
-  border flashes with every beep, the border holds steady red for 3 s and
-  the code plays again, over and over. A pass at the end of a tape repeats
+- **The RAM test** runs first, before anyone has said they can see the
+  screen. Its result flashes the border with every beep, holds red for 3 s
+  and plays again, over and over, until you press START. A pass repeats
   its long green flashes every 5 s.
+- **Pressing START there** tells the program the picture can be read.
+  From then on the border stays steady and nothing repeats.
+- **The ROM test** (test 1) plays its code once: one long beep in a lower
+  pitch than the RAM's (330 Hz), then one short beep (660 Hz) per failed
+  item number, then the low beep. SELECT plays it again.
+- **Every other test** only shows its result. A pass plays the jingle; a
+  fail plays one low beep and waits for START with a red border.
+- **The final result** plays a code only for ROM and RAM faults: for the
+  RAM one long beep at the RAM's pitch (440 Hz), then one short beep per
+  bad bank number.
+- **OPTION** switches to full-screen flashes, and the flashing and
+  repeating come back while the text is off.
 
 Example: **long, long, pause, short ×5, low** = bank 2, bit D4.
 
@@ -337,9 +355,10 @@ means the tape didn't load correctly into RAM (a bad image checksum): see
 Only the low beep, on and off with no long or short beeps, means this tape
 needs more RAM than the machine has.
 
-The test numbers are the same on every tape: 1 ROMs, 2 keyboard, 3 console
-keys, 4 POKEY, 5 joysticks, 6 paddles, 7 GTIA. On `diag-32k-xl-xe`, 8 is
-the RAM.
+The test numbers are the same on every tape, disk file and the cartridge:
+0 RAM, 1 ROMs, 2 keyboard, 3 console keys, 4 joysticks, 5 paddles, 6 POKEY,
+7 GTIA. (Before version 0.5, 4 was POKEY, 5 joysticks, 6 paddles, and the
+RAM was 8.)
 
 ### Keys during a result
 
@@ -366,19 +385,9 @@ a sound keeps playing it until you answer.
 
 ### RAM test (`-01-ram`, and the start of `diag-32k-xl-xe`)
 
-**Video check.** First the tape checks that the screen works.
-
-![Video check](img/ram-01-video-check.png)
-
-1. The question. If you can read it and see eight colour bars, press any
-   key or the joystick button.
-2. Seconds left. With no answer the border turns purple, a siren sounds for
-   a moment and a 10 s last chance starts. Without an answer the test goes
-   on anyway, and the results say `VIDEO NOT CONFIRMED`.
-3. The whole character set: all 64 characters, then the same in inverse.
-4. What the tape found (the machine, all its RAM, PAL or NTSC), a checksum
-   of the character ROM, and where the screen is in RAM.
-5. The eight colour bars.
+There is no separate video check. The RAM result screen is the picture
+check: its code keeps flashing and beeping until you press START, and
+pressing START says you can see it.
 
 **Testing.** Each 16K bank is tested in turn; the screen says which. On a
 machine with a lot of RAM this takes a few minutes.
@@ -405,9 +414,8 @@ When a bank fails, its line shows the bad data bits:
 1. How to read the code.
 2. The failed bank and its bad bits. On an 800XL each data bit is one RAM
    chip; see [When something fails](#when-something-fails).
-3. The overall result, and `VIDEO NOT CONFIRMED` when nobody answered the
-   video check. The border is red while the code plays: here long ×1
-   (bank 1), short ×5 (bit D4).
+3. The overall result. The border is red while the code plays: here
+   long ×1 (bank 1), short ×5 (bit D4).
 
 **Summary** (machines with 16K or more). Next the tape tests the RAM it
 ran in itself (the "loader area"), then on an XL/XE the RAM under the
@@ -416,7 +424,7 @@ everything. On the 400 tape the second part does this:
 
 ![RAM summary, 400 tape](img/ram-04-summary.png)
 
-1. Low RAM, the display checks and the video check.
+1. Low RAM and the display checks.
 2. Every bank, and the area the tape itself ran in. On an XL/XE also the RAM
    under the OS, and on a 130XE the extra banks.
 3. The number of failures and the next tape.
@@ -427,7 +435,7 @@ moment), testing it and putting it back. The summary waits for you:
 
 ![RAM summary, 16K tape](img/16k-01-summary.png)
 
-1. Low RAM, the display checks and the video check.
+1. Low RAM and the display checks.
 2. Every bank, and the area the tape itself ran in.
 3. The number of failures and the next tape. A failure shows its first bad
    address and bits, with a hint (one bit: one RAM chip).
@@ -507,7 +515,7 @@ plays a tone over and over until you answer.
 3. The question about the speaker, answered with Y or START (yes) or N or
    SELECT (no). The border is purple while it waits.
 
-### Joysticks and paddles (`diag-400-04-ports`; tests 5 and 6)
+### Joysticks and paddles (`diag-400-04-ports`; tests 4 and 5)
 
 **Joysticks.** Move each joystick and press its button. Each direction and
 the button show inverse while active. START (or any key) ends the test.
@@ -532,11 +540,13 @@ test.
    still: a large jitter means a dirty or worn paddle. A `T` at the end
    means the paddle's button is pressed.
 
-### Sound and video (`diag-400-05-av`; tests 4 and 7)
+### Sound and video (`diag-400-05-av`; tests 6 and 7)
 
 **POKEY.** The sound chip's timer and random-number generator are checked
-automatically. Then each of its four voices plays a pure tone, one at a
-time, over and over until you answer whether you heard it (items 3-6).
+automatically. Then each of its four voices plays a rising scale, eight
+notes from C to C, one voice at a time, over and over until you answer
+whether you heard it (items 3-6). A voice that plays some notes wrong
+counts as not heard.
 Last, voice 1 plays noise, a steady hiss (item 7): the noise comes from a
 part of the chip the pure tones don't use.
 
@@ -546,17 +556,19 @@ part of the chip the pure tones don't use.
 2. The voice playing now.
 3. The question: Y or START = yes, N or SELECT = no.
 
-**GTIA.** First, eight brightness steps and sixteen colours, drawn down the
-screen (item 1). Then the sprites (item 2): the word ATARI, made of the four
-players and the four missiles, scrolls across the screen in rainbow colours
-that move down the letters. Answer whether each looks right.
+**GTIA.** One screen: eight brightness steps, sixteen colours, and under
+them the sprites: the word ATARI, made of the four players and the four
+missiles, scrolling across in rainbow colours that move down the letters.
+Answer whether it all looks right (item 1). Without a working screen the
+test is skipped.
 
-![GTIA ramps](img/av-02-gtia.png)
+![GTIA](img/av-02-gtia.png)
 
 1. PAL or NTSC, as the machine reports it.
 2. Eight even steps from black to white.
 3. Sixteen different colours.
-4. The question: do they look right?
+4. ATARI, scrolling.
+5. The question: does it look right?
 
 ### The menu (`diag-16k-02-system` and `diag-32k-xl-xe`)
 
@@ -565,9 +577,8 @@ menu.
 
 ![Menu](img/system-01-menu.png)
 
-1. The tests, with their state: `-` not run yet, PASS, or FAIL and the
-   failed items. They're listed in the order they run, which is why 5 and
-   6 come before 4.
+1. The tests, in order, with their state: `-` not run yet, PASS, or FAIL
+   and the failed items.
 2. `ALL OF THEM, IN ORDER`, highlighted when the menu first appears: one
    press of START runs everything.
 3. The results and the final code.
@@ -594,32 +605,32 @@ One tape, one load, for any machine with 32K or more:
 
 ![32K RAM summary](img/32k-01-summary.png)
 
-1. Low RAM, the display checks and the video check.
+1. Low RAM and the display checks.
 2. Every bank, the area the tape ran in, and here (an XL) the RAM under the
    OS as bank 4.
 3. The result and what's next.
-4. START goes on to the system tests.
+4. START goes on to the menu.
 
 5. The seven tests, with the menu:
 
 ![32K menu](img/32k-02-menu.png)
 
-1. The tests.
-2. All of them, in order.
-3. The results.
-4. `0 RAM TEST AGAIN`: the whole RAM test from the start, with the RAM
-   result so far beside it. Choose it with SELECT and START, or press 0.
-   After the RAM summary, START brings you back to this menu, with the
-   other tests cleared to `-`.
+1. `0 RAM`: the whole RAM test again from the start, with the RAM result
+   so far beside it. Choose it with SELECT and START, or press 0. After
+   the RAM summary, START brings you back to this menu, with the other
+   tests cleared to `-`.
+2. The tests.
+3. All of them, in order.
+4. The results.
 5. The keys.
 
-At the end, RAM faults show up again as test 8, with the bank as the item:
+At the end, RAM faults show up again as test 0, with the bank as the item:
 
 ![32K results](img/32k-03-results.png)
 
-1. The seven tests.
-2. Test 8: the RAM. FAIL with the bank numbers if any RAM failed; the code
-   plays them as long ×8, then short × bank.
+1. Test 0: the RAM. FAIL with the bank numbers if any RAM failed; the code
+   plays one long beep, then short × bank.
+2. The seven tests.
 3. The ROMs: here a real XL OS rev 2 and BASIC rev A.
 
 During the ROM test the screen goes blank for about a third of a second:

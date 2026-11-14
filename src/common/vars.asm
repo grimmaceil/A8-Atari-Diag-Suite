@@ -77,6 +77,8 @@ XERAM	= BSS+$DE	; nonzero: 130XE extended banks found
 XEBANK	= BSS+$DF	; extended bank being tested (0-3)
 RAMK	= BSS+$F9	; all the RAM found, in K (boot.asm: for the machine line)
 HSEL	= BSS+$FA	; hold: it ended on SELECT (report: play the code again)
+SKIPRAM	= BSS+$FE	; nonzero: CTRL+S skipped the first RAM test (SKIPKEY builds)
+SLATCH	= BSS+$FD	; START was seen down during a delay (a tap in mid-tone counts)
 QUIET	= BSS+$FB	; the picture is confirmed (VIDEOOK) and the text is on: the
 			; reporter keeps the border steady and doesn't repeat (screen.asm)
 

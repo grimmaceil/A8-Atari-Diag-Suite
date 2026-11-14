@@ -64,13 +64,20 @@ tt_ly	.byte >[600*157/10+255], >[200*157/10+255], >[600*157/10+255], >[100*157/1
 ; ---------------------------------------------------------------------------
 ; delay: X + 256*(Y-1) scanlines, timed by WSYNC. While SPKMASK=$08 it also
 ; drives the console speaker at ~980 Hz, so a beep is still heard if POKEY is
-; dead. (The OS keyclick drives CONSOL the same way.) Returns via RET2.
+; dead. (The OS keyclick drives CONSOL the same way.) It also notes START
+; held down (SLATCH), so a short tap during a tone isn't lost: hold and
+; rpkey take it as a press. Returns via RET2.
 delay
 dl_lp	sta WSYNC
 	txa
 	and #7
 	bne dl_nt
-	lda SPKPH
+	lda CONSOL
+	lsr
+	bcs dl_ns
+	lda #1
+	sta SLATCH
+dl_ns	lda SPKPH
 	eor SPKMASK
 	sta SPKPH
 	sta CONSOL
@@ -234,12 +241,15 @@ rp_rep	jmp rp_top
 ; CONTVEC (if one is set) and doesn't come back. (hold clears HARMED, so
 ; after a pause the controls must be seen released again.)
 rpkey	jsr inputs
+	ldx HARMED
 	bne rq_in
-	lda #1
-	sta HARMED
+	ldx #0			; not seen released yet: nothing counts
+	stx SLATCH
+	cmp #0
+	bne rq_x
+	inc HARMED
 	rts
-rq_in	ldx HARMED
-	beq rq_x
+rq_in	ora SLATCH
 	lsr
 	bcc rq_x
 	ldx CONTVEC+1
@@ -310,11 +320,15 @@ ho_lp	lda HOLDC
 	lda STACKOK
 	beq ho_n
 	jsr inputs
+	ldx HARMED
 	bne ho_in
-	lda #1			; all released
-	sta HARMED
+	ldx #0			; not seen released yet: nothing counts
+	stx SLATCH
+	cmp #0
 	bne ho_n
-ho_in	ldx HARMED
+	inc HARMED		; all released
+	bne ho_n
+ho_in	ora SLATCH
 	beq ho_n
 	lsr			; bit 0: go on
 	bcc ho_sel
@@ -357,6 +371,7 @@ in_x	lda INB
 ; waitrel: wait until every control is released.
 waitrel	jsr inputs
 	bne waitrel
+	sta SLATCH		; (0)
 	rts
 
 ; scrtoggle: text results <-> full-screen flashes (ANTIC off, easier to

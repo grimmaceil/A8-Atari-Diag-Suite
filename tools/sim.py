@@ -619,6 +619,7 @@ def main():
     ap.add_argument('--xejunk', action='store_true',
                     help='130XE: extended RAM holds random bytes at power-on, as real RAM does')
     ap.add_argument('--pal', action='store_true')
+    ap.add_argument('--kb', default='', help='CODE:SECS[:HOLD],...  a key by its KBCODE (hex), e.g. BE:2:8 = CTRL+S from 2 s for 8 s')
     ap.add_argument('--busnoise', action='store_true',
                     help='400/800: $C000-$CFFF (nothing there) reads back random bytes')
     ap.add_argument('--key', default='', help='seconds at which a key is pressed, e.g. 3,30')
@@ -702,6 +703,9 @@ def main():
     snaps = sorted(to_line(t) for t in a.snap.split(',') if t)
     hw = Atari(a.ram, stuck, a.mirror, a.xl or a.xe, a.pal, keys, a.xe, xstuck)
     hw.busnoise = a.busnoise
+    for k in (x for x in a.kb.split(',') if x):
+        c, t, *h = k.split(':')
+        hw.press(to_line(t), 'KB', int(c, 16), float(h[0]) if h else 0.25)
     if a.osrom:
         hw.osrom = Path(a.osrom).read_bytes()
         assert len(hw.osrom) in (0x2800, 0x4000), 'an OS ROM is 10K or 16K'
@@ -775,7 +779,7 @@ def main():
     insert_at = to_line(a.insert[0]) if a.insert else None
     frame = 0
     auto = Auto(hw, [d for d in a.deny.split(',') if d], a.skip, a.menuwalk,
-                [0x32 if c == '0' else WALK[int(c) - 1]
+                [0x32 if c == '0' else 0x35 if c == '8' else WALK[int(c) - 1]
                  for c in a.walk] if a.walk else None,
                 a.skiponce) if a.auto else None
     next_auto = 0
@@ -850,6 +854,8 @@ def main():
         img = bytes(hw.ram[0x801] * 128)
         load = 0x0800
     bss = load + len(img)
+    if car is not None and hw.caron:     # the tests run from ROM: BSS is at $0800
+        bss = 0x0800
     if 0x2006 in entered:                  # stage 2's BSS follows its image
         bss = 0x2000 + hw.ram[0x2001] * 128
     bad = [hw.ram[bss + 0x40 + b] for b in range(10)]

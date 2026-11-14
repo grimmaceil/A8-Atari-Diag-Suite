@@ -19,12 +19,27 @@
 ;                                     it page-tests this stage's RAM
 ;   ONE32=1 (with ONE16)              the 32k+ tape: the same, with the
 ;                                     system tests in the image too
+;   ROM=1 (with ONE16)                the cartridge's bank 0: runs from ROM
+;                                     at $A000 (cart/romsum.asm), BSS at
+;                                     $0800; START at the summary goes to
+;                                     the menu's bank
 
 	icl '../common/hw.asm'
 	icl '../common/vars.asm'
 	icl '../common/faults.asm'
 
+	.ifdef ROM		; CTRL+S skips the RAM test, on the cartridge and
+SKIPKEY	= 1			; the disk file (not from tape: the wait was the
+	.elseif .def XEX	; load)
+SKIPKEY	= 1
+	.endif
 	opt h-
+	.ifdef ROM
+LOAD	= $A000
+	org LOAD
+	jmp entry		; power-on
+	jmp again		; from the menu: the RAM test again
+	.else
 LOAD	= $0800
 	org LOAD
 
@@ -34,9 +49,16 @@ LOAD	= $0800
 	.byte NREC
 	.word LOAD
 	.word init_rts
+	.endif
 
 	icl '../common/boot.asm'
 	jsr dprereq
+	.ifdef SKIPKEY
+	jsr skipchk
+	.endif
+	.ifdef ROM
+	jsr undercart		; the 8K under the cartridge (cart/undercart.asm)
+	.endif
 	lda DISPOK		; no display: beeps only (ANTIC stays off)
 	beq rt_go
 	jsr ramscreen
@@ -60,7 +82,11 @@ res_lp	lda BADMASK,x
 res_bad	jmp report
 	.endif
 
+	.ifdef ONE16		; (no results here: stage 2's summary has them)
+redraw	= ramscreen
+	.else
 redraw	= results		; scrtoggle's text screen
+	.endif
 
 	.if .not .def ONE16
 	icl '../common/loader.asm'
@@ -84,6 +110,7 @@ ag_cl	sta BSS,x
 	sta COLBK
 	jmp lowram
 	.endif
+	.ifndef ONE16		; (the loader's, and the results')
 ; clrrow: blank row A.
 clrrow	ldx #0
 	jsr at
@@ -93,6 +120,7 @@ cr_lp	jsr putc
 	dex
 	bne cr_lp
 	rts
+	.endif
 
 	icl '../common/display.asm'
 
@@ -101,7 +129,11 @@ cr_lp	jsr putc
 ; block (tested in findscr). Below TSTART is low RAM (tested) and this stage.
 ramtest	lda #1
 	sta CURBANK
-rt_bank	jsr bankrange
+rt_bank
+	.ifdef SKIPKEY
+	jsr skipchk		; (looked at between banks: hold it down)
+	.endif
+	jsr bankrange
 	bcs rt_next
 	inc NBANKS
 	jsr showbank
@@ -163,6 +195,20 @@ br_e	sta RBE
 
 ; ---------------------------------------------------------------------------
 ; Text screens for the RAM test.
+	.ifdef SKIPKEY
+; skipchk: CTRL+S held: no RAM test (or no more of it). Stage 2 sees
+; SKIPRAM and goes straight on to the menu, which shows the RAM as SKIPPED.
+skipchk	lda SKSTAT
+	and #4
+	bne sk_x
+	lda KBCODE
+	cmp #$BE		; CTRL + S
+	bne sk_x
+	inc SKIPRAM
+	jmp PAYAT+6		; (stage 2 sets the stack up again)
+sk_x	rts
+	.endif
+
 ramscreen jsr scr_on
 	lda #C_YELLOW
 	sta COLBK
@@ -171,6 +217,9 @@ ramscreen jsr scr_on
 	jsr header
 	lda #2
 	jsr machinfo
+	.ifdef SKIPKEY
+	PRINT 23, 0, s_skip
+	.endif
 	lda #3
 	jmp chinfo
 
@@ -183,6 +232,7 @@ showbank lda DISPOK
 	jmp putc
 sb_x	rts
 
+	.ifndef ONE16
 ; results: one line per bank (plus the bad bits for a failed one), then the
 ; overall result. The full detail (first error, hint) is on stage 2's summary.
 ;   BANK 2 $4000-$7FFF  FAIL
@@ -294,9 +344,13 @@ rs_bad	lda #<s_somefail
 	ldy #>s_somefail
 	jmp puts
 
+	.endif
+
 ; ---------------------------------------------------------------------------
 ; Strings, in screen codes ($FF ends).
-	.if .def ONE32			; header prefix: the tape's name
+	.if .def ROM			; header prefix: the tape's name
+s_hpre	dta d' DIAG-CART  ',$FF
+	.elseif .def ONE32
 	.ifdef XEX			; the disk file (build.py)
 s_hpre	dta d' DIAG-32K-XEX  ',$FF
 	.elseif .def CART		; the cartridge (build.py)
@@ -310,7 +364,11 @@ s_hpre	dta d' DIAG-16K-01-RAM  ',$FF
 s_hpre	dta d' DIAG-400-01-RAM  ',$FF
 	.endif
 s_hram	dta d'RAM TEST',$FF
+	.ifdef SKIPKEY
+s_skip	dta d'HOLD CTRL+S TO SKIP THE RAM TEST',$FF
+	.endif
 s_testing dta d'TESTING BANK ',$FF
+	.ifndef ONE16
 s_legend dta d'CODE: LONG=BANK, SHORT=BIT (D0=1)',$FF
 s_bank	dta d'BANK ',$FF
 s_dol	dta d' $',$FF
@@ -333,6 +391,7 @@ s_l2_hdr dta d'NOT ON TAPE',$FF
 s_l2_sum dta d'BAD CHECKSUM',$FF
 s_allpass dta d'ALL RAM PASSED',$FF
 s_somefail dta d'FAIL: SEE THE CODE'*,$FF
+	.endif
 
 init_rts rts
 
@@ -346,7 +405,13 @@ NPAT	= *-pats
 	icl '../common/screen.asm'
 	icl '../common/ramtest.asm'
 	icl '../common/info.asm'
+	.ifndef ONE16
 	icl '../common/bits.asm'
+	.endif
+	.ifdef ROM
+	icl '../cart/romsum.asm'
+	icl '../cart/undercart.asm'
+	.endif
 
 
 	.ifdef ONE16
@@ -358,6 +423,14 @@ PAYPAD	= [[*+$FF]/$100]*$100
 PAYAT	ins '../../build/payload16.bin'
 	.endif
 
+	.ifdef ROM
+	.if *>$BFE0
+	.error "the cartridge's RAM bank is over 8K (the tail starts at $BFE0)"
+	.endif
+IMGEND
+BSS	= $0800			; in RAM: the page above low RAM
+TSTART	= [>BSS]+1
+	.else
 ; Pad to a whole page; the last two bytes hold the image sum (mkcas.py).
 PADTO	= [[*+2+$FF]/$100]*$100
 	.if PADTO-*-2>0
@@ -368,3 +441,4 @@ IMGEND
 NREC	= [IMGEND-LOAD]/128
 BSS	= IMGEND
 TSTART	= [>BSS]+1
+	.endif

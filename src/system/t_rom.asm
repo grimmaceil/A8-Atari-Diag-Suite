@@ -66,6 +66,11 @@ tr_osok	jsr mixed
 	lda #2
 	ora ROMHAVE
 	sta ROMHAVE
+	.ifdef ROM		; the cartridge build: what is at $A000 is this
+	lda #18			; cartridge (the bank this runs in; its sum was
+	sta BASID		; checked on the way in), shown with its CRC
+	bne tr_font
+	.endif
 	jsr basname
 	cmp #$FF
 	bne tr_font
@@ -657,6 +662,9 @@ tab_bas	.byte 3			; BASIC revisions A, B, C: the 400/800's cartridge
 romnames .word n_ab, n_antsc, n_bntsc, n_apal, n_r10, n_r11, n_r1, n_r2
 	.word n_r3, n_r3a, n_r3b, n_r4, n_r5, n_r59, n_r59a
 	.word n_basa, n_basb, n_basc
+	.ifdef ROM
+	.word n_self
+	.endif
 n_ab	dta d'A/B, ANY',$FF
 n_antsc	dta d'A NTSC',$FF
 n_bntsc	dta d'B NTSC',$FF
@@ -675,6 +683,9 @@ n_r59a	dta d'59A',$FF
 n_basa	dta d'A',$FF
 n_basb	dta d'B',$FF
 n_basc	dta d'C',$FF
+	.ifdef ROM
+n_self	dta d'DIAG',$FF
+	.endif
 s_rev	dta d'REV ',$FF
 s_unk	dta d'UNKNOWN'*,$FF
 s_unkb	dta d'NOT IN THE TABLE',$FF
