@@ -138,6 +138,8 @@ ramat	sta PTR+1
 XEKEEP	= %11100011		; PORTB bits left as they were
 xebanks	lda PORTB
 	sta PBSAVE
+	lda $4000		; (main RAM's byte: put back at the end. It can
+	pha			; be part of the program)
 	lda #$5A		; extended RAM exists if bank 0 and main RAM differ
 	sta $4000
 	ldx #0
@@ -155,7 +157,10 @@ xebanks	lda PORTB
 	beq xe_have
 xe_back	lda #0
 	sta BANKOVR
-	jmp xemain
+	jsr xemain
+	pla
+	sta $4000
+	rts
 xe_have	inc XERAM
 	jsr xemain
 	jsr xeprog		; the stage's progress line

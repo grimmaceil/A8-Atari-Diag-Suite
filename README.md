@@ -17,10 +17,13 @@ slow (about 3K a minute), so there are three sets, by RAM size: the more
 RAM, the fewer tapes. Each set works on every machine with at least that
 much RAM, newer models included. With a disk drive, the 32k+ tape and the
 memory test also come as **disk files** (`.xex`, in `disks/`) that load in
-seconds. All of it is also on one **cartridge** (`carts/diag-cart.car`):
-plug it in, switch on, pick a test.
+seconds. All of it is also on one **cartridge** (in `carts/`): plug it in,
+switch on, pick a test.
 
-Version 0.3.
+Version 0.4. Every file has its version in its name
+(`diag-32k-xl-xe-v0.4.xex`) and every screen shows it at the right of the
+title bar (`V0.4`), so you can tell which one you are running. The names
+below leave the `-v0.4` out.
 
 ![The menu](docs/img/system-01-menu.png)
 
@@ -53,6 +56,39 @@ and beeps, loading from a PC, and what to do when something fails.
 
 ## Versions
 
+- **0.4** (2026-11-14)
+  - Fixed: a real 800 could be taken for an XL/XE. The test looked at what
+    `$C000` reads, where a 400/800 has nothing, and an idle bus can read
+    back anything. Then the ROM test compared the OS with the XL/XE tables
+    (`UNKNOWN`, with sums that changed from run to run) and only joystick
+    and paddle ports 1-2 were tested. The machine is now told apart by the
+    direction of the PIA's port B, which the OS sets: outputs on an XL/XE,
+    inputs on a 400/800.
+  - Quieter once the picture is confirmed (a key at the video check; on
+    the tapes without one, the display checks passing). A fault's beep code
+    plays once, then the border stays steady red and silent, and SELECT
+    plays the code again. The border doesn't flash while the text is up.
+    The end of a tape stays green and silent. The memory test doesn't beep
+    after each pass. Without a confirmed picture, and with full-screen
+    flashes (OPTION), everything is as before.
+  - A key now counts between the beeps of a code, not only in the pause
+    after it.
+  - The menu no longer blanks the screen when the highlight moves.
+  - POKEY test: a new item 7, noise. After the four voices, voice 1 plays
+    as a hiss; a POKEY whose polynomial counter is dead plays the pure
+    tones but not this.
+  - The version is in every file name and on every title bar.
+  - Fixed: the 130XE check left a wrong byte at `$4000` in the 32k+
+    tape, disk file and cartridge (one wrong character in the GTIA test).
+  - Fixed: the tapes without a RAM test accepted a screen block with a bit
+    stuck through all of it, and showed garbled text.
+  - Fixed: with no working screen block, the console key test wrote its
+    text over page zero and crashed.
+  - The cartridge menu: too little RAM for one program shows the message
+    and comes back to the menu, so the other can still be picked.
+  - The video check shows all 64 characters, normal and inverse.
+  - `diag-400-memtest` no longer shows the character ROM sum (no room in
+    8K); `diag-400-01-ram` shows it.
 - **0.3** (2026-11-08)
   - Fixed: on a 130XE the 32k+ tape and `diag-32k-xl-xe.xex` crashed as
     the RAM test went from the RAM under the OS to extended bank 5. Their

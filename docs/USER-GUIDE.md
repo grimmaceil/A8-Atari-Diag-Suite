@@ -1,6 +1,11 @@
 # A8 Cassette Diagnostics: User Guide
 
-Version 0.3
+Version 0.4
+
+Every file has its version in its name (`diag-32k-xl-xe-v0.4.cas`), and
+every screen shows it at the right of the title bar (`V0.4`). If the two
+don't match, or a screen shows no version, you are running an older file.
+This guide leaves the `-v0.4` out of the names.
 
 These tapes test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
 800XL, 65XE, 800XE, 130XE and XE Game System. You load them like any
@@ -307,8 +312,21 @@ Every flash comes with a beep, so you can read the code by eye or by ear.
 | low beep (about 0.6 s, 220 Hz) | bright red | the end of the list |
 
 A fault plays as: long beeps (where), a pause, short beeps (what), and so
-on for each bad bit or item, then the low end beep. Then the border holds
-steady red for 3 s and the code plays again.
+on for each bad bit or item, then the low end beep.
+
+What happens next depends on whether the tape knows you can read the
+screen. It does once you have pressed a key at the video check, or, on the
+tapes that have no video check, once the display checks have passed:
+
+- **Picture confirmed:** the code plays once, without flashing the border.
+  Then the border stays steady red and silent, with the result on the
+  screen. SELECT plays the code again. A pass at the end of a tape stays
+  steady green and silent, and the memory test doesn't beep after each
+  pass.
+- **Picture not confirmed, or full-screen flashes chosen with OPTION:** the
+  border flashes with every beep, the border holds steady red for 3 s and
+  the code plays again, over and over. A pass at the end of a tape repeats
+  its long green flashes every 5 s.
 
 Example: **long, long, pause, short ×5, low** = bank 2, bit D4.
 
@@ -327,7 +345,7 @@ the RAM.
 
 | Key | Does |
 |---|---|
-| START, any key, or a joystick button | go on |
+| START, any key, or a joystick button | go on (between the beeps of a code too) |
 | SELECT | play the beep code again |
 | OPTION | switch between the text screen and full-screen flashes (the whole screen flashes with the code: easier to see when the picture is garbled) |
 
@@ -357,7 +375,7 @@ a sound keeps playing it until you answer.
 2. Seconds left. With no answer the border turns purple, a siren sounds for
    a moment and a 10 s last chance starts. Without an answer the test goes
    on anyway, and the results say `VIDEO NOT CONFIRMED`.
-3. The whole character set, normal and inverse.
+3. The whole character set: all 64 characters, then the same in inverse.
 4. What the tape found (the machine, all its RAM, PAL or NTSC), a checksum
    of the character ROM, and where the screen is in RAM.
 5. The eight colour bars.
@@ -517,8 +535,10 @@ test.
 ### Sound and video (`diag-400-05-av`; tests 4 and 7)
 
 **POKEY.** The sound chip's timer and random-number generator are checked
-automatically. Then each of its four voices plays, one at a time, over and
-over until you answer whether you heard it.
+automatically. Then each of its four voices plays a pure tone, one at a
+time, over and over until you answer whether you heard it (items 3-6).
+Last, voice 1 plays noise, a steady hiss (item 7): the noise comes from a
+part of the chip the pure tones don't use.
 
 ![POKEY voices](img/av-01-pokey.png)
 

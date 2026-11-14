@@ -8,7 +8,8 @@
 ; START or SELECT picks one. If the RAM is there, the image is copied to
 ; $0800, the cartridge switches itself off (all the RAM is the test's) and
 ; the image starts at $0806, as from tape or disk. Too little RAM: one
-; line, red border, the low tone on and off, as the tapes do.
+; line, red border and the low tone for a moment, then the menu again (the
+; other program may fit).
 ;
 ; Banks: an access to $D500+n selects bank n (0-15), one to $D510-$D51F
 ; switches the cartridge off until the power goes off.
@@ -136,7 +137,7 @@ release	lda CONSOL
 	bne release
 	rts
 
-; short: "NEEDS nnK RAM. THIS MACHINE HAS nnK." and halt.
+; short: "NEEDS nnK RAM. THIS MACHINE HAS nnK.", then back to the keys.
 short	ldy #0
 	ldx #0
 sh_a	lda s_need,x
@@ -162,8 +163,8 @@ sh_b	lda s_has,x
 	sta COLBK
 	lda #F_END
 	sta AUDF1
-	lda #AUD_ON		; 0.6 s on, 0.6 s off, for good (as boot.asm)
-sh_tone	sta AUDC1
+	lda #AUD_ON		; 0.6 s
+	sta AUDC1
 	ldy #37
 sh_wy	ldx #0
 sh_wx	sta WSYNC
@@ -171,8 +172,12 @@ sh_wx	sta WSYNC
 	bne sh_wx
 	dey
 	bne sh_wy
-	eor #AUD_ON^AUD_OFF
-	jmp sh_tone
+	lda #AUD_OFF
+	sta AUDC1
+	lda #C_MENUBK
+	sta COLBK
+	jsr release
+	jmp mn_key
 
 ; putk: A pages as "nnK" at LINE,Y (no leading zero); Y moves on.
 putk	lsr
@@ -213,7 +218,7 @@ dlist	:4 dta $70		; 32 blank lines
 text
 	dta d'                                        '
 	dta d'        A8 DIAGNOSTICS CARTRIDGE        '
-	dta d'                                        '
+	dta d'              VERSION ',[VMAJ+$10],d'.',[VMIN+$10],d'               '
 	dta d'                                        '
 	dta d'  START   THE DIAGNOSTIC TESTS:         '
 	dta d'          RAM, ROMS, KEYBOARD, CONSOLE  '

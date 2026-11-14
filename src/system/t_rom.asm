@@ -26,7 +26,7 @@ BASID	= T3D+$16
 ROMHAVE	= T3D+$17		; bit 1: BASIC/cartridge read, bit 2: halves read,
 				; bit 3: it is a cartridge
 CRCSV	= TSCR+$00		; 16: the first read, for the re-read to match
-PGLEFT	= TSCR+$10		; crcpg: pages to go
+PGLEFT	= $8A			; crcpg: pages to go (zero page: see osread)
 RTAB	= TSCR+$11		; crcid: the table's entries left
 CIENT	= TSCR+$12		; crcid: offset of the entry being compared
 
@@ -130,14 +130,18 @@ or_xl	jsr crcnew		; XL/XE: the whole 16K image
 	.endif			; ROM as a display list, follow its jumps, and
 				; stay lost after the RAM came back. (The other
 				; tapes' screens are all below $5000.)
+; While the self-test ROM is in, the RAM at $5000-$57FF is out of reach: on
+; the 32k+ tape that can be the work page (BSS) as well as the screen. So
+; this stretch uses only the stack and zero page (crcpg does too), and the
+; code itself must be outside the window (checked below).
 	lda PORTB		; the self-test ROM in, for $D000-$D7FF
-	sta PBSAVE
+	pha
 	and #$7F
 	sta PORTB
 	lda #$50
 	ldx #8
 	jsr crcpg
-	lda PBSAVE
+	pla
 	sta PORTB
 	.ifdef CHAIN
 	jsr scr_re
@@ -387,6 +391,14 @@ cb_n	dex
 	dec PGLEFT
 	bne cp_lp
 	rts
+
+	.ifdef CHAIN
+	.if *>$5000
+	.if osread<$5800
+	.error "t_rom's ROM read is inside $5000-$57FF, where the self-test ROM comes in"
+	.endif
+	.endif
+	.endif
 
 ; crcid: look up the CRC at OSCRC+X in the table at A/Y: a count, then
 ; entries of the CRC32 (low byte first) and a name number. A = the name

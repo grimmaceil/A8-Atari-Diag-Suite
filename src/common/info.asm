@@ -37,6 +37,7 @@ mi_v	jsr puts
 	jmp puts
 mi_x	rts
 
+	.ifndef NOFONT
 ; chinfo: "CHAR ROM $xxxx  SCREEN $xx00" on row A.
 chinfo	ldx #0
 	jsr at
@@ -59,6 +60,7 @@ ci_s	lda #<s_scr
 	jsr puthex
 	lda #0
 	jmp puthex
+	.endif
 
 
 s_800	dta d'FOUND: 400/800',$FF	; what the tape detected
@@ -67,7 +69,9 @@ s_ram	dta d'  RAM ',$FF
 s_pal	dta d'K  PAL',$FF
 s_ntsc	dta d'K  NTSC',$FF
 s_cartin dta d'  CART IN'*,$FF
+	.ifndef NOFONT
 s_chrom	dta d'CHAR ROM $',$FF
 s_unstab dta d' UNSTABLE',$FF
 s_scr	dta d'  SCREEN $',$FF
+	.endif
 

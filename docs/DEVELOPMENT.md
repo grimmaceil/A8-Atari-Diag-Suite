@@ -30,8 +30,14 @@ The tapes were built and tested with:
 python tools/build.py              # every tape, disk file and the cartridge: build/ (all output), cassettes/, disks/ and carts/ (the releases)
 python tools/build.py --nodeploy   # the same, without copying the changed tapes to the MiSTer share
 python tools/build.py --fault 2,5  # extra builds with a stuck bit 5 in bank 2, to hear a fail code
-python tools/build.py --fast       # skip the $55/$AA march pass (quicker runs)
+python tools/build.py --fast       # skip the $55/$AA march pass (quicker runs); build/ only, the releases aren't touched
 ```
+
+The version is `VERSION` in `tools/build.py`. It goes into every release
+file's name (`cassettes/diag-...-v0.4.cas`; `build/` keeps the plain names,
+which the simulator examples below use) and onto every title bar
+(`screen.asm`'s header). A build removes the release files of other
+versions.
 
 Every build copies the release tapes that changed to the share
 (`SHARE` in `tools/build.py`, the MiSTer core's `_diag` folder), so a new
@@ -168,9 +174,9 @@ as a picture. `--auto` answers the prompts as a person would; `--menuwalk`
 runs the menu's tests one by one.
 
 ```
-python tools/sim.py cassettes/diag-400-03-input.cas --auto --until 90
-python tools/sim.py cassettes/diag-400-01-ram.cas --stuck 2:5:1 --until 200
-python tools/sim.py cassettes/diag-32k-xl-xe.cas --xl --auto --until 900
+python tools/sim.py build/diag-400-03-input.cas --auto --until 90
+python tools/sim.py build/diag-400-01-ram.cas --stuck 2:5:1 --until 200
+python tools/sim.py build/diag-32k-xl-xe.cas --xl --auto --until 900
 python tools/sim.py disks/diag-32k-xl-xe.xex --ram 0x4000 --until 4 --snap 3.5   # the guard
 ```
 

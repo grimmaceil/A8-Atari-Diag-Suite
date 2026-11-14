@@ -101,6 +101,7 @@ vs_2	lda VCOUNT
 	bcs vs_2
 	rts
 
+	.ifdef NEEDYN
 ; yesno: wait for the answer, as long as it takes. C set: Y or START. C
 ; clear: N or SELECT. Console keys too, so a dead keyboard can answer. The
 ; border is purple while it waits, so a question shows without a picture.
@@ -111,6 +112,7 @@ vs_2	lda VCOUNT
 YNSND	= BSS+$F4
 YNV	= BSS+$F5		; POKEY voice times 2 (its AUDF/AUDC offset)
 YNFRM	= BSS+$F6		; frame in the on/off cycle
+YNC	= BSS+$F8		; YNSND 1: the voice's AUDC (a pure tone, or noise)
 yesno	jsr waitrel
 	lda #C_PURPLE
 	sta COLBK
@@ -169,13 +171,17 @@ yn_x	php
 ; tone: ynon makes 0.7 s of it then and there (WAITMS toggles the speaker).
 ynon	lda YNSND
 	beq yo_x
+	.ifdef WANT_POK
 	cmp #1
 	bne yo_spk
 	ldx YNV
 	lda #F_LONG
 	sta AUDF1,x
-	lda #AUD_ON
+	lda YNC
 	sta AUDC1,x
+	.else
+	bne yo_spk
+	.endif
 yo_x	rts
 yo_spk	lda #$08
 	sta SPKMASK
@@ -185,13 +191,17 @@ yo_spk	lda #$08
 	lda #42			; that was the on time: on to the gap
 	sta YNFRM
 	rts
-ynoff	lda YNSND
+ynoff
+	.ifdef WANT_POK
+	lda YNSND
 	cmp #1
 	bne yf_x
 	ldx YNV
 	lda #AUD_OFF
 	sta AUDC1,x
+	.endif
 yf_x	rts
+	.endif
 
 ; tresult: the end of test TEST. A pass gives the jingle and goes on after
 ; ~2 s (OPTION holds it). A fail plays that test's code (only that one) and
@@ -382,8 +392,10 @@ MNT	= BSS+$F3		; tests on the tape
 
 menu	lda #0
 	sta MMODE
+	lda #C_BLACK		; a steady border, whatever the last test left
+	sta COLBK
 	jsr mdraw
-	jsr waitrel
+mn_rel	jsr waitrel
 mn_lp	jsr vsync
 	lda CONSOL
 	eor #7
@@ -441,7 +453,8 @@ mn_up	ldx MSEL		; OPTION: up, round to the bottom
 	inx
 	.endif
 mn_set	stx MSEL
-	jmp menu
+	jsr mlines		; just the lines: no blanking, no flicker
+	jmp mn_rel
 
 ; mgo: run the highlighted line: a test, all of them, or the results.
 mgo	jsr waitrel
@@ -484,7 +497,10 @@ mdraw	jsr scr_on
 	jsr header
 	lda #2
 	jsr machinfo
-	ldx #0
+	PRINT 18, 0, s_m1
+	PRINT 19, 0, s_m2
+; mlines: the menu's lines, the highlighted one in inverse (over the old).
+mlines	ldx #0
 md_lp	stx CNT
 	lda #0			; the highlighted line in inverse
 	cpx MSEL
@@ -602,8 +618,6 @@ md_gx
 	.endif
 	lda #0
 	sta INV
-	PRINT 18, 0, s_m1
-	PRINT 19, 0, s_m2
 	rts
 
 kdigit	.byte $1F, $1E, $1A, $18, $1D, $1B, $33	; KBCODEs of 1-7
@@ -729,15 +743,6 @@ cr_lp	jsr putc
 	bne cr_lp
 	rts
 
-; hex4: "$" A X (A = high byte).
-hex4	pha
-	lda #4			; '$'
-	jsr putc
-	pla
-	jsr puthex
-	txa
-	jmp puthex
-
 bitn	.byte 1, 2, 4, 8, 16, 32, 64, 128
 
 tnames	.word s_t1, s_t2, s_t3, s_t4, s_t5, s_t6, s_t7
@@ -755,9 +760,11 @@ s_test	dta d'TEST ',$FF
 s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_items	dta d', ITEMS',$FF
-s_tpass	dta d'NEXT TEST IN 2 S.  OPTION = FLASH      ',$FF
+s_tpass	dta d'NEXT TEST IN 2 S.  OPTION = FLASH',$FF
 s_toggle dta d'START=GO ON SELECT=RE-BEEP OPTION=FLASH',$FF
 s_toggle4 dta d'START=AGAIN SELECT=RE-BEEP OPTION=FLASH',$FF
 s_items2 dta d'FAIL N: ITEM N. THE CODE IS TEST, ITEM.',$FF
+	.ifdef NEEDYN
 s_heard	dta d'HEARD IT? Y/START = YES, N/SELECT = NO',$FF
+	.endif
 s_hres	dta d'RESULTS',$FF

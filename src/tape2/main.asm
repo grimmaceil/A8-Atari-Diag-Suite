@@ -140,8 +140,9 @@ cl_log	sta FIRSTLO,x
 	sta FIRSTLO+$100,x
 	inx
 	bne cl_log
-	jsr detect
 	jsr dprereq
+	lda DISPOK		; no video check here: the display checks passing
+	sta VIDEOOK		; counts as the picture confirmed (report.asm)
 	.ifdef BOUNCE
 	lda #BOFF
 	ldx MACHINE
@@ -513,8 +514,10 @@ so_no	clc
 	rts
 
 ; pulse: the green end-of-pass flash and beep, then the state color.
-pulse	BEEP T_J1
-	lda BCOL
+pulse	lda QUIET		; quiet: the pass count is on the screen
+	bne pu_col
+	BEEP T_J1
+pu_col	lda BCOL
 	sta COLBK
 	rts
 
@@ -525,8 +528,10 @@ bscreen	lda #<s_hburn
 	jsr header
 	lda #2
 	jsr machinfo
+	.ifndef NOFONT		; (the 8K tape: no room for the font's sum)
 	lda #3
 	jsr chinfo
+	.endif
 	PRINT 8, 0, s_legend
 	PRINT 23, 0, s_stop
 	rts
@@ -700,8 +705,10 @@ summary	jsr scr_on
 	jsr header
 	lda #2
 	jsr machinfo
+	.ifndef NOFONT		; (the 8K tape: no room for the font's sum)
 	lda #3
 	jsr chinfo
+	.endif
 	jsr showpass
 	PRINT 6, 0, s_result
 	lda NSOLID

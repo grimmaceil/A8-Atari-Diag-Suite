@@ -26,6 +26,12 @@ CASSETTES = ROOT / 'cassettes'  # the release tapes (in git): what users load
 DISKS = ROOT / 'disks'          # the release disk files (.xex, in git)
 CARTS = ROOT / 'carts'          # the release cartridge (.car, in git)
 SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTer Atari800 core's folder
+# The version: in every release file's name (diag-...-v0.4.cas) and at the
+# right of every screen's title bar, so a file and what it shows can be
+# matched. One digit each side of the point (screen.asm). build/ keeps the
+# plain names.
+VERSION = '0.4'
+VDEFS = dict(zip(('VMAJ', 'VMIN'), VERSION.split('.')))
 
 # Each tape: source dir, name, stages (first = boot), defines. A later stage
 # is told where the boot stage keeps its BSS and where its own test area ends.
@@ -56,7 +62,7 @@ TAPES = [('tape1', 'diag-400-01-ram', ['main.asm', 'stage2.asm'], {}),
          ('one32', 'diag-32k-xl-xe', [], {'NEEDPG': '$80'}),
          ('system', 'diag-controls', ['main.asm'],
           dict(N16, SETNO=3, WANT_KB=1, WANT_JOY=1, WANT_PAD=1, BIGSTAGE=1)),
-         ('tape2', 'diag-400-memtest', ['main.asm'], {'OWNTEST': 1, 'NOXL': 1, 'NORAMK': 1}),
+         ('tape2', 'diag-400-memtest', ['main.asm'], {'OWNTEST': 1, 'NOXL': 1, 'NORAMK': 1, 'NOFONT': 1}),
          ('bounce', 'diag-memtest', [], dict(N16, BOUNCE=1, BIGSTAGE=1, OWNTEST=1))]
 # The disk files (Atari-diag-disk-scope.md): the same programs as these
 # tapes, built with XEX (their own title bar, no NEEDPG: the wrapper's guard
@@ -70,7 +76,7 @@ CAR = 'diag-cart'
 
 def mads(src, asm, out, defines):
     args = [str(MADS), asm, f'-o:{out}.bin', f'-l:{out}.lst', f'-t:{out}.lab']
-    args += [f'-d:{k}={v}' for k, v in defines.items()]
+    args += [f'-d:{k}={v}' for k, v in dict(VDEFS, **defines).items()]
     r = subprocess.run(args, cwd=ROOT / 'src' / src, capture_output=True, text=True)
     if r.returncode:
         sys.exit(f'{src}/{asm}:\n' + r.stdout + r.stderr)
@@ -277,22 +283,25 @@ def main():
     me = build_bounce('diag-memtest-cart', dict(XEXES[1][2], **cd), '', 'img')
     car = BUILD / f'{CAR}.car'
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkcar.py'), str(car),
-                    '--diag', *map(str, di), '--mem', *map(str, me)], check=True)
-    CASSETTES.mkdir(exist_ok=True)
-    DISKS.mkdir(exist_ok=True)
-    for c in cas:
-        if 'FAULT' not in c.name:       # fault-injection builds stay in build/
-            shutil.copy2(c, CASSETTES / c.name)
-    for x in xexes:
-        shutil.copy2(x, DISKS / x.name)
-    CARTS.mkdir(exist_ok=True)
-    shutil.copy2(car, CARTS / car.name)
-    cas += xexes + [car]
-    if a.nodeploy or a.fast:        # (FAST tapes skip test patterns: not for use)
+                    '--diag', *map(str, di), '--mem', *map(str, me),
+                    '--version', VERSION], check=True)
+    if a.fast:                      # FAST builds skip test patterns: not for use,
+        return                      # so they stay in build/
+    rel = []                        # the release files, named with the version
+    for folder, files in ((CASSETTES, cas), (DISKS, xexes), (CARTS, [car])):
+        folder.mkdir(exist_ok=True)
+        for f in files:
+            if 'FAULT' in f.name:   # fault-injection builds stay in build/
+                continue
+            for old in folder.glob(f'{f.stem}-v[0-9]*{f.suffix}'):   # other versions,
+                old.unlink()                                         # and the name
+            (folder / f.name).unlink(missing_ok=True)                # without one
+            dst = folder / f'{f.stem}-v{VERSION}{f.suffix}'
+            shutil.copy2(f, dst)
+            rel.append(dst)
+    if a.nodeploy:
         return
-    for c in cas:                   # the release tapes to the share, for testing
-        if 'FAULT' in c.name:
-            continue
+    for c in rel:                   # the release files to the share, for testing
         dst = SHARE / c.name
         try:
             if dst.exists() and dst.read_bytes() == c.read_bytes():

@@ -2,24 +2,24 @@
 ; sum, screen block), shared by the boot stages. Needs TSTART.
 
 ; ---------------------------------------------------------------------------
-; Machine and video standard. The XL/XE OS ROM covers $C000-$FFFF; on the
-; 400/800 nothing answers at $C000-$CFFF and the idle bus reads back the
-; same byte every time. So count byte-to-byte changes over $C000-$C0FF.
-detect	ldx #0
-	ldy #0
-	lda $C000
-dt_lp	cmp $C000,x
-	beq dt_same
-	iny
-	lda $C000,x
-dt_same	inx
-	bne dt_lp
-	cpy #32
-	lda #0
-	bcc dt_set
-	lda #1
-dt_set	sta MACHINE
-	lda PAL			; bits 1-3 are 0 on PAL
+; Machine and video standard. The PIA's port B is the memory control port
+; on the XL/XE, and its OS makes all eight lines outputs; on the 400/800 it
+; is joystick ports 3 and 4, and its OS makes them inputs. So the port's
+; direction register says which machine this is. (Not by what $C000 reads:
+; nothing answers there on a 400/800, and an idle bus reads back anything:
+; a real 800 was taken for an XL/XE that way.)
+detect	lda #0
+	sta MACHINE
+	ldx PBCTL
+	txa
+	and #$FB		; $D301 = the direction register
+	sta PBCTL
+	ldy PORTB
+	stx PBCTL
+	iny			; $FF: all outputs
+	bne dt_pal
+	inc MACHINE
+dt_pal	lda PAL			; bits 1-3 are 0 on PAL
 	and #$0E
 	bne dt_x
 	inc ISPAL
@@ -47,6 +47,7 @@ dp_v2	dex
 	dey
 	bne dp_vc
 
+	.ifndef NOFONT
 	jsr fontsum		; read the font twice: a flaky ROM or bus differs
 	lda SUM
 	sta CHSUM
@@ -60,6 +61,7 @@ dp_v2	dex
 	cmp CHSUM+1
 	bne dp_scr
 	inc CHSTAB
+	.endif
 
 dp_scr	jsr findscr
 	lda VCMIN
@@ -73,6 +75,7 @@ dp_scr	jsr findscr
 	inc DISPOK
 dp_x	rts
 
+	.ifndef NOFONT
 ; fontsum: SUM = 16-bit sum of the ROM font, $E000-$E3FF.
 fontsum	lda #0
 	sta SUM
@@ -94,6 +97,7 @@ cs_nc	iny
 	cmp #$E4
 	bne cs_lp
 	rts
+	.endif
 
 ; findscr: SCRPG = the first candidate 1K block that is present and passes
 ; the march test; 0 if none. Errors found here count against the bank.
@@ -186,7 +190,9 @@ qs_pat	lda qspats,x
 	stx MTMP
 	ldx CURBANK
 	inc ECNTLO,x
-	ldx MTMP
+	bne qs_nc		; (16 bits: 4096 misses must not read as 0)
+	inc ECNTHI,x
+qs_nc	ldx MTMP
 qs_ok	dex
 	bpl qs_pat
 	iny

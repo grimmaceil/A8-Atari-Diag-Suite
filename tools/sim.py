@@ -57,6 +57,8 @@ class Atari:
         self.car = None          # .car: an AtariMax 128K (16 x 8K at $A000)
         self.carbank, self.caron = 0, False
         self.carlog = []         # (line, 'bank n' / 'off')
+        self.ddrb = 0xFF if xl else 0x00   # PIA port B direction, as the OS sets it
+        self.busnoise = False    # an idle bus reads back anything (a real 800)
 
     def _carsel(self, a):
         """AtariMax: an access to $D500-$D50F selects bank n, $D510-$D51F
@@ -120,6 +122,10 @@ class Atari:
             if a == 0xD014:
                 return 0x01 if self.pal else 0x0F
             if a == 0xD301:
+                if not self.regs.get(0xD303, 0x3C) & 4:
+                    return self.ddrb     # PBCTL bit 2 = 0: the direction register
+                if not self.xl:
+                    return 0xFF          # 400/800: joystick ports 3 and 4, nothing in
                 return self.regs.get(a, 0xFF)
             if 0xD500 <= a < 0xD600:
                 self._carsel(a)
@@ -158,6 +164,8 @@ class Atari:
                 if self.osrom is not None:
                     return self.osrom[a - (0xC000 if len(self.osrom) == 0x4000 else 0xD800)]
                 return ((a * 31) ^ (a >> 3)) & 0xFF    # stand-in ROM bytes
+            if self.busnoise:
+                return random.randrange(256)
             return a >> 8        # 400/800: nothing at $C000-$CFFF
         pb = self.regs.get(0xD301, 0xFF)
         if (self.xl and self.osrom is not None and len(self.osrom) == 0x4000
@@ -194,6 +202,11 @@ class Atari:
                 self.pm[a] = v
             if 0xD500 <= a < 0xD600:
                 self._carsel(a)
+            if a == 0xD301 and not self.regs.get(0xD303, 0x3C) & 4:
+                self.ddrb = v
+                return
+            if a == 0xD303:
+                self.regs[a] = v
             if a == 0xD40A:
                 self.mpu.processorCycles = (self.line + 1) * 114
             elif a in (0xD01A, 0xD200, 0xD201, 0xD01F, 0xD40E, 0xD400,
@@ -606,6 +619,8 @@ def main():
     ap.add_argument('--xejunk', action='store_true',
                     help='130XE: extended RAM holds random bytes at power-on, as real RAM does')
     ap.add_argument('--pal', action='store_true')
+    ap.add_argument('--busnoise', action='store_true',
+                    help='400/800: $C000-$CFFF (nothing there) reads back random bytes')
     ap.add_argument('--key', default='', help='seconds at which a key is pressed, e.g. 3,30')
     ap.add_argument('--snap', default='', help='seconds at which to print the screen')
     ap.add_argument('--shot', default='', help='SECS:FILE.png,... : save the screen as a picture')
@@ -686,6 +701,7 @@ def main():
     keys = [(to_line(t), to_line(t) + to_line(0.25)) for t in a.key.split(',') if t]
     snaps = sorted(to_line(t) for t in a.snap.split(',') if t)
     hw = Atari(a.ram, stuck, a.mirror, a.xl or a.xe, a.pal, keys, a.xe, xstuck)
+    hw.busnoise = a.busnoise
     if a.osrom:
         hw.osrom = Path(a.osrom).read_bytes()
         assert len(hw.osrom) in (0x2800, 0x4000), 'an OS ROM is 10K or 16K'
@@ -838,7 +854,7 @@ def main():
         bss = 0x2000 + hw.ram[0x2001] * 128
     bad = [hw.ram[bss + 0x40 + b] for b in range(10)]
     print(f'first result at {t_done:.1f} s, {steps} steps, {hw.nmis} VBIs, '
-          f'ended at {hw.line / LINES_PER_MS / 1000:.0f} s')
+          f'ended at {hw.line / LINES_PER_MS / 1000:.0f} s, PC ${mpu.pc:04X}, PORTB ${hw.regs.get(0xD301, 0xFF):02X}')
     print('--- final screen'); print(hw.screen())
     if a.peek:                           # BSS offsets, e.g. E0-F3
         lo, hi = (int(x, 16) for x in a.peek.split('-'))

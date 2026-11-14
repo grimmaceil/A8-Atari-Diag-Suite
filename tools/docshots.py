@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 IMG = ROOT / 'docs' / 'img'      # the guide's pictures, with callouts
 RAW = IMG / 'raw'                # the screens as captured
-CAS = ROOT / 'cassettes'
+CAS = ROOT / 'build'            # (plain names; cassettes/ has the version in them)
 SHARE = Path('//TRUENAS/Media/games/ATARI800')
 
 OS800 = 'Atari 400-800 OS rev B NTSC - CRC 0E86D61D.rom'
@@ -66,7 +66,7 @@ RUNS = {
                                '--until', '1200'], [
         ('^START=RUN', 0.5, '32k-02-menu'),
         ('^START=MENU', 1, '32k-03-results')]),
-    'memtest': ('diag-memtest', ['--ram', '0x8000', '--stuck', '23FC-23FF:3:1',
+    'memtest': ('diag-memtest', ['--ram', '0x8000', '--stuck', '6FFC-6FFF:3:1',
                                  '--key', '150', '--until', '220'], [
         ('PASS 4', 3, 'memtest-01-running'),
         ('FIX SOLID', 1, 'memtest-02-summary')]),
@@ -79,7 +79,7 @@ RUNS = {
 # The guide's callouts: picture -> [(first text row, last text row, number)].
 # Each is a bracket in the right border beside those rows, with its number.
 ANNOT = {
-    'ram-01-video-check': [(2, 4, 1), (6, 6, 2), (8, 10, 3), (11, 12, 4), (14, 21, 5)],
+    'ram-01-video-check': [(2, 4, 1), (6, 6, 2), (8, 11, 3), (12, 13, 4), (14, 21, 5)],
     'ram-02-testing': [(2, 3, 1), (5, 5, 2)],
     'ram-03-pass': [(4, 4, 1), (6, 9, 2), (20, 21, 3), (23, 23, 4)],
     'ram-04-summary': [(5, 7, 1), (8, 11, 2), (14, 16, 3)],

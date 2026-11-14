@@ -250,7 +250,10 @@ pr_done
 	lsr
 	lsr
 	sta RAMK
+	jsr detect		; the machine (display.asm)
 	.ifndef NORAMK		; (the 8K memory test: main RAM is all there is)
+	lda MACHINE		; a 400/800: no more RAM, and port B is joystick
+	beq rk_end		; ports 3 and 4
 	lda PORTB
 	pha
 	and #$FE		; OS out
@@ -298,4 +301,5 @@ rk_xe	pla			; extended RAM: put its byte back
 	sta RAMK
 rk_x	pla
 	sta PORTB
+rk_end
 	.endif

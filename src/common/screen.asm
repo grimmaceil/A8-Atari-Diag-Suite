@@ -77,12 +77,15 @@ so_dl	sta (CUR),y
 	lda #$22		; normal playfield, display list DMA
 	sta DMACTL
 	sta SCRON
+	lda VIDEOOK		; (report.asm)
+	sta QUIET
 	rts
 
 ; scr_off: back to abstract mode (border color only).
 scr_off	lda #0
 	sta DMACTL
 	sta SCRON
+	sta QUIET
 	rts
 
 ; at: cursor to row A, column X.
@@ -108,12 +111,15 @@ ps_lp	lda (SPTR),y
 	bne ps_lp
 ps_x	rts
 
-; putc: screen code A at the cursor, advance. Keeps X and Y.
+; putc: screen code A at the cursor, advance. Keeps X and Y. Without a
+; screen block (SCRPG = 0) it writes nothing: the cursor would be in page 0.
 putc	ora INV
 	sty PCY
+	ldy SCRPG
+	beq pc2_ns
 	ldy #0
 	sta (CUR),y
-	ldy PCY
+pc2_ns	ldy PCY
 	inc CUR
 	bne pc2_x
 	inc CUR+1
@@ -180,7 +186,8 @@ rowhi	.rept 24
 	.endr
 
 ; header: the inverse title bar on row 0: s_hpre (the tape's prefix), the
-; title at A/Y, inverse spaces to the end of the row.
+; title at A/Y, inverse spaces to the end of the row, where the version
+; goes (build.py's VMAJ.VMIN, as in the file's name) if there is room.
 header	pha
 	tya
 	pha
@@ -196,14 +203,30 @@ header	pha
 	tay
 	pla
 	jsr puts
-hd_pad	lda #0
-	jsr putc
-	lda CUR			; the block is page aligned: CUR lo = column on row 0
-	cmp #40
-	bne hd_pad
+hd_pad	lda CUR			; the block is page aligned: CUR lo = column on row 0
+	cmp #40-VERLEN
+	beq hd_ver
+	bcs hd_fill
 	lda #0
+	jsr putc
+	jmp hd_pad
+hd_ver	lda #<s_ver
+	ldy #>s_ver
+	jsr puts
+hd_fill	lda CUR
+	cmp #40
+	bcs hd_x
+	lda #0
+	jsr putc
+	jmp hd_fill
+hd_x	lda #0
 	sta INV
 	rts
+	.if VMAJ>9 .or VMIN>9
+	.error 'the version is one digit, a point, one digit'
+	.endif
+s_ver	dta d'V',[VMAJ+$10],d'.',[VMIN+$10],d' ',$FF
+VERLEN	= 5
 
 ; PRINT row, col, string
 .macro PRINT

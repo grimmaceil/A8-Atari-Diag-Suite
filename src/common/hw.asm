@@ -36,6 +36,7 @@ IRQST	= $D20E		; read: 0 bits = interrupt pending (latched even with SEI)
 PORTA	= $D300
 PORTB	= $D301
 PACTL	= $D302		; bit 3: cassette motor ($34 = on, $3C = off)
+PBCTL	= $D303		; bit 2 = 0: $D301 is port B's direction register
 
 ; ANTIC
 DMACTL	= $D400
@@ -59,6 +60,7 @@ C_BLACK	= $00
 ; POKEY pure tone, volume 8 / volume 0
 AUD_ON	= $A8
 AUD_OFF	= $A0
+AUD_NOISE = $88		; white noise (the 17-bit polynomial counter), volume 8
 
 ; POKEY AUDF values (AUDCTL=0, 64 kHz clock): f = 63921 / (2 * (N + 1))
 F_LONG	= 72		; ~440 Hz  group A (where)

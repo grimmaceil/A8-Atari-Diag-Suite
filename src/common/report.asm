@@ -30,6 +30,7 @@ ret
 	NCALL RET1, tone
 .endm
 
+
 C_FLASH	= C_RED+4	; fail flash: brighter than the steady fail color
 C_GFLASH = C_GREEN+4
 
@@ -67,9 +68,15 @@ dl_nt	dex
 
 ; tone: flash and beep tone X of the table, then 200 ms black and silent.
 ; Returns via RET1.
-tone	lda tt_col,x
+; QUIET (the picture confirmed and the text on): the result is on the
+; screen, so the border keeps its steady color and only the sound plays.
+; After the tone it looks at the controls (once low RAM has passed: rpkey
+; uses the stack), so a press doesn't have to wait for the end of a code.
+tone	lda QUIET
+	bne tn_nf
+	lda tt_col,x
 	sta COLBK
-	lda tt_frq,x
+tn_nf	lda tt_frq,x
 	sta AUDF1
 	lda #AUD_ON
 	sta AUDC1
@@ -86,14 +93,22 @@ tone	lda tt_col,x
 	lda #$08
 	sta SPKPH
 	sta CONSOL
+	lda QUIET
+	bne tn_nb
 	lda #C_BLACK
 	sta COLBK
-	WAITMS 200
-	jmp (RET1)
+tn_nb	WAITMS 200
+	lda STACKOK
+	beq tn_x
+	jsr rpkey
+tn_x	jmp (RET1)
 
 ; ---------------------------------------------------------------------------
-; report: the failure code, repeated until a press continues to CONTVEC
-; (when set; never before low RAM passes). Without CONTVEC it never returns.
+; report: the failure code, until a press continues to CONTVEC (when set;
+; never before low RAM passes). Without CONTVEC it never returns.
+; Not quiet (see tone): the code repeats, flashing the border. Quiet: it
+; plays once, then the border stays steady red and silent; SELECT plays it
+; again. A press counts between the tones too, not only in the pause.
 ;   for each bad bank (1-4 main, 5-8 130XE): A = bank number (long), then
 ;   for each bad bit,
 ;   B = bit number 1-8 (short), then the low end-of-list tone.
@@ -102,6 +117,8 @@ tone	lda tt_col,x
 ; the RAM the loader landed in is suspect but no bit is known.
 report	lda #AUD_OFF
 	sta AUDC1
+	lda #0
+	sta HARMED
 	lda #C_RED
 	sta COLBK
 	WAITMS 1000
@@ -159,6 +176,8 @@ rp_next	inc RBANK
 
 rp_wait	lda #30
 	sta RCNT
+	lda #0
+	sta HSEL
 	.if .def RPCOLVAR
 	lda RPCOL		; the stage picks the steady color (burn-in: yellow
 	.else			; when every error was intermittent)
@@ -166,15 +185,50 @@ rp_wait	lda #30
 	.endif
 	sta HOLDC
 	NCALL RET1, hold
-	jmp rp_top
+	lda HSEL		; SELECT: the code again
+	bne rp_rep
+	lda QUIET		; quiet: once was enough, wait on
+	bne rp_wait
+rp_rep	jmp rp_top
+
+; rpkey: the controls, after a tone (JSR: only once STACKOK is set). A
+; press of START, a key or fire, after all were seen released, goes on to
+; CONTVEC (if one is set) and doesn't come back. (hold clears HARMED, so
+; after a pause the controls must be seen released again.)
+rpkey	jsr inputs
+	bne rq_in
+	lda #1
+	sta HARMED
+	rts
+rq_in	ldx HARMED
+	beq rq_x
+	lsr
+	bcc rq_x
+	ldx CONTVEC+1
+	beq rq_x
+	pla
+	pla
+	jsr waitrel
+	jmp (CONTVEC)
+rq_x	rts
 
 ; ---------------------------------------------------------------------------
 ; pass: rising jingle. With a continue vector: hold green ~2 s, then go on.
 ; Without (the end of the tape): every ~5 s one long green flash per bank
-; tested, steady green between, forever.
-pass	BEEP T_J1
-	BEEP T_J2
-	BEEP T_J3
+; tested, steady green between, forever; quiet (see tone): steady green and
+; silent.
+pass	lda #C_GREEN
+	sta COLBK
+	lda #0			; (tone's look at the controls: a key still down
+	sta HARMED		; from the test doesn't count)
+	lda #T_J1
+	sta RCNT
+pa_jin	ldx RCNT
+	NCALL RET1, tone
+	inc RCNT
+	lda RCNT
+	cmp #T_J3+1
+	bne pa_jin
 	lda #20
 	sta RCNT
 	lda #C_GREEN
@@ -187,12 +241,14 @@ pass	BEEP T_J1
 	bne pa_top		; nothing goes on by itself
 	.endif
 	jmp (CONTVEC)
-pa_top	lda NBANKS
+pa_top	lda QUIET
+	bne pa_hold
+	lda NBANKS
 	sta RCNT
 pa_long	BEEP T_GLONG
 	dec RCNT
 	bne pa_long
-	lda #50
+pa_hold	lda #50
 	sta RCNT
 	lda #C_GREEN
 	sta HOLDC
@@ -231,6 +287,8 @@ ho_in	ldx HARMED
 ho_sel	lsr			; bit 1: SELECT
 	bcc ho_opt
 	jsr waitrel
+	lda #1
+	sta HSEL
 	jmp (RET1)
 ho_opt	lda DISPOK		; bit 2: OPTION
 	beq ho_n

@@ -31,6 +31,7 @@ def main():
     ap.add_argument('car')
     ap.add_argument('--diag', nargs=2, metavar=('BIN', 'LAB'), required=True)
     ap.add_argument('--mem', nargs=2, metavar=('BIN', 'LAB'), required=True)
+    ap.add_argument('--version', default='0.0', help='MAJOR.MINOR, shown on the menu')
     a = ap.parse_args()
 
     imgs = []
@@ -40,7 +41,8 @@ def main():
             sys.exit('an image must run at $0800')
         imgs.append(img + bytes(-len(img) % 256))
     data = bytearray(b'\xff' * (NBANKS * DATAPG * 256))
-    defs, bank = {}, 0
+    vmaj, vmin = a.version.split('.')
+    defs, bank = {'VMAJ': vmaj, 'VMIN': vmin}, 0
     for img, tag in zip(imgs, ('DIAG', 'MEM')):
         npg = len(img) // 256
         defs[f'{tag}BK'], defs[f'{tag}PG'] = bank, npg

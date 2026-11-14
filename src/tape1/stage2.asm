@@ -537,6 +537,10 @@ BSS	= S1BSS			; one image: stage 1's BSS page is this one's
 	.else
 BSS	= IMGEND
 	.endif
-	.if [>BSS]+1>[>FONT]
+	.if .def ONE32
+	.if IMGEND>$4000
+	.error "stage 2 too big: it must end below $4000 (it runs while a 130XE bank is in at $4000-$7FFF)"
+	.endif
+	.elseif [>BSS]+1>[>FONT]
 	.error "stage 2 too big: $3800-$3FFF must stay free (font copy, screen block)"
 	.endif

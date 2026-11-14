@@ -38,7 +38,6 @@ LOAD	= $0800
 	.word init_rts
 
 	icl '../common/boot.asm'
-	jsr detect
 	jsr dprereq
 	lda DISPOK		; no display: beeps only (ANTIC stays off)
 	beq rt_go
@@ -47,23 +46,14 @@ LOAD	= $0800
 rt_go	jsr ramtest
 	.ifdef ONE16
 	jmp PAYAT+6		; no results here: stage 2's summary has them all
-	.endif
-	lda DISPOK
-	beq rt_res
-	jsr results
-	.if .def ONE16
-rt_res	lda #<[PAYAT+6]		; a press (or a pass) goes on to stage 2, in
-	sta CONTVEC		; this image (the image checksum covered it)
-	lda #>[PAYAT+6]
 	.else
-rt_res	lda #<load2		; a press (or a pass) goes on to stage 2
+	lda #<load2		; a press (or a pass) goes on to stage 2
 	sta CONTVEC
 	lda #>load2
-	.endif
 	sta CONTVEC+1
-	lda SCRON
+	lda DISPOK
 	beq final
-	jsr results		; again: the prompt line now names START
+	jsr results
 final	ldx #4
 res_lp	lda BADMASK,x
 	bne res_bad
@@ -71,6 +61,7 @@ res_lp	lda BADMASK,x
 	bne res_lp
 	jmp pass
 res_bad	jmp report
+	.endif
 
 redraw	= results		; scrtoggle's text screen
 
@@ -126,16 +117,21 @@ vcheck	jsr scr_on
 	jsr header
 	PRINT 2, 0, s_v1
 	PRINT 3, 0, s_v2
-	PRINT 8, 1, s_set1
-	PRINT 9, 1, s_set2
-	lda #$80
-	sta INV
-	PRINT 10, 1, s_set1
-	lda #0
-	sta INV
-	lda #11
-	jsr machinfo
+	lda #8			; the character set: its 64 characters, then
+	ldx #0			; the same in inverse (rows 8-11)
+	jsr at
+	ldx #0
+vc_set	txa
+	and #$3F
+	cpx #64
+	bcc vc_sn
+	ora #$80
+vc_sn	jsr putc
+	inx
+	bpl vc_set
 	lda #12
+	jsr machinfo
+	lda #13
 	jsr chinfo
 	ldx #0
 vc_bars	stx CNT
@@ -188,6 +184,7 @@ vk_line	sta WSYNC
 vk_down	lda ARMED
 	beq vk_tick
 	inc VIDEOOK
+	inc QUIET		; (the text is on: report.asm)
 	lda #AUD_OFF
 	sta AUDC1
 vk_rel	jsr inputs		; let go before moving on
@@ -249,12 +246,17 @@ fps	lda ISPAL
 fps_p	lda #50
 	rts
 
-showsec	lda LASTCH
-	bne ss_last
-	PRINT 6, 0, s_secs
-	jmp ss_num
-ss_last	PRINT 6, 0, s_last
-ss_num
+showsec	lda #6
+	ldx #0
+	jsr at
+	lda LASTCH
+	beq ss_secs
+	lda #<s_last
+	ldy #>s_last
+	jsr puts
+ss_secs	lda #<s_secs
+	ldy #>s_secs
+	jsr puts
 	lda SECLEFT
 	sta DVAL
 	lda #0
@@ -486,9 +488,7 @@ s_hram	dta d'RAM TEST',$FF
 s_v1	dta d'CAN YOU READ THIS AND SEE 8 COLOR BARS?',$FF
 s_v2	dta d'IF SO, PRESS ANY KEY (OR FIRE).',$FF
 s_secs	dta d'SECONDS LEFT: ',$FF
-s_last	dta d'LAST CHANCE'*,d' - SECONDS LEFT: ',$FF
-s_set1	dta d'ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789',$FF
-s_set2	dta d'!"#$%&()*+,-./:;<=>?@[]^_',$FF
+s_last	dta d'LAST CHANCE'*,d' - ',$FF
 s_bar	dta d'COLOR BAR ',$FF
 s_testing dta d'TESTING BANK ',$FF
 s_legend dta d'CODE: LONG=BANK, SHORT=BIT (D0=1)',$FF

@@ -31,6 +31,16 @@
 
 QUICKSCR = 1			; display.asm: quick screen-block test
 RESTART	= 1			; report.asm: the end waits for START (see final)
+	.ifdef WANT_CON		; common.asm: the tests that ask Y/N
+NEEDYN	= 1
+	.elseif .def WANT_POK
+NEEDYN	= 1
+	.elseif .def WANT_GTIA
+NEEDYN	= 1
+	.endif
+	.ifndef WANT_ROM
+NOFONT	= 1			; display.asm, info.asm: only the ROM test shows
+	.endif			; the font's sum (the 400 tapes are short of room)
 
 	opt h-
 	.if .def SYSAT
@@ -89,8 +99,9 @@ ch_r9	lda MTMP
 
 	icl '../common/boot.asm'
 
-	jsr detect
 	jsr dprereq
+	lda DISPOK		; no video check on this tape: the display checks
+	sta VIDEOOK		; passing counts as the picture confirmed
 	jmp trun
 	.endif
 
