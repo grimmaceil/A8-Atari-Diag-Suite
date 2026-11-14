@@ -152,6 +152,9 @@ mu_w	bit MFLAGS
 mu_nx	iny
 	bne mu_by
 	inc PTR+1
+	.ifdef SKIPKEY
+	jsr skipchk
+	.endif
 	lda PTR+1
 	cmp MEND
 	bne mu_by
@@ -163,6 +166,9 @@ m_dn	lda #0
 	lda MEND
 	sta PTR+1
 md_pg	dec PTR+1
+	.ifdef SKIPKEY
+	jsr skipchk
+	.endif
 	ldy #$FF
 md_by	bit MFLAGS
 	bvs md_w

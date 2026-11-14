@@ -259,18 +259,18 @@ switches itself off for a moment during the RAM test, tests that 8K too,
 and switches back on, so the machine shows its real size (48K, or 64K on
 an XL/XE) and a fault there is reported in bank 3.
 
-**CTRL+S skips the RAM test.** Hold CTRL and S as you switch on (or while
-the RAM test runs: it is looked at between banks) and the menu comes up at
-once, with line 0 showing `SKIPPED`. The disk file `diag-32k-xl-xe` does
-the same. The tapes don't: their wait is the load.
+**CTRL+S skips the RAM test** (the cartridge only). Press CTRL and S any
+time from switching on until the RAM summary: a tap is enough, the key is
+looked at all through the test. The menu comes up at once, with line 0
+showing `SKIPPED`.
 
 The long test, line 8, copies itself into RAM and switches the cartridge
 off for good. After it, RESET starts the machine from cold without the
 cartridge; to get back to the menu, switch off and on again.
 
-In the ROM test the cartridge line shows `DIAG` and its CRC. An
-XL/XE's built-in BASIC can't be read while a cartridge is plugged in; the
-tape and disk versions check it.
+In the ROM test the cartridge line shows `DIAG` and its CRC. On an XL/XE
+the built-in BASIC is checked as well: the cartridge switches itself off
+for the moment it takes to read it.
 
 ## Reading the results
 
@@ -543,12 +543,18 @@ test.
 ### Sound and video (`diag-400-05-av`; tests 6 and 7)
 
 **POKEY.** The sound chip's timer and random-number generator are checked
-automatically. Then each of its four voices plays a rising scale, eight
-notes from C to C, one voice at a time, over and over until you answer
-whether you heard it (items 3-6). A voice that plays some notes wrong
-counts as not heard.
-Last, voice 1 plays noise, a steady hiss (item 7): the noise comes from a
-part of the chip the pure tones don't use.
+automatically. Then each of its four voices plays, one voice at a time,
+over and over until you answer whether you heard it (items 3-6): first a
+rising scale, eight notes from C to C, then noise, a steady hiss. The
+noise comes from a part of the chip the pure tones don't use. A voice that
+plays some notes wrong, or no hiss, counts as not heard.
+
+On the cartridge one more check follows (item 7): the word "hello", a
+short recording, played five times. The first four use each voice's
+volume control as a 4-bit sample player; the fifth uses the console
+speaker, which is only on or off, so it sounds rougher. Answer whether you
+heard all five. (The recording is a public-domain one from Wikimedia
+Commons, `En-us-hello.ogg` by Dvortygirl.)
 
 ![POKEY voices](img/av-01-pokey.png)
 

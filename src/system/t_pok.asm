@@ -1,9 +1,9 @@
 ; Test 4: POKEY.
 ;   item 1: timer 1's interrupt doesn't come (read in IRQST; the CPU masks it)
 ;   item 2: RANDOM doesn't change
-;   items 3-6: voice 1-4 not heard (a pure tone)
-;   item 7: noise not heard (voice 1 again, as a hiss: POKEY's 17-bit
-;           polynomial counter, which the pure tones don't use)
+;   items 3-6: voice 1-4 not heard: a rising scale of pure tones, then
+;              noise (a hiss: the 17-bit polynomial counter, which the pure
+;              tones don't use), over and over (common.asm's ynnote)
 VOICE	= TSCR+$00		; voice being played (0-3)
 
 t_pok	lda #6
@@ -61,26 +61,17 @@ pk_vl	lda DISPOK
 	beq pk_play
 	lda #7
 	jsr clrrow
-	lda VOICE
-	cmp #4
-	beq pk_nz
 	PRINT 7, 0, s_voice
 	lda VOICE
 	clc
 	adc #$11
 	jsr putc
-	jmp pk_q
-pk_nz	PRINT 7, 0, s_noise
-pk_q	PRINT 8, 0, s_heard
-pk_play	lda #AUD_ON		; the voice, over and over, until the answer
-	sta YNC
-	lda VOICE
-	cmp #4
-	bne pk_tone
-	lda #AUD_NOISE		; the last round: voice 1 as noise
-	sta YNC
-	lda #0
-pk_tone	asl
+	lda #<s_voic2
+	ldy #>s_voic2
+	jsr puts
+	PRINT 8, 0, s_heard
+pk_play	lda VOICE		; the voice, over and over, until the answer
+	asl
 	sta YNV
 	lda #1
 	sta YNSND
@@ -92,12 +83,16 @@ pk_tone	asl
 	sta BADMASK+6
 pk_heard inc VOICE
 	lda VOICE
-	cmp #5
+	cmp #4
 	beq pk_end
 	jmp pk_vl
-pk_end	jmp tend
-pkbit	.byte 4, 8, 16, 32, 64
+pk_end
+	.ifdef ROM		; the cartridge: and sampled sound (cart/hello.asm)
+	jsr hello
+	.endif
+	jmp tend
+pkbit	.byte 4, 8, 16, 32
 
 s_pk1	dta d'TIMER AND RANDOM CHECKED. NOW BY EAR:',$FF
-s_voice	dta d'PLAYING VOICE ',$FF
-s_noise	dta d'PLAYING NOISE (A HISS) ON VOICE 1',$FF
+s_voice	dta d'VOICE ',$FF
+s_voic2	dta d': A SCALE, THEN A HISS',$FF

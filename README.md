@@ -63,7 +63,11 @@ and beeps, loading from a PC, and what to do when something fails.
     memory test (menu line 8) copies itself to RAM. The RAM test also tests
     the 8K under the cartridge (it switches itself off for a moment), so a
     48K machine shows as 48K.
-  - CTRL+S skips the first RAM test on the cartridge and the disk file.
+  - CTRL+S skips the first RAM test on the cartridge (a tap any time
+    during it).
+  - The cartridge's ROM test also checks an XL/XE's built-in BASIC (it
+    switches itself off to read it), and its POKEY test plays a sampled
+    "hello" on each voice and the console speaker (item 7).
   - One menu, numbered in order: 0 RAM, 1 ROMs, 2 keyboard, 3 console
     keys, 4 joysticks, 5 paddles, 6 POKEY, 7 GTIA (and 8, the long memory
     test, on the cartridge). Joysticks, paddles and POKEY changed numbers.
@@ -72,7 +76,8 @@ and beeps, loading from a PC, and what to do when something fails.
   - Beep codes only for the RAM and the ROMs, in different pitches. Other
     tests show their result: a jingle for a pass, one low beep for a fail.
   - Keyboard test: the key click sounds on the console speaker and POKEY.
-  - POKEY test: each voice plays a scale, not one note.
+  - POKEY test: each voice plays a scale, then noise.
+  - Keyboard test: on a 400/800 the Atari logo key shows as `/|\`, not INV.
   - GTIA test: ramps and sprites on one screen, one question.
   - ROM test: the cartridge slot is named only for BASIC A, B and C; the
     diagnostic cartridge names itself.

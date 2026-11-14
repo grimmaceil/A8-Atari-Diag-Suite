@@ -490,7 +490,7 @@ WALK = [0x1F, 0x1E, 0x1A, 0x18, 0x1D, 0x1B, 0x33]   # keys 1-7: the menu order
 class Auto:
     """Answers tape 3's prompts as a person would, from the screen text.
     deny: prompt words to answer No to; skip: keys to leave unpressed."""
-    PROMPTS = ['PRESS EVERY KEY', 'PRESS START, SELECT AND OPTION', 'HEARD IT?',
+    PROMPTS = ['HEARD ALL 5?', 'PRESS EVERY KEY', 'PRESS START, SELECT AND OPTION', 'HEARD IT?',
                'MOVE EACH STICK', 'UNPLUG ALL PADDLES', 'TURN EACH', 'LOOKS RIGHT?',
                'LOOKS RIGHT?']
 
@@ -552,7 +552,7 @@ class Auto:
         else:
             yes = not any(d in text for d in self.deny)
             when = t + int(2.5 * 1000 * LINES_PER_MS)
-            if p in ('HEARD IT?', 'LOOKS RIGHT?', 'LOOKS RIGHT?'):
+            if p in ('HEARD IT?', 'LOOKS RIGHT?', 'HEARD ALL 5?'):
                 hw.press(when, 'KB', 0x2B if yes else 0x23)
             else:
                 hw.press(when, 'CON', 1)        # START

@@ -50,8 +50,6 @@ RAMAGAIN = xram			; and the RAM test again is in bank 0
 	.endif
 	.ifdef ROM		; common.asm: the RAM test can be skipped (CTRL+S,
 SKIPKEY	= 1			; tape1/main.asm): its line says so
-	.elseif .def XEX
-SKIPKEY	= 1
 	.endif
 	.ifdef WANT_CON		; common.asm: the tests that ask Y/N
 NEEDYN	= 1
@@ -324,6 +322,9 @@ ttests
 	icl '../cart/romsum.asm'
 	.ifdef HASLDR
 	icl '../cart/ldmem.asm'
+	.endif
+	.ifdef WANT_POK
+	icl '../cart/hello.asm'
 	.endif
 	.elseif .not .def CHAIN
 	icl '../common/display.asm'

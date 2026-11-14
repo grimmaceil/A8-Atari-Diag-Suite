@@ -113,14 +113,14 @@ vs_2	lda VCOUNT
 ; yesno: wait for the answer, as long as it takes. C set: Y or START. C
 ; clear: N or SELECT. Console keys too, so a dead keyboard can answer. The
 ; border is purple while it waits, so a question shows without a picture.
-; YNSND: the sound being asked about, repeated until the answer (about 0.7 s
-; on, 0.5 s off): 0 none, 1 POKEY voice YNV/2, 2 the console speaker. A key
+; YNSND: the sound being asked about, repeated until the answer: 0 none,
+; 1 POKEY voice YNV/2 (a scale, then noise: 1 s on, 0.2 s off), 2 the
+; console speaker (0.7 s on, 0.5 s off). A key
 ; pressed while the speaker tone runs (the CPU is busy making it) still
 ; counts: POKEY latches it in IRQST.
 YNSND	= BSS+$F4
 YNV	= BSS+$F5		; POKEY voice times 2 (its AUDF/AUDC offset)
 YNFRM	= BSS+$F6		; frame in the on/off cycle
-YNC	= BSS+$F8		; YNSND 1: the voice's AUDC (a pure tone, or noise)
 yesno	jsr waitrel
 	lda #C_PURPLE
 	sta COLBK
@@ -132,7 +132,7 @@ yn_lp	lda YNFRM
 	bne yn_s1
 	jsr ynon
 	jmp yn_f
-yn_s1	cmp #42
+yn_s1	cmp #60
 	bne yn_f
 	jsr ynoff
 yn_f	jsr vsync
@@ -186,9 +186,7 @@ ynon	lda YNSND
 	cmp #1
 	bne yo_spk
 	ldx YNV
-	lda #F_LONG
-	sta AUDF1,x
-	lda YNC
+	lda #AUD_ON
 	sta AUDC1,x
 	.else
 	bne yo_spk
@@ -204,22 +202,24 @@ yo_spk	lda #$08
 	rts
 	.ifdef WANT_POK
 ; ynnote: a POKEY voice (YNSND 1) plays a rising scale, a note every 4
-; frames (C5 to C6, the last one held), not one pitch: a voice whose divider
-; has a dead bit plays some of the notes wrong.
+; frames (C5 to C6), not one pitch: a voice whose divider has a dead bit
+; plays some of the notes wrong. Then, from frame 32 until it goes off (60),
+; noise at the last note's rate.
 ynnote	lda YNSND
 	cmp #1
 	bne yt_x
-	lda YNFRM
-	cmp #42
-	bcs yt_x
-	lsr
-	lsr
-	cmp #8
-	bcc yt_n
-	lda #7
-yt_n	tay
-	lda scale,y
 	ldx YNV
+	lda YNFRM
+	cmp #32
+	bcc yt_n
+	bne yt_x
+	lda #AUD_NOISE
+	sta AUDC1,x
+	rts
+yt_n	lsr
+	lsr
+	tay
+	lda scale,y
 	sta AUDF1,x
 yt_x	rts
 scale	.byte 60, 53, 47, 45, 40, 35, 31, 30

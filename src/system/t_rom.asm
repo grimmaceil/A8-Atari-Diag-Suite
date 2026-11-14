@@ -25,6 +25,9 @@ OSID	= T3D+$13		; 3: name number of each OSCRC ($FF: unknown)
 BASID	= T3D+$16
 ROMHAVE	= T3D+$17		; bit 1: BASIC/cartridge read, bit 2: halves read,
 				; bit 3: it is a cartridge
+SELFCRC	= T3D+$18		; 4: ROM (the cartridge build): this bank's CRC
+BWAT	= $0600			; and its BASIC reader, in low RAM
+BWHAVE	= $8B			; nonzero: BASIC was there
 CRCSV	= TSCR+$00		; 16: the first read, for the re-read to match
 PGLEFT	= $8A			; crcpg: pages to go (zero page: see osread)
 RTAB	= TSCR+$11		; crcid: the table's entries left
@@ -60,17 +63,20 @@ tr_flk	lda #1
 tr_osb	ora BADMASK+1
 	sta BADMASK+1
 tr_osok	jsr mixed
+	.ifdef ROM		; the cartridge build: this cartridge (the bank
+	jsr br_crc		; this runs in), for its own line
+	ldx #3
+tr_self	lda BASCRC,x
+	sta SELFCRC,x
+	dex
+	bpl tr_self
+	.endif
 
 	jsr basread		; BASIC or the cartridge
 	bcc tr_font
 	lda #2
 	ora ROMHAVE
 	sta ROMHAVE
-	.ifdef ROM		; the cartridge build: what is at $A000 is this
-	lda #18			; cartridge (the bank this runs in; its sum was
-	sta BASID		; checked on the way in), shown with its CRC
-	bne tr_font
-	.endif
 	jsr basname
 	cmp #$FF
 	bne tr_font
@@ -263,6 +269,35 @@ mixed	ldx OSID+1
 	sta BADMASK+1
 mx_x	rts
 
+	.ifdef ROM
+; basread, on the cartridge: the XL/XE's built-in BASIC into BASCRC. C
+; clear: none (a 400/800, where this cartridge has the slot, or a 1200XL).
+; The cartridge covers BASIC, so a routine in low RAM (bw_src with crcpg
+; behind it, copied to BWAT) switches the cartridge off, BASIC in, takes
+; the CRC and switches this bank back in. Interrupts are off, so the OS
+; never sees the cartridge go.
+basread	lda MACHINE
+	bne bx_xl
+	clc
+	rts
+bx_xl	ldx #crcend-bw_src-1
+bx_cp	lda bw_src,x
+	sta BWAT,x
+	dex
+	bpl bx_cp
+	jsr crcnew
+	jsr BWAT
+	lda BWHAVE
+	cmp #1			; C set: BASIC
+	bcc bx_x
+	ldx #3
+bx_put	lda CRC,x
+	eor #$FF
+	sta BASCRC,x
+	dex
+	bpl bx_put
+bx_x	rts
+	.else
 ; basread: BASIC (XL/XE) or a cartridge (400/800) into BASCRC. C clear: no
 ; ROM there.
 basread	lda MACHINE
@@ -319,6 +354,7 @@ br_cart	lda RAMTOP		; RAM up to $BFFF: no cartridge
 	rts
 br_no	clc
 	rts
+	.endif
 br_crc	jsr crcnew
 	lda #$A0
 	ldx #32
@@ -359,6 +395,37 @@ cu_lp	lda CRC,x
 	bne cu_lp
 	rts
 
+	.ifdef ROM
+	.if crcend-bw_src>128
+	.error "the BASIC reader is too long for its copy loop"
+	.endif
+; bw_src: runs at BWAT, with crcpg right behind it (copied along).
+bw_src	sta $D510		; the cartridge off
+	lda PORTB
+	pha
+	and #$FD		; BASIC in
+	sta PORTB
+	lda #0
+	sta BWHAVE
+	lda $A000		; a ROM? A write doesn't change one
+	tay
+	eor #$FF
+	sta $A000
+	cmp $A000
+	bne bw_rom
+	sty $A000		; RAM (no BASIC: a 1200XL): put it back
+	beq bw_out
+bw_rom	inc BWHAVE
+	lda #$A0
+	ldx #32
+	jsr BWAT+crcpg-bw_src
+bw_out	pla
+	sta PORTB
+	ldx #3-OTHER		; this bank back in
+	sta $D500,x
+	rts
+	.endif
+
 ; crcpg: add X pages from page A to the CRC. Reflected CRC32, polynomial
 ; $EDB88320, a bit at a time (no room for a 1K table in 8K): about 280
 ; cycles a byte, so 2.5 s for an XL/XE OS.
@@ -396,6 +463,7 @@ cb_n	dex
 	dec PGLEFT
 	bne cp_lp
 	rts
+crcend
 
 	.ifdef CHAIN
 	.if *>$5000
@@ -488,7 +556,37 @@ ri_xl	ldx #0
 	lda #<s_re0
 	ldy #>s_re0
 	jsr romline
-ri_bas	lda ROMHAVE
+ri_bas
+	.ifdef ROM		; the cartridge: itself, then (XL/XE) BASIC
+	lda CNT
+	ldx #0
+	jsr at
+	lda #<s_rcart
+	ldy #>s_rcart
+	jsr puts
+	lda CNT
+	ldx #11
+	jsr at
+	lda #<s_diag
+	ldy #>s_diag
+	jsr puts
+	lda CNT
+	ldx #29
+	jsr at
+	lda #4			; '$'
+	jsr putc
+	ldx #3
+ri_sc	lda SELFCRC,x
+	jsr puthex
+	dex
+	bpl ri_sc
+	inc CNT
+	lda MACHINE
+	bne ri_xb
+	jmp ri_ch
+ri_xb
+	.endif
+	lda ROMHAVE
 	and #2
 	bne ri_have
 	lda CNT			; none: say so (not a fault: a 400/800 without a
@@ -662,9 +760,6 @@ tab_bas	.byte 3			; BASIC revisions A, B, C: the 400/800's cartridge
 romnames .word n_ab, n_antsc, n_bntsc, n_apal, n_r10, n_r11, n_r1, n_r2
 	.word n_r3, n_r3a, n_r3b, n_r4, n_r5, n_r59, n_r59a
 	.word n_basa, n_basb, n_basc
-	.ifdef ROM
-	.word n_self
-	.endif
 n_ab	dta d'A/B, ANY',$FF
 n_antsc	dta d'A NTSC',$FF
 n_bntsc	dta d'B NTSC',$FF
@@ -684,7 +779,7 @@ n_basa	dta d'A',$FF
 n_basb	dta d'B',$FF
 n_basc	dta d'C',$FF
 	.ifdef ROM
-n_self	dta d'DIAG',$FF
+s_diag	dta d'DIAG',$FF
 	.endif
 s_rev	dta d'REV ',$FF
 s_unk	dta d'UNKNOWN'*,$FF

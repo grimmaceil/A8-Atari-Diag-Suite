@@ -28,10 +28,8 @@
 	icl '../common/vars.asm'
 	icl '../common/faults.asm'
 
-	.ifdef ROM		; CTRL+S skips the RAM test, on the cartridge and
-SKIPKEY	= 1			; the disk file (not from tape: the wait was the
-	.elseif .def XEX	; load)
-SKIPKEY	= 1
+	.ifdef ROM		; CTRL+S skips the RAM test, on the cartridge
+SKIPKEY	= 1			; (ramtest.asm looks at it every page)
 	.endif
 	opt h-
 	.ifdef ROM
@@ -54,6 +52,8 @@ LOAD	= $0800
 	icl '../common/boot.asm'
 	jsr dprereq
 	.ifdef SKIPKEY
+	lda #$40		; the keyboard latch (IRQST; the CPU masks the
+	sta IRQEN		; IRQ): a tap between two looks counts too
 	jsr skipchk
 	.endif
 	.ifdef ROM
@@ -129,11 +129,7 @@ cr_lp	jsr putc
 ; block (tested in findscr). Below TSTART is low RAM (tested) and this stage.
 ramtest	lda #1
 	sta CURBANK
-rt_bank
-	.ifdef SKIPKEY
-	jsr skipchk		; (looked at between banks: hold it down)
-	.endif
-	jsr bankrange
+rt_bank	jsr bankrange
 	bcs rt_next
 	inc NBANKS
 	jsr showbank
@@ -198,10 +194,19 @@ br_e	sta RBE
 	.ifdef SKIPKEY
 ; skipchk: CTRL+S held: no RAM test (or no more of it). Stage 2 sees
 ; SKIPRAM and goes straight on to the menu, which shows the RAM as SKIPPED.
+; A key held now, or pressed since the last look (the latch). Only A is used.
 skipchk	lda SKSTAT
 	and #4
+	beq sk_key
+	lda IRQST
+	and #$40
 	bne sk_x
-	lda KBCODE
+	lda #0			; (the latch: off and on again clears it)
+	sta IRQEN
+	lda #$40
+	sta IRQEN
+sk_key	lda KBCODE
+	and #$BF		; (with or without SHIFT)
 	cmp #$BE		; CTRL + S
 	bne sk_x
 	inc SKIPRAM
@@ -365,7 +370,7 @@ s_hpre	dta d' DIAG-400-01-RAM  ',$FF
 	.endif
 s_hram	dta d'RAM TEST',$FF
 	.ifdef SKIPKEY
-s_skip	dta d'HOLD CTRL+S TO SKIP THE RAM TEST',$FF
+s_skip	dta d'CTRL+S = SKIP THE RAM TEST',$FF
 	.endif
 s_testing dta d'TESTING BANK ',$FF
 	.ifndef ONE16

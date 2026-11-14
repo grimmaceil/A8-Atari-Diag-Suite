@@ -64,7 +64,10 @@ kb_rows	stx CNT
 	inx
 	cpx #KBROWS
 	bne kb_rows
-	PRINT KBROW+5, 0, s_kb2	; the legend, DONE in inverse
+	lda MACHINE		; the 400/800: that key carries the Atari logo,
+	bne kb_xl		; not the XL/XE's inverse video sign
+	PRINT KBROW+3, 32, s_logo
+kb_xl	PRINT KBROW+5, 0, s_kb2	; the legend, DONE in inverse
 	lda #KL_DONE
 	jsr light
 
@@ -373,6 +376,7 @@ click	lda #F_SHORT		; (and on POKEY: one of the two may be dead)
 kbrtab	.word kbrow0, kbrow1, kbrow2, kbrow3, kbrow4
 
 s_kb1	dta d'PRESS EVERY KEY. START ENDS THE TEST.',$FF
+s_logo	.byte $0F, $7C, $3C, $FF	; /|\ (three columns, as INV: same key cell)
 s_kb2	dta d'PLAIN=TO DO  INVERSE=DONE  BLINK=HELD',$FF
 s_kb3	dta d'INVERSE = PRESSED',$FF
 KL_DONE	= 5*40+13		; the legend's INVERSE=DONE, as a keyboard offset

@@ -77,11 +77,6 @@ tk_lp	lda S1BSS,x
 	beq noskip
 	jmp tomenu
 noskip
-	.elseif .def XEX
-	lda SKIPRAM
-	beq noskip
-	jmp SYS32+6
-noskip
 	.endif
 
 	lda #C_YELLOW
@@ -192,7 +187,13 @@ rl_go	lda #LDRIDX
 
 	lda MACHINE
 	beq no_os
+	.ifdef ROM
+	jsr skip2
+	.endif
 	jsr underos
+	.ifdef ROM
+	jsr skip2
+	.endif
 	jsr xebanks
 no_os	lda DISPOK
 	beq fin
@@ -231,6 +232,27 @@ fin_bad	jmp report
 redraw	= summary		; scrtoggle's text screen
 
 	.ifdef ROM
+; skip2: CTRL+S, between this stage's parts (as stage 1's skipchk).
+skip2	lda SKSTAT
+	and #4
+	beq s2_key
+	lda IRQST
+	and #$40
+	bne s2_x
+	lda #0
+	sta IRQEN
+	lda #$40
+	sta IRQEN
+s2_key	lda KBCODE
+	and #$BF
+	cmp #$BE
+	bne s2_x
+	inc SKIPRAM
+	ldx #$FF
+	txs
+	jmp tomenu
+s2_x	rts
+
 ; tomenu: the RAM faults (banks 1-8) become test 0's items (kept at index
 ; 8: item = bank), as the system tests' results have them; then the menu.
 tomenu	lda #0
