@@ -3,22 +3,24 @@
 ;   1 ROMs (WANT_ROM)            identified by CRC32 against published tables
 ;   2 keyboard (WANT_KB)         stuck keys, then a map with three key states
 ;   3 console keys (WANT_CON)    START, SELECT, OPTION and the console speaker
-;   5 joysticks (WANT_JOY)       live, per port
-;   6 paddles (WANT_PAD)         open-input check, then live values
-;   4 POKEY (WANT_POK)           timer IRQ, RANDOM, the four voices by ear
-;   7 GTIA (WANT_GTIA)           luminance and hue ramps by eye
+;   4 joysticks (WANT_JOY)       live, per port
+;   5 paddles (WANT_PAD)         open-input check, then live values
+;   6 POKEY (WANT_POK)           timer IRQ, RANDOM, the voices and noise by ear
+;   7 GTIA (WANT_GTIA)           ramps and sprites by eye
 ; They run in that order (progressive: the Y/N answers later tests ask for
-; come from the keyboard and console keys tested before them). The numbers
-; are the brief's, so a test's beep code is the same on every tape.
+; come from the keyboard and console keys tested before them), and the menu
+; lists them by number (0 is the RAM test, on the 32k+ image). The numbers
+; are the same on every tape, disk file and the cartridge.
 ;
 ; Boots like the other tapes (alive, image checksum, low RAM, size probe,
 ; machine, display prerequisites). The screen block gets a quick test only:
 ; tape 1 tests RAM. The image must fit an 8K 400 (display.asm checks).
 ;
 ; A test that passes plays the jingle and goes on by itself (~2 s). One that
-; fails shows which items failed and plays A = test number, B = item, until
-; START, a key or fire; SELECT replays it, OPTION switches to full-screen
-; flashes. After the last test, the tape's results and the final code.
+; fails shows which items failed, with one low tone, and waits for START, a
+; key or fire. Only the ROM test also plays a code (one long tone, then
+; item = short tones); OPTION switches to full-screen flashes. After the
+; last test, the tape's results; the final code is for ROM and RAM faults.
 ;
 ; CHAIN (the 32k+ tape): not a boot file but part of tape 1's image, at
 ; SYSAT, entered by its stage 2. It takes over stage 2's results; their RAM
@@ -31,6 +33,8 @@
 
 QUICKSCR = 1			; display.asm: quick screen-block test
 RESTART	= 1			; report.asm: the end waits for START (see final)
+SYSCODES = 1			; report.asm: beep codes for the ROMs (test 1) and
+				; the RAM (index 8) only, each with its own tones
 	.ifdef WANT_CON		; common.asm: the tests that ask Y/N
 NEEDYN	= 1
 	.elseif .def WANT_POK
@@ -89,6 +93,8 @@ ch_rn	dex
 	sta BADMASK+LDRIDX
 ch_r9	lda MTMP
 	sta BADMASK+8
+	lda DISPOK		; START at the summary: someone sees the picture
+	sta VIDEOOK
 	jmp trun
 	.else
 ; Cassette boot header. The OS reads NREC records to LOAD, then JSRs LOAD+6.
@@ -141,13 +147,13 @@ ttests
 	.byte 3
 	.endif
 	.ifdef WANT_JOY
-	.byte 5
+	.byte 4
 	.endif
 	.ifdef WANT_PAD
-	.byte 6
+	.byte 5
 	.endif
 	.ifdef WANT_POK
-	.byte 4
+	.byte 6
 	.endif
 	.ifdef WANT_GTIA
 	.byte 7

@@ -9,7 +9,7 @@ RET1	= BSS+$00	; tone level
 RET2	= BSS+$02	; delay level
 
 SUM	= BSS+$04	; 2: image checksum accumulator
-TFREQ	= BSS+$06	; tone: AUDF1 value
+RTONE	= BSS+$06	; report: the long tone of the group being played
 TCOL	= BSS+$07	; tone: COLBK during the flash
 TLX	= BSS+$08	; tone: length, delay X/Y form
 TLY	= BSS+$09

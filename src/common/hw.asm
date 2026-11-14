@@ -65,6 +65,8 @@ AUD_NOISE = $88		; white noise (the 17-bit polynomial counter), volume 8
 ; POKEY AUDF values (AUDCTL=0, 64 kHz clock): f = 63921 / (2 * (N + 1))
 F_LONG	= 72		; ~440 Hz  group A (where)
 F_SHORT	= 35		; ~880 Hz  group B (which bit)
+F_RLONG	= 96		; ~330 Hz  the ROM test's code: group A
+F_RSHORT = 47		; ~659 Hz  and group B
 F_END	= 144		; ~220 Hz  end of list
 F_J1	= 60		; ~523 Hz  pass jingle
 F_J2	= 47		; ~659 Hz

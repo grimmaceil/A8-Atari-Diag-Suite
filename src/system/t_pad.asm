@@ -15,10 +15,10 @@ PJIT	= TSCR+$28		; 8: the last window's spread
 PFRM	= TSCR+$30		; frame count in the window
 PFAST	= TSCR+$31		; nonzero: fast pot scan (SKCTL bit 2)
 
-t_pad	lda #6
+t_pad	lda #5
 	sta TEST
-	lda #<s_t6
-	ldy #>s_t6
+	lda #<s_tpad
+	ldy #>s_tpad
 	jsr tpage
 	lda DISPOK
 	beq pd_s0
@@ -41,8 +41,8 @@ pd_c	lda PCUR,x
 	cmp #228
 	beq pd_cok
 	lda bitn,x
-	ora BADMASK+6
-	sta BADMASK+6
+	ora BADMASK+5
+	sta BADMASK+5
 pd_cok	inx
 	jsr npots
 	bne pd_c

@@ -1,5 +1,6 @@
 ; Test 2: keyboard. A key already down at the start is stuck (item 1). Then
-; every key pressed shows on the map, and clicks the console speaker; SHIFT
+; every key pressed shows on the map, and clicks the console speaker and
+; POKEY voice 1; SHIFT
 ; and CONTROL show with it, BREAK through its own interrupt latch. START
 ; ends the test; a key not pressed by then fails item 2. HELP and F1-F4
 ; (XL) show but aren't required.
@@ -352,9 +353,15 @@ showleft	lda DISPOK
 	jmp putc
 
 ; click: a short burst on the console speaker (the keyboard click).
-click	lda #$08
+click	lda #F_SHORT		; (and on POKEY: one of the two may be dead)
+	sta AUDF1
+	lda #AUD_ON
+	sta AUDC1
+	lda #$08
 	sta SPKMASK
 	WAITMS 30
+	lda #AUD_OFF
+	sta AUDC1
 	lda #0
 	sta SPKMASK
 	lda #$08

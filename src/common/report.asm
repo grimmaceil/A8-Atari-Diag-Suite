@@ -42,10 +42,24 @@ T_J1	= 3		; pass jingle, green
 T_J2	= 4
 T_J3	= 5
 T_GLONG	= 6		; pass: one long green flash per bank
+T_RLONG	= 7		; SYSCODES: the ROM test's group A and B, lower than
+T_RSHORT = 8		; the RAM's, so the two can be told apart by ear
 tt_frq	.byte F_LONG, F_SHORT, F_END, F_J1, F_J2, F_J3, F_LONG
+	.ifdef SYSCODES
+	.byte F_RLONG, F_RSHORT
+	.endif
 tt_col	.byte C_FLASH, C_FLASH, C_FLASH, C_GFLASH, C_GFLASH, C_GFLASH, C_GFLASH
+	.ifdef SYSCODES
+	.byte C_FLASH, C_FLASH
+	.endif
 tt_lx	.byte <[600*157/10], <[200*157/10], <[600*157/10], <[100*157/10], <[100*157/10], <[300*157/10], <[600*157/10]
+	.ifdef SYSCODES
+	.byte <[600*157/10], <[200*157/10]
+	.endif
 tt_ly	.byte >[600*157/10+255], >[200*157/10+255], >[600*157/10+255], >[100*157/10+255], >[100*157/10+255], >[300*157/10+255], >[600*157/10+255]
+	.ifdef SYSCODES
+	.byte >[600*157/10+255], >[200*157/10+255]
+	.endif
 
 ; ---------------------------------------------------------------------------
 ; delay: X + 256*(Y-1) scanlines, timed by WSYNC. While SPKMASK=$08 it also
@@ -133,6 +147,14 @@ rp_top	lda LOADERR
 rp_banks lda #1
 	sta RBANK
 rp_bank	ldx RBANK
+	.ifdef SYSCODES		; the system tests: a code only for the ROMs (1)
+	cpx #2			; and the RAM (8); the other tests' results are
+	bcc rp_sy		; on the screen
+	cpx #8
+	bcs rp_sy
+	jmp rp_next
+rp_sy
+	.endif
 	lda BADMASK,x
 	.if .def LDRFOLD
 	cpx #1			; the loader area is part of bank 1
@@ -143,9 +165,23 @@ rp_fold	cmp #0			; the CPX changed Z
 	bne rp_have
 	jmp rp_next
 rp_have	sta RMASK
+	.ifdef SYSCODES		; one long tone, in the ROM's pitch or the RAM's
+	lda #1
+	sta RCNT
+	lda #T_ALONG
+	ldx RBANK
+	cpx #1
+	bne rp_tn
+	lda #T_RLONG
+rp_tn	sta RTONE
+	.else
 	lda RBANK
 	sta RCNT
-rp_along BEEP T_ALONG
+	lda #T_ALONG
+	sta RTONE
+	.endif
+rp_along ldx RTONE
+	NCALL RET1, tone
 	dec RCNT
 	bne rp_along
 	WAITMS 800		; +200 after the last tone = 1 s between groups
@@ -157,7 +193,9 @@ rp_bit	lsr RMASK		; D0 first, reported as 1
 	ldx RBIT
 	inx
 	stx RCNT
-rp_bshort BEEP T_BSHORT
+rp_bshort ldx RTONE		; (the short tone follows its long one)
+	inx
+	NCALL RET1, tone
 	dec RCNT
 	bne rp_bshort
 	WAITMS 800

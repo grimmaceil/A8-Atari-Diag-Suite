@@ -484,15 +484,15 @@ KEYCODES = [0x00, 0x01, 0x02, 0x05, 0x06, 0x07, 0x08, 0x0A, 0x0B, 0x0C, 0x0D, 0x
             0x3A, 0x3C, 0x3D, 0x3E, 0x3F]   # every key all machines have
 
 
-WALK = [0x1F, 0x1E, 0x1A, 0x1D, 0x1B, 0x18, 0x33]   # keys 1 2 3 5 6 4 7: the menu order
+WALK = [0x1F, 0x1E, 0x1A, 0x18, 0x1D, 0x1B, 0x33]   # keys 1-7: the menu order
 
 
 class Auto:
     """Answers tape 3's prompts as a person would, from the screen text.
     deny: prompt words to answer No to; skip: keys to leave unpressed."""
     PROMPTS = ['PRESS EVERY KEY', 'PRESS START, SELECT AND OPTION', 'HEARD IT?',
-               'MOVE EACH STICK', 'UNPLUG ALL PADDLES', 'TURN EACH', 'RAMPS RIGHT?',
-               'IN RAINBOW?']
+               'MOVE EACH STICK', 'UNPLUG ALL PADDLES', 'TURN EACH', 'LOOKS RIGHT?',
+               'LOOKS RIGHT?']
 
     def __init__(self, hw, deny, skip, menuwalk=False, walk=None, skiponce=False):
         self.hw, self.deny, self.skip, self.seen = hw, deny, skip, set()
@@ -517,7 +517,7 @@ class Auto:
                 else:                         # START: ALL at first, then (walk)
                     self.hw.press(when, 'CON', 1)            # the results
             return
-        if 'START=GO ON' in text or 'START=SYSTEM TESTS' in text:    # a failed test's code: go on (a press only
+        if 'START = GO ON' in text or 'START=GO ON' in text or 'START=MENU  SELECT' in text:    # a failed test's code: go on (a press only
             ln = self.hw.line        # counts in a pause, so keep pressing)
             if not any(e > ln for st, e, k, v in self.hw.presses if k == 'CON'):
                 self.hw.press(ln + 4000, 'CON', 1)
@@ -552,7 +552,7 @@ class Auto:
         else:
             yes = not any(d in text for d in self.deny)
             when = t + int(2.5 * 1000 * LINES_PER_MS)
-            if p in ('HEARD IT?', 'RAMPS RIGHT?', 'IN RAINBOW?'):
+            if p in ('HEARD IT?', 'LOOKS RIGHT?', 'LOOKS RIGHT?'):
                 hw.press(when, 'KB', 0x2B if yes else 0x23)
             else:
                 hw.press(when, 'CON', 1)        # START
@@ -775,7 +775,7 @@ def main():
     insert_at = to_line(a.insert[0]) if a.insert else None
     frame = 0
     auto = Auto(hw, [d for d in a.deny.split(',') if d], a.skip, a.menuwalk,
-                [0x32 if c == '0' else WALK[[1, 2, 3, 5, 6, 4, 7].index(int(c))]
+                [0x32 if c == '0' else WALK[int(c) - 1]
                  for c in a.walk] if a.walk else None,
                 a.skiponce) if a.auto else None
     next_auto = 0

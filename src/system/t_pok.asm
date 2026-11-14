@@ -6,10 +6,10 @@
 ;           polynomial counter, which the pure tones don't use)
 VOICE	= TSCR+$00		; voice being played (0-3)
 
-t_pok	lda #4
+t_pok	lda #6
 	sta TEST
-	lda #<s_t4
-	ldy #>s_t4
+	lda #<s_tpok
+	ldy #>s_tpok
 	jsr tpage
 	lda #0			; timer 1: 64 kHz / 256, about 4 ms
 	sta AUDCTL
@@ -32,7 +32,7 @@ pk_irq	lda IRQST
 	dey
 	bpl pk_irq
 	lda #1
-	sta BADMASK+4
+	sta BADMASK+6
 pk_ok	lda #0
 	sta IRQEN
 
@@ -49,8 +49,8 @@ pk_rs	dex
 	cpy #8
 	bcs pk_v
 	lda #2
-	ora BADMASK+4
-	sta BADMASK+4
+	ora BADMASK+6
+	sta BADMASK+6
 
 pk_v	lda DISPOK
 	beq pk_v0
@@ -88,8 +88,8 @@ pk_tone	asl
 	bcs pk_heard
 	ldx VOICE		; items 3-6
 	lda pkbit,x
-	ora BADMASK+4
-	sta BADMASK+4
+	ora BADMASK+6
+	sta BADMASK+6
 pk_heard inc VOICE
 	lda VOICE
 	cmp #5

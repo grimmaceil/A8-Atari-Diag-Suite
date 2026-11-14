@@ -3,15 +3,13 @@
 ;   green + chirp       alive: the CPU is running the loaded code
 ;   yellow              testing (a hang shows yellow)
 ;   red + beep code     fail; see report.asm for the code
-;   purple + siren      video check timed out: last 10 s to press a key
-;
-; With the display checks passed the text stays on; during the pauses in the
-; result code a key switches between text and full-screen flashes.
 ;   green + jingle      pass; then one long flash per 16K bank tested
 ;
 ; Once low RAM passes it checks the display (VCOUNT, a 1K screen block) and
-; shows the video check screen, then runs the RAM test with text progress
-; and results. If the display checks fail it stays beeps-only.
+; runs the RAM test with text progress and results; if the display checks
+; fail it stays beeps-only. The result screen is the picture check: the
+; code flashes and repeats until START, which says someone can see it.
+; OPTION switches between the text and full-screen flashes.
 ;
 ; Build flags (mads -d:NAME=value):
 ;   FAULT_BANK=0..4, FAULT_BIT=1..8   inject a stuck bit; bank 0 = low RAM
@@ -41,8 +39,7 @@ LOAD	= $0800
 	jsr dprereq
 	lda DISPOK		; no display: beeps only (ANTIC stays off)
 	beq rt_go
-	jsr vcheck		; confirmed or not, the text stays on from here:
-	jsr ramscreen		; the display checks passed, so it can't hurt
+	jsr ramscreen
 rt_go	jsr ramtest
 	.ifdef ONE16
 	jmp PAYAT+6		; no results here: stage 2's summary has them all
@@ -98,174 +95,6 @@ cr_lp	jsr putc
 	rts
 
 	icl '../common/display.asm'
-
-; ---------------------------------------------------------------------------
-; Video check: text, the full character set, inverse video and 8 color
-; bars. The bars are drawn by racing the beam (COLPF2 changed every 8 lines
-; with WSYNC), so no interrupts are needed. A press confirms the video; it
-; only counts after every input has been seen released, so a stuck key can't
-; confirm by itself. No press in 20 s (plus the last chance) leaves
-; VIDEOOK = 0; the text stays on anyway and the results say so.
-BARROW	= 14
-BARV	= [32+BARROW*8]/2	; VCOUNT at the top of the bars
-
-vcheck	jsr scr_on
-	lda #C_YELLOW
-	sta COLBK
-	lda #<s_hvid
-	ldy #>s_hvid
-	jsr header
-	PRINT 2, 0, s_v1
-	PRINT 3, 0, s_v2
-	lda #8			; the character set: its 64 characters, then
-	ldx #0			; the same in inverse (rows 8-11)
-	jsr at
-	ldx #0
-vc_set	txa
-	and #$3F
-	cpx #64
-	bcc vc_sn
-	ora #$80
-vc_sn	jsr putc
-	inx
-	bpl vc_set
-	lda #12
-	jsr machinfo
-	lda #13
-	jsr chinfo
-	ldx #0
-vc_bars	stx CNT
-	txa
-	clc
-	adc #BARROW
-	ldx #2
-	jsr at
-	lda #<s_bar
-	ldy #>s_bar
-	jsr puts
-	lda CNT
-	clc
-	adc #$11		; '1'
-	jsr putc
-	ldx CNT
-	inx
-	cpx #8
-	bne vc_bars
-
-	lda #20
-	sta SECLEFT
-	jsr showsec
-	jsr fps
-	sta FRM
-
-vk_frame lda VCOUNT
-	cmp #BARV
-	bne vk_frame
-	ldx #0
-vk_bar	lda barcol,x
-	sta WSYNC
-	sta COLPF2
-	ldy #7
-vk_line	sta WSYNC
-	dey
-	bne vk_line
-	inx
-	cpx #8
-	bne vk_bar
-	sta WSYNC
-	lda #C_TEXTBG
-	sta COLPF2
-
-	jsr inputs
-	bne vk_down
-	lda #1
-	sta ARMED
-	bne vk_tick
-vk_down	lda ARMED
-	beq vk_tick
-	inc VIDEOOK
-	inc QUIET		; (the text is on: report.asm)
-	lda #AUD_OFF
-	sta AUDC1
-vk_rel	jsr inputs		; let go before moving on
-	bne vk_rel
-	rts
-
-vk_tick	jsr siren
-	dec FRM
-	bne vk_wrap
-	jsr fps
-	sta FRM
-	dec SECLEFT
-	bne vk_show
-	lda LASTCH		; time's up: one last chance, then beeps only
-	bne vk_x
-	inc LASTCH
-	lda #LASTSECS
-	sta SECLEFT
-	lda #C_PURPLE
-	sta COLBK
-vk_show	jsr showsec
-vk_wrap	lda VCOUNT		; wait for the next frame to begin
-	cmp #BARV
-	bcs vk_wrap
-	jmp vk_frame
-vk_x	lda #AUD_OFF
-	sta AUDC1
-	lda #C_YELLOW		; back to "testing" for the beeps-only run
-	sta COLBK
-	rts
-
-; siren: a two-tone warble over the first 3 s of the last chance, to call
-; someone back to the screen. Called once per frame.
-LASTSECS = 10
-siren	lda LASTCH
-	beq sn_off
-	lda SECLEFT
-	cmp #LASTSECS-2
-	bcc sn_off
-	lda FRM			; swap pitch every 16 frames
-	and #16
-	beq sn_lo
-	lda #F_SIRH
-	bne sn_on
-sn_lo	lda #F_SIRL
-sn_on	sta AUDF1
-	lda #AUD_ON
-	sta AUDC1
-	rts
-sn_off	lda #AUD_OFF
-	sta AUDC1
-	rts
-
-
-fps	lda ISPAL
-	bne fps_p
-	lda #60
-	rts
-fps_p	lda #50
-	rts
-
-showsec	lda #6
-	ldx #0
-	jsr at
-	lda LASTCH
-	beq ss_secs
-	lda #<s_last
-	ldy #>s_last
-	jsr puts
-ss_secs	lda #<s_secs
-	ldy #>s_secs
-	jsr puts
-	lda SECLEFT
-	sta DVAL
-	lda #0
-	sta DVAL+1
-	jsr putdec
-	lda #0			; blank the old second digit
-	jmp putc
-
-barcol	.byte $16,$36,$56,$76,$96,$B6,$D6,$F6
 
 ; ---------------------------------------------------------------------------
 ; RAM test, bank by bank (16K each) from TSTART to RAMTOP, minus the screen
@@ -437,10 +266,7 @@ rs_end	lda MACHINE
 	lda #<s_bank4
 	ldy #>s_bank4
 	jsr puts
-rs_tot	lda VIDEOOK
-	bne rs_vok
-	PRINT 21, 0, s_vnot
-rs_vok	lda CONTVEC+1
+rs_tot	lda CONTVEC+1
 	beq rs_end2
 	PRINT 23, 0, s_toggle
 	jmp rs_l2
@@ -483,13 +309,7 @@ s_hpre	dta d' DIAG-16K-01-RAM  ',$FF
 	.else
 s_hpre	dta d' DIAG-400-01-RAM  ',$FF
 	.endif
-s_hvid	dta d'VIDEO CHECK',$FF
 s_hram	dta d'RAM TEST',$FF
-s_v1	dta d'CAN YOU READ THIS AND SEE 8 COLOR BARS?',$FF
-s_v2	dta d'IF SO, PRESS ANY KEY (OR FIRE).',$FF
-s_secs	dta d'SECONDS LEFT: ',$FF
-s_last	dta d'LAST CHANCE'*,d' - ',$FF
-s_bar	dta d'COLOR BAR ',$FF
 s_testing dta d'TESTING BANK ',$FF
 s_legend dta d'CODE: LONG=BANK, SHORT=BIT (D0=1)',$FF
 s_bank	dta d'BANK ',$FF
@@ -501,7 +321,6 @@ s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_bank4	dta d'BANK 4 $C000-$FFFF  IN STAGE 2',$FF
 s_result dta d'RESULT: ',$FF
-s_vnot	dta d'VIDEO NOT CONFIRMED',$FF
 s_toggle dta d'START=GO ON SELECT=RE-BEEP OPTION=FLASH',$FF
 s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FULL-SCREEN FLASH',$FF
 s_l2load dta d'LOADING STAGE 2...',$FF

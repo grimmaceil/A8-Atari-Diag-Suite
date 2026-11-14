@@ -1,9 +1,10 @@
 ; System tapes, shared code: the test list, the per-test result flow, frame
 ; sync, yes/no answers, the test-result screen and the tape's results.
 ;
-; Each test leaves its failed items in BADMASK[test] (item n = bit n-1), so
-; the reporter plays A = test number, B = item, as the brief has it. A test
-; ends with jmp tend; the tape's tlist says what comes next.
+; Each test leaves its failed items in BADMASK[test] (item n = bit n-1). A
+; test ends with jmp tend; the tape's tlist says what comes next. Only the
+; ROMs (test 1) and the RAM (index 8, shown as test 0) get a beep code
+; (report.asm, SYSCODES); the other tests' results are on the screen.
 
 ; The system tapes run no RAM tests, so their data lives in the first-error
 ; arrays ($70-$CF of the BSS page), which only merr writes. (qscr uses ECNTLO.)
@@ -128,6 +129,9 @@ yn_s1	cmp #42
 	bne yn_f
 	jsr ynoff
 yn_f	jsr vsync
+	.ifdef WANT_POK
+	jsr ynnote
+	.endif
 	inc YNFRM
 	lda YNFRM
 	cmp #72
@@ -191,6 +195,28 @@ yo_spk	lda #$08
 	lda #42			; that was the on time: on to the gap
 	sta YNFRM
 	rts
+	.ifdef WANT_POK
+; ynnote: a POKEY voice (YNSND 1) plays a rising scale, a note every 4
+; frames (C5 to C6, the last one held), not one pitch: a voice whose divider
+; has a dead bit plays some of the notes wrong.
+ynnote	lda YNSND
+	cmp #1
+	bne yt_x
+	lda YNFRM
+	cmp #42
+	bcs yt_x
+	lsr
+	lsr
+	cmp #8
+	bcc yt_n
+	lda #7
+yt_n	tay
+	lda scale,y
+	ldx YNV
+	sta AUDF1,x
+yt_x	rts
+scale	.byte 60, 53, 47, 45, 40, 35, 31, 30
+	.endif
 ynoff
 	.ifdef WANT_POK
 	lda YNSND
@@ -204,8 +230,9 @@ yf_x	rts
 	.endif
 
 ; tresult: the end of test TEST. A pass gives the jingle and goes on after
-; ~2 s (OPTION holds it). A fail plays that test's code (only that one) and
-; waits for START, a key or fire; then the flow goes on at NEXTVEC.
+; ~2 s (OPTION holds it). A fail gives one low tone and a steady red border,
+; and waits for START, a key or fire; the ROM test plays its code first
+; (only its own). Then the flow goes on at NEXTVEC.
 tresult	jsr tshow
 	ldx TEST
 	lda BADMASK,x
@@ -230,7 +257,11 @@ tr_ps
 	lda NEXTVEC+1
 	sta CONTVEC+1
 	jmp pass
-tr_fail	ldx #8
+tr_fail
+	.ifdef WANT_ROM
+	cpx #1
+	bne tr_nc
+	ldx #8
 tf_st	lda BADMASK,x
 	sta STASH-1,x
 	cpx TEST
@@ -250,6 +281,20 @@ tf_rs	lda STASH-1,x
 	dex
 	bne tf_rs
 	jmp (NEXTVEC)
+	.endif
+tr_nc	lda NEXTVEC
+	sta CONTVEC
+	lda NEXTVEC+1
+	sta CONTVEC+1
+; nocode: a fail without a code: one low tone, then steady red until a
+; press goes on to CONTVEC.
+nocode	BEEP T_END
+nc_w	lda #C_RED
+	sta HOLDC
+	lda #50
+	sta RCNT
+	NCALL RET1, hold
+	jmp nc_w
 
 ; tpage: a fresh page for test TEST, titled A/Y.
 tpage	ldx DISPOK
@@ -306,7 +351,7 @@ ts_on	lda #21
 	PRINT 23, 0, s_tpass
 ts_x	rts
 	.ifdef WANT_ROM
-ts_go	PRINT 23, 0, s_toggle
+ts_go	PRINT 23, 0, s_goon
 	rts
 	.endif
 ts_fail	lda #<s_fail
@@ -318,7 +363,7 @@ ts_fail	lda #<s_fail
 	ldx TEST
 	lda BADMASK,x
 	jsr putitems
-	PRINT 23, 0, s_toggle
+	PRINT 23, 0, s_goon
 	rts
 
 ; putitems: the set bits of A as item numbers, " 1 3".
@@ -340,8 +385,9 @@ pi_nx	inx
 redraw	= tshow			; scrtoggle's text screen
 
 ; ---------------------------------------------------------------------------
-; final: past the last test. Every test on the tape with a failed item plays,
-; A = test, B = item; all passed: one long flash per test.
+; final: past the last test: the results. A ROM or RAM fault plays its code;
+; any other failed test: one low tone and a red border; all passed: the
+; jingle and green.
 final	lda #8			; tshow, as redraw, shows the results from here
 	sta TEST
 	.ifdef MENU
@@ -365,16 +411,18 @@ fi_n	stx NBANKS
 	lda DISPOK
 	beq fi_chk
 	jsr results
+fi_chk	lda BADMASK+1
 	.ifdef CHAIN
-fi_chk	ldx #8			; and test 8, the RAM
-	.else
-fi_chk	ldx #7
+	ora BADMASK+8		; (the RAM)
 	.endif
-fi_lp	lda BADMASK,x
 	bne fi_bad
+	ldx #7
+fi_lp	lda BADMASK,x
+	bne fi_nc
 	dex
 	bne fi_lp
 	jmp pass
+fi_nc	jmp nocode
 fi_bad	jmp report
 
 	.ifdef MENU
@@ -389,6 +437,11 @@ MSEL	= BSS+$EE		; highlighted line: a ttests index, MNT = ALL,
 MMODE	= BSS+$EF		; nonzero: running all of them in order
 MRUN	= BSS+$F0		; tests run so far, bit per test number
 MNT	= BSS+$F3		; tests on the tape
+	.ifdef RAMAGAIN		; the first test's row: under the RAM line (0)
+MROW0	= 5
+	.else
+MROW0	= 4
+	.endif
 
 menu	lda #0
 	sta MMODE
@@ -509,7 +562,7 @@ md_lp	stx CNT
 md_inv	sta INV
 	txa
 	clc
-	adc #4
+	adc #MROW0
 	ldx #0
 	jsr at
 	lda #0
@@ -524,7 +577,7 @@ md_inv	sta INV
 	jsr puts
 	lda CNT			; its state at column 20
 	clc
-	adc #4
+	adc #MROW0
 	ldx #20
 	jsr at
 	ldx CNT
@@ -564,7 +617,7 @@ md_res	lda #<s_mall		; then ALL and the results
 	sta INV
 md_r	txa
 	clc
-	adc #4
+	adc #MROW0
 	ldx #0
 	jsr at
 	lda #0
@@ -582,10 +635,8 @@ md_r	txa
 	bne md_g
 	lda #$80
 	sta INV
-md_g	txa
-	clc
-	adc #4
-	ldx #0
+md_g	lda #4			; (the top line; SELECT reaches it from the
+	ldx #0			; bottom, OPTION from the first test)
 	jsr at
 	lda #0
 	jsr putc
@@ -594,12 +645,7 @@ md_g	txa
 	jsr puts
 	lda #0
 	sta INV
-	ldx MNT
-	inx
-	inx
-	txa
-	clc
-	adc #4
+	lda #4
 	ldx #20
 	jsr at
 	lda BADMASK+8
@@ -628,15 +674,20 @@ s_mres	dta d'RESULTS AND THE FINAL CODE',$FF
 s_m1	dta d'START=RUN  SELECT=DOWN  OPTION=UP',$FF
 	.ifdef RAMAGAIN
 s_m2	dta d'OR PRESS 0-7 TO RUN THAT TEST',$FF
-s_mram	dta d'0 RAM TEST AGAIN',$FF
+s_mram	dta d'0 RAM',$FF
 	.else
 s_m2	dta d'OR PRESS 1-7 TO RUN THAT TEST',$FF
 	.endif
-s_toggle3 dta d'START=MENU  SELECT=RE-BEEP  OPTION=FLASH',$FF
+s_toggle3 dta d'START = MENU',$FF
 	.endif
 
 ; results: every test on the tape, PASS or FAIL and its items, then the ROM
 ; names if test 1 ran.
+	.ifdef CHAIN		; the first test's row: under the RAM line (0)
+RZROW0	= 5
+	.else
+RZROW0	= 4
+	.endif
 results	jsr scr_on
 	lda #<s_hres
 	ldy #>s_hres
@@ -649,7 +700,7 @@ rz_lp	stx CNT
 	beq rz_end
 	txa
 	clc
-	adc #4
+	adc #RZROW0
 	ldx #0
 	jsr at
 	ldx CNT
@@ -661,7 +712,7 @@ rz_lp	stx CNT
 	jsr puts
 	lda CNT
 	clc
-	adc #4
+	adc #RZROW0
 	ldx #18			; status at column 18
 	jsr at
 	ldx CNT
@@ -692,17 +743,13 @@ rz_n	ldx CNT
 	inx
 	bne rz_lp
 rz_end	.ifdef CHAIN
-	lda CNT			; the 32k+ tape: RAM from stages 1-2, as test 8
-	clc
-	adc #4
-	ldx #0
+	lda #4			; the 32k+ tape: RAM from stages 1-2, as test 0,
+	ldx #0			; on top
 	jsr at
 	lda #<s_t8
 	ldy #>s_t8
 	jsr puts
-	lda CNT
-	clc
-	adc #4
+	lda #4
 	ldx #18
 	jsr at
 	lda BADMASK+8
@@ -745,25 +792,25 @@ cr_lp	jsr putc
 
 bitn	.byte 1, 2, 4, 8, 16, 32, 64, 128
 
-tnames	.word s_t1, s_t2, s_t3, s_t4, s_t5, s_t6, s_t7
+tnames	.word s_t1, s_t2, s_t3, s_tjoy, s_tpad, s_tpok, s_t7
 s_t1	dta d'1 ROMS',$FF
 s_t2	dta d'2 KEYBOARD',$FF
 s_t3	dta d'3 CONSOLE KEYS',$FF
-s_t4	dta d'4 POKEY',$FF
-s_t5	dta d'5 JOYSTICKS',$FF
-s_t6	dta d'6 PADDLES',$FF
+s_tjoy	dta d'4 JOYSTICKS',$FF
+s_tpad	dta d'5 PADDLES',$FF
+s_tpok	dta d'6 POKEY',$FF
 s_t7	dta d'7 GTIA',$FF
 	.ifdef CHAIN
-s_t8	dta d'8 RAM, BANKS',$FF
+s_t8	dta d'0 RAM, BANKS',$FF
 	.endif
 s_test	dta d'TEST ',$FF
 s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_items	dta d', ITEMS',$FF
 s_tpass	dta d'NEXT TEST IN 2 S.  OPTION = FLASH',$FF
-s_toggle dta d'START=GO ON SELECT=RE-BEEP OPTION=FLASH',$FF
-s_toggle4 dta d'START=AGAIN SELECT=RE-BEEP OPTION=FLASH',$FF
-s_items2 dta d'FAIL N: ITEM N. THE CODE IS TEST, ITEM.',$FF
+s_goon	dta d'START = GO ON',$FF
+s_toggle4 dta d'START = AGAIN',$FF
+s_items2 dta d'FAIL N: ITEM N OF THAT TEST',$FF
 	.ifdef NEEDYN
 s_heard	dta d'HEARD IT? Y/START = YES, N/SELECT = NO',$FF
 	.endif

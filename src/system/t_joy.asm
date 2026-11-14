@@ -4,10 +4,10 @@
 JX	= TSCR+$00		; jshow: label being printed
 JBITS	= TSCR+$01		; jshow: the port's active bits
 
-t_joy	lda #5
+t_joy	lda #4
 	sta TEST
-	lda #<s_t5
-	ldy #>s_t5
+	lda #<s_tjoy
+	ldy #>s_tjoy
 	jsr tpage
 	lda DISPOK
 	beq jy_s0
@@ -16,8 +16,8 @@ jy_s0	ldx #0			; stuck: whatever is active now
 jy_st	jsr jread
 	beq jy_sn
 	lda bitn,x
-	ora BADMASK+5
-	sta BADMASK+5
+	ora BADMASK+4
+	sta BADMASK+4
 jy_sn	inx
 	cpx NPORT
 	bne jy_st

@@ -243,29 +243,17 @@ summary	jsr scr_on
 	lda #<s_pass
 	ldy #>s_pass
 	jsr puts_st
-	lda #7
-	sta SROW
-	PRINT 7, 0, s_i3
-	lda VIDEOOK
-	bne su_vok
-	lda #<s_notc
-	ldy #>s_notc
-	jsr puts_st
-	jmp su_banks
-su_vok	lda #<s_conf
-	ldy #>s_conf
-	jsr puts_st
 
 su_banks lda #1
 	sta CURBANK
 su_bk	clc
-	adc #7			; rows 8-10
+	adc #6			; rows 7-9
 	sta SROW
 	ldx #0
 	jsr at
-	lda CURBANK		; "4 BANK 1 $0000-$3FFF"
+	lda CURBANK		; "3 BANK 1 $0000-$3FFF"
 	clc
-	adc #$13		; '3' + bank
+	adc #$12		; '2' + bank
 	jsr putc
 	lda #<s_bank
 	ldy #>s_bank
@@ -309,18 +297,18 @@ su_next	inc CURBANK
 	cmp #4
 	bne su_bk
 
-	lda #11
+	lda #10
 	sta SROW
-	PRINT 11, 0, s_i7	; loader area
+	PRINT 10, 0, s_i7	; loader area
 	jsr ldrend
 	lda #LDRIDX
 	sta CURBANK
 	jsr bankstat
 	lda OSRAM
 	beq su_cnt
-	lda #12
+	lda #11
 	sta SROW
-	PRINT 12, 0, s_i8
+	PRINT 11, 0, s_i8
 	lda OSRAM
 	cmp #2
 	beq su_os
@@ -333,9 +321,9 @@ su_os	lda #4
 	jsr bankstat
 su_xe	lda XERAM		; 130XE: one line for banks 5-8
 	beq su_cnt
-	lda #13
+	lda #12
 	sta SROW
-	PRINT 13, 0, s_i9
+	PRINT 12, 0, s_i9
 	lda BADMASK+5
 	ora BADMASK+6
 	ora BADMASK+7
@@ -482,10 +470,9 @@ s_hsum	dta d'SUMMARY',$FF
 s_tldr	dta d'TESTING LOADER AREA $0800-$',$FF
 s_i1	dta d'1 LOW RAM $0000-$07FF',$FF
 s_i2	dta d'2 DISPLAY CHECKS',$FF
-s_i3	dta d'3 VIDEO CHECK',$FF
-s_i7	dta d'7 LOADER AREA $0800-$',$FF
-s_i8	dta d'8 BANK 4 $C000-$FFFF',$FF
-s_i9	dta d'9 130XE BANKS 5-8',$FF
+s_i7	dta d'6 LOADER AREA $0800-$',$FF
+s_i8	dta d'7 BANK 4 $C000-$FFFF',$FF
+s_i9	dta d'8 130XE BANKS 5-8',$FF
 s_xe	dta d' XE',$FF
 s_bank	dta d' BANK ',$FF
 s_ldr	dta d' LOADER AREA',$FF
@@ -495,15 +482,13 @@ s_ff	dta d'FF',$FF
 s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_none	dta d'NOT FOUND',$FF
-s_conf	dta d'CONFIRMED',$FF
-s_notc	dta d'NOT CONFIRMED',$FF
 s_tos	dta d'TESTING RAM UNDER THE OS ROM',$FF
 s_txe	dta d'TESTING 130XE BANKS',$FF
 s_nfail	dta d'FAILURES: ',$FF
 s_detail dta d'DETAIL:',$FF
 	.ifdef ONE32
-s_nextok dta d'ALL PASSED. START: THE SYSTEM TESTS',$FF
-s_nextbad dta d'FIX THIS FIRST, OR START: SYSTEM TESTS',$FF
+s_nextok dta d'ALL PASSED. START: THE MENU',$FF
+s_nextbad dta d'FIX THIS FIRST, OR START: THE MENU',$FF
 	.elseif .def ONE16
 s_nextok dta d'ALL PASSED. NEXT: DIAG-16K-02-SYSTEM',$FF
 s_nextbad dta d'NEXT: FIX THIS ONE FIRST, THEN RE-RUN',$FF
@@ -512,7 +497,7 @@ s_nextok dta d'ALL PASSED. NEXT: DIAG-400-02-ROM',$FF
 s_nextbad dta d'NEXT: FIX THIS ONE FIRST, THEN RE-RUN',$FF
 	.endif
 	.ifdef ONE32
-s_toggle2 dta d'START=SYSTEM TESTS  SELECT=RE-BEEP',$FF
+s_toggle2 dta d'START=MENU  SELECT=RE-BEEP',$FF
 	.elseif .def ONE16
 s_toggle2 dta d'START=AGAIN SELECT=RE-BEEP OPTION=FLASH',$FF
 	.else
