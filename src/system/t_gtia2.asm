@@ -168,9 +168,10 @@ gat	sta CUR
 	sta CUR+1
 	rts
 
-; gdlist: the display list at GMDL from gdl_t, then ANTIC on it. In gdl_t an
-; LMS line ($40 set) is followed by its address in the screen block (the
-; block's page is added here); $80+n is the last LMS line n times more.
+; gdlist: the display list at GMDL from gdl_t, then ANTIC on it. In gdl_t a
+; mode line with LMS ($40 set, mode not 0) is followed by its address in the
+; screen block (the block's page is added here); $80+n is the last LMS line
+; n times more.
 gdlist	lda #<GMDL
 	sta PTR
 	lda #>GMDL
@@ -183,6 +184,9 @@ gd_lp	lda gdl_t,x
 	bcs gd_rep
 	jsr gdput
 	sta GM_C
+	and #$0F		; a blank line ($x0, $70 too: its bit 6 is part
+	beq gd_nx		; of the count, not an LMS) has no address
+	lda GM_C
 	and #$40
 	beq gd_nx
 	lda gdl_t,x

@@ -380,6 +380,12 @@ def main():
                     str(ROOT / 'src' / 'basic' / 'bascrc.bas'), str(lst), str(bas)], check=True)
     cas.append(bas)
     xexes.append(lst)
+    # and as a disk file of its own (src/basic/bascrc.asm: the same check in
+    # machine code, loaded from DOS with the cartridge in)
+    bx = BUILD / 'diag-bascrc'
+    mads('basic', 'bascrc.asm', bx, {})
+    shutil.copy2(f'{bx}.bin', f'{bx}.xex')
+    xexes.append(Path(f'{bx}.xex'))
     if a.fast:                      # FAST builds skip test patterns: not for use,
         return                      # so they stay in build/
     rel = []                        # the release files, named with the version

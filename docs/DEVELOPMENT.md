@@ -177,6 +177,9 @@ the programs don't read: `tools/mkbasic.py` makes it an ATASCII listing
 (`disks/bascrc.lst`) and a tape for `ENTER "C:"` (`cassettes/diag-bascrc`:
 the cassette handler's $FC/$FA/$FE records with 3 s gaps, as the handler
 stops the motor between records when BASIC reads that way).
+`src/basic/bascrc.asm` is the same check as a disk file
+(`disks/diag-bascrc.xex`, MADS `opt h+`, at $2000): it prints through the
+OS screen editor and returns to DOS.
 
 ### 130XE banks and the 32k+ image
 

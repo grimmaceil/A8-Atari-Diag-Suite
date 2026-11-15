@@ -529,6 +529,15 @@ programs. BASCRC is a short Atari BASIC program that is: it works out the
 CRC32 of the cartridge ($A000-$BFFF) with a little machine code (2-3
 seconds) and names the revision.
 
+The easiest way, with a disk drive or a MiSTer and 16K or more: the disk
+file `disks/diag-bascrc` (`.xex`), the same check in machine code. With
+the cartridge in, boot DOS, type `DOS`, then `L` and the file's name (or
+load it as an `.xex` on a MiSTer). It prints the CRC32, the revision byte
+and `REV A: GOOD` (or B, C), or `NO MATCH`; a key goes back to DOS. On an
+XL/XE it switches the built-in BASIC in itself if it is off.
+
+Or the BASIC program:
+
 1. Switch on with the BASIC cartridge in (no START held), to `READY`.
 2. Load BASCRC, one of three ways:
    - **Tape** (`cassettes/diag-bascrc`): type `ENTER "C:"` and

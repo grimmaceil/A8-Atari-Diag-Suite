@@ -43,7 +43,7 @@ below leave the `-v0.9` out.
    | keyboard, joysticks, paddles only (16K or more) | `diag-controls`: no test harness needed; goes with Atari's SALT disks |
    | with a disk drive or a MiSTer: 32K or more | `disks/diag-32k-xl-xe.xex`: everything in one file, the long test as menu line 9; the long test alone: `disks/diag-memtest.xex` (16K) |
    | a MiSTer, or an AtariMax 128K flash cartridge: any machine, 8K or more | `carts/diag-cart.car`: every test, run from ROM, with the menu; the long test from its line 8 (16K) |
-   | a BASIC cartridge (400/800, 1200XL) | BASCRC, a BASIC program: `cassettes/diag-bascrc.cas` (`ENTER "C:"`) or `disks/bascrc.lst` (`ENTER "D:"`); see the user guide |
+   | a BASIC cartridge (400/800, 1200XL) | BASCRC: `disks/diag-bascrc.xex` (from DOS, 16K), or as a BASIC program: `cassettes/diag-bascrc.cas` (`ENTER "C:"`), `disks/bascrc.lst` (`ENTER "D:"`); see the user guide |
 
    A machine that won't get through its own set: use the 8k set. A tape
    that needs more RAM than the machine has stops at once: red border, a
@@ -104,7 +104,8 @@ and beeps, loading from a PC, and what to do when something fails.
     in RAM by CRC32, and the cartridge checks each of its program banks
     against a CRC32 stored in it (item 6). The 400/800 cartridge reading
     is gone: a BASIC cartridge is checked by BASCRC, a short BASIC program
-    (`diag-bascrc` tape, `bascrc.lst`). The XL/XE's built-in BASIC is
+    (`diag-bascrc` tape, `bascrc.lst`, and `diag-bascrc.xex`, the same
+    check in machine code). The XL/XE's built-in BASIC is
     still checked, and one that matches no revision is now a fault.
 - **0.8** (2026-11-15)
   - The 400 set is now the 8k set: `diag-8k-01-ram` to `diag-8k-05-av` and

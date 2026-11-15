@@ -873,6 +873,9 @@ def main():
     print(f'first result at {t_done:.1f} s, {steps} steps, {hw.nmis} VBIs, '
           f'ended at {hw.line / LINES_PER_MS / 1000:.0f} s, PC ${mpu.pc:04X}, PORTB ${hw.regs.get(0xD301, 0xFF):02X}')
     print('--- final screen'); print(hw.screen())
+    if os.environ.get('SIM_DUMP'):       # LO-HI (hex): memory at the end, for checks
+        lo, hi = (int(x, 16) for x in os.environ['SIM_DUMP'].split('-'))
+        print(f'dump ${lo:04X}:', ' '.join(f'{hw.ram[i]:02X}' for i in range(lo, hi + 1)))
     if os.environ.get('SIM_IMGDIFF') and car is None:   # the image's bytes changed in RAM
         diff = [load + i for i in range(len(img)) if hw.ram[load + i] != img[i]]
         print(f'image bytes changed in RAM: {len(diff)}',
