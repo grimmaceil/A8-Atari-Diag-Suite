@@ -51,14 +51,14 @@ S8 = {'SETNO': 0}
 # machine with at least that much RAM, the bigger and newer ones included.
 # The 8k set needs 8K, which every Atari has, so it has no check.
 N16 = {'NEEDPG': '$40'}
-TAPES = [('tape1', 'diag-8k-01-ram', ['main.asm', 'stage2.asm'], {}),
+TAPES = [('tape1', 'diag-8k-01-ram', ['main.asm', 'stage2.asm'], {'NORAMK': 1}),  # (FOUND: main RAM)
          ('system', 'diag-8k-02-rom', ['main.asm'], dict(S8, TAPENO=2, WANT_ROM=1)),
          ('system', 'diag-8k-03-input', ['main.asm'],
           dict(S8, TAPENO=3, WANT_KB=1, WANT_CON=1)),
          ('system', 'diag-8k-04-ports', ['main.asm'],
           dict(S8, TAPENO=4, WANT_JOY=1, WANT_PAD=1)),
-         ('system', 'diag-8k-05-av', ['main.asm', 'gpart2.asm'],   # test 7's page 2:
-          dict(S8, TAPENO=5, WANT_POK=1, WANT_GTIA=1, GPART2=1)),     # part two
+         ('system', 'diag-8k-05-sound', ['main.asm'], dict(S8, TAPENO=5, WANT_POK=1)),
+         ('system', 'diag-8k-06-video', ['main.asm'], dict(S8, TAPENO=6, WANT_GTIA=1)),
          ('one16', 'diag-16k-01-ram', [], N16),
          ('system', 'diag-16k-02-system', ['main.asm'],
           dict(ALL7, **N16, SETNO=1, TAPENO=2, MENU=1, BIGSTAGE=1)),
@@ -68,12 +68,12 @@ TAPES = [('tape1', 'diag-8k-01-ram', ['main.asm', 'stage2.asm'], {}),
          ('system', 'diag-controls', ['main.asm'],
           dict(N16, SETNO=3, WANT_KB=1, WANT_JOY=1, WANT_PAD=1, BIGSTAGE=1)),
          ('tape2', 'diag-8k-memtest', ['main.asm'], {'OWNTEST': 1, 'NOXL': 1, 'NORAMK': 1, 'NOFONT': 1}),
-         ('bounce', 'diag-memtest', [], dict(N16, BOUNCE=1, BIGSTAGE=1, OWNTEST=1))]
+         ('bounce', 'diag-16k-memtest', [], dict(N16, BOUNCE=1, BIGSTAGE=1, OWNTEST=1))]
 # The disk files (Atari-diag-disk-scope.md): the same programs as these
 # tapes, built with XEX (their own title bar, no NEEDPG: the wrapper's guard
 # checks the RAM before the file loads) and wrapped by mkxex.py.
 XEXES = [('one32', 'diag-32k-xl-xe', {}, 0x80),      # (32K: the image loads at $2000, above DOS)
-         ('bounce', 'diag-memtest', dict(BOUNCE=1, BIGSTAGE=1, OWNTEST=1), 0x40)]
+         ('bounce', 'diag-16k-memtest', dict(BOUNCE=1, BIGSTAGE=1, OWNTEST=1), 0x40)]
 # The cartridge (mkcar.py, src/cart/romsum.asm): the tests run from ROM,
 # one program to an 8K bank (build_car), and need 8K of RAM. Only the long
 # memory test is copied to RAM, as it tests the RAM under the cartridge too.
@@ -115,19 +115,10 @@ def gen_shlib(lab_path):
     return hi - lo
 
 
-# The labels a system tape's part two (gpart2.asm) takes from part one.
-PART1 = ('SCR_ON', 'HEADER', 'AT', 'PUTS', 'WAITREL', 'TPAGE', 'TEND', 'GWAVE',
-         'GANS', 'S_T7', 'S_GQ', 'GPX', 'TSCR', 'BSS', 'P2AT', 'TESTEND')
-
-
 def build(src, name, stages, defines, label):
     out = BUILD / name
     mads(src, stages[0], out, defines)
     s1 = labels(f'{out}.lab')
-    if len(stages) > 1:
-        (BUILD / 'part1.asm').write_text(
-            "; build.py: part one's labels for its part two\n"
-            + ''.join(f'{n}\t= ${s1[n]:04X}\n' for n in PART1 if n in s1))
     prev, nexts = s1, []
     for k, asm in enumerate(stages[1:], 2):
         # 'dir/file.asm' takes a stage from another source dir. PREVBSS: the
@@ -226,13 +217,6 @@ def build_one32(name, defines, label, xex=None):
     the addresses."""
     out = BUILD / name
     s2, sy, pay = Path(f'{out}.s2'), Path(f'{out}.sys'), BUILD / 'payload16.bin'
-    mem = b''                       # the disk file: the long memory test's image
-    if xex and xex != 'img':        # too, behind the system tests (menu line 9)
-        from mkcas import patch_boot
-        fast = {'FAST': 1} if 'FAST' in defines else {}
-        me = build_bounce(f'{name}-mem', dict(XEXES[1][2], XEX=1, **fast), '', 'img')
-        mem = bytes(patch_boot(*map(str, me))[0])
-        mem += bytes(-len(mem) % 256)
     pay.write_bytes(bytes(0x4000))
     d1 = dict(defines, ONE16=1, ONE32=1)
     mads('tape1', 'main.asm', out, d1)
@@ -254,12 +238,8 @@ def build_one32(name, defines, label, xex=None):
                    SELFAT=f"${s1['PAYAT']:04X}",       # the ROM test's self-check:
                    SELFPG=(s1['IMGEND'] - s1['PAYAT']) // 256,  # stage 1's CRCAT on
                    **{k: 1 for k in ('XEX', 'CART') if k in defines})
-        if mem:                     # (its address: the size doesn't depend on it)
-            dsy.update(MEMAT='$7000', MEMPG=len(mem) // 256)
-            mads('system', 'main.asm', sy, dsy)
-            dsy['MEMAT'] = f"${sysat + len(Path(f'{sy}.bin').read_bytes()):04X}"
         mads('system', 'main.asm', sy, dsy)
-        pay.write_bytes(b2 + Path(f'{sy}.bin').read_bytes() + mem)
+        pay.write_bytes(b2 + Path(f'{sy}.bin').read_bytes())
         mads('tape1', 'main.asm', out, d1)
         new = labels(f'{out}.lab')
         if all(new[k] == s1[k] for k in ('BSS', 'PAYAT', 'TSTART', 'IMGEND')):

@@ -92,7 +92,11 @@ rt_8k	lda #<s_l2_8k
 	sta L2MSG
 	lda #>s_l2_8k
 	sta L2MSG+1
-rt_res	lda DISPOK
+rt_res	lda #<again		; R: the RAM test again
+	sta RETESTV
+	lda #>again
+	sta RETESTV+1
+	lda DISPOK
 	beq final
 	jsr results
 final	ldx #4
@@ -112,9 +116,8 @@ redraw	= results		; has them; scrtoggle's text screen)
 	icl '../common/loader.asm'
 	.endif
 
-	.ifdef ONE16
-; again: the whole RAM test once more, from the low RAM test on (stage 2's
-; START at the end). The image is intact (the page test put every page
+; again: the whole RAM test once more, from the low RAM test on (R at its
+; results, here or in stage 2's summary). The image is intact (the page test put every page
 ; back), so no reload and no image checksum: fresh results, then as at boot.
 again	sei
 	.ifdef SKIPKEY		; the keyboard latch: S counts from now
@@ -137,7 +140,6 @@ ag_n	inx
 	lda #C_GREEN
 	sta COLBK
 	jmp lowram
-	.endif
 	icl '../common/display.asm'
 
 ; ---------------------------------------------------------------------------
@@ -388,8 +390,8 @@ s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_bank4	dta d'BANK 4 $C000-$FFFF  IN STAGE 2',$FF
 s_result dta d'RESULT: ',$FF
-s_toggle dta d'ANY KEY=GO ON SELECT=REPLAY OPTION=FLASH',$FF
-s_toggle2 dta d'SELECT=REPLAY  OPTION=FLASH',$FF
+s_toggle dta d'R=RETEST  T=TONES  ANY KEY=GO ON',$FF
+s_toggle2 dta d'R=RETEST  ANY KEY=TONES',$FF
 s_l2load dta d'LOADING STAGE 2...',$FF
 s_l2pre	dta d'STAGE 2: ',$FF
 s_l2_8k	dta d'16K ONLY. NEXT: DIAG-8K-02-ROM',$FF

@@ -11,14 +11,9 @@
 ;     and down, on its own counter (GPH, nothing to do with the horizontal
 ;     position), an eighth of a wave behind the letter before it; they are
 ;     written again at their new heights every frame.
-;   item 2 (page 2, t_gtia2.asm): the display modes look wrong. On the 8K
-;     sound and video tape it is the tape's part two (GPART2), loaded now
-;     over the tests already run (common/loader.asm).
+;   item 2 (page 2, t_gtia2.asm): the display modes look wrong.
 ; The video standard is shown. Without a picture there is nothing to judge:
 ; the test is skipped.
-	.ifndef GPART2		; (build.py: the 8K tape, page 2 its part two)
-GPAGE2	= 1
-	.endif
 GL_ROW	= 5			; first text row of the luminance ramp: 8 steps of
 				; 3 lines, rows 5-7
 GH_ROW	= 9			; first text row of the hue ramp: 16 steps of 4
@@ -186,15 +181,9 @@ gs_off	sta HPOSP0,x
 	lda #$22
 	sta DMACTL
 	jsr waitrel
-	.ifdef GPART2
-	jmp load2		; page 2: the tape's part two
-	.else
 	jmp gmodes		; page 2
-	.endif
 
-	.ifdef GPAGE2
 	icl 't_gtia2.asm'	; page 2
-	.endif
 
 ; gletters: the five letters, from the ROM font, each at its point on the
 ; wave (gwave of GPH less 8 a letter: 0-8 bytes into the zone, their top

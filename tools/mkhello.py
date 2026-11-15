@@ -2,14 +2,10 @@
 """Make the sampled "hello" for src/cart/hello.asm from
 src/cart/audio/En-us-hello.ogg, and a preview to listen to on a PC.
 
-  src/cart/audio/hello-15k.bin   the cartridge: one sample a scan line
-                                 (15.7 kHz), one byte each, 0-30 (two
-                                 voices' levels added), in a bank of its own
-  src/cart/audio/hello-ram.bin   the disk file and the 16k hello tape: the
-                                 same, recorded at a quarter of the rate
-                                 (3.9 kHz) and played every two lines (7.85
-                                 kHz): twice as fast and squeaky, a quarter
-                                 of the bytes
+  src/cart/audio/hello-15k.bin   one sample a scan line (15.7 kHz), one
+                                 byte each, 0-30 (two voices' levels added):
+                                 the cartridge (in a bank of its own), the
+                                 disk file and the 16k hello tape
   build/hello-preview.wav        what the Atari plays, in the order it plays
                                  it: 4 bits (one voice), 1 bit (the console
                                  speaker), 5 bits (two voices), for both
@@ -54,7 +50,7 @@ AUDIO = ROOT / 'src' / 'cart' / 'audio'
 SRC = AUDIO / 'En-us-hello.ogg'
 LINE = 15700.0                  # NTSC scan lines a second (PAL: 15557, 1% slower)
 # file, scan lines a sample when played, how many times faster than recorded
-OUTS = [(AUDIO / 'hello-15k.bin', 1, 1), (AUDIO / 'hello-ram.bin', 2, 2)]
+OUTS = [(AUDIO / 'hello-15k.bin', 1, 1)]
 PREVIEW = ROOT / 'build' / 'hello-preview.wav'
 PREV_SR = 44100
 

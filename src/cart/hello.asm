@@ -6,12 +6,10 @@
 ;   1-4  on voice 1, 2, 3, 4: 4 bits (the sample halved)
 ;   5    on the console speaker: 1 bit (rougher)
 ;   6-7  on voices 1+2, then 3+4: 5 bits (clearer)
-; One byte a sample, 0-30 (tools/mkhello.py). The cartridge (ROM): a sample
-; every scan line (15.7 kHz), from a bank of its own (HELLOBK), so the
+; One byte a sample, 0-30 (tools/mkhello.py), a sample every scan line
+; (15.7 kHz). The cartridge (ROM): from a bank of its own (HELLOBK), so the
 ; player runs from low RAM while that bank is in. In RAM (the disk file,
-; the 16k hello tape): a sample every other line (7.85 kHz) of a recording
-; made at a quarter of the cartridge's rate: twice as fast and squeaky, in
-; a quarter of the bytes.
+; the 16k hello tape): the same recording, in the image.
 ;
 ; Then the question; no answer in about 3 s plays them all again. Not
 ; heard: POKEY item 7. An answer counts while it plays too (looked at after
@@ -27,12 +25,11 @@ HPN	= $8A			; pages left
 HSPK	= $8B			; the speaker's state
 HMODE	= $8C			; 0 one voice, 1 the speaker, 2 two voices
 HWHO	= TSCR+$08		; which play, 0-6
-	.ifdef ROM
 HLINES	= 1
+	.ifdef ROM
 HDATA	= $A000			; (bank HELLOBK, HELLOPG pages: build.py)
 HPAGES	= HELLOPG
 	.else
-HLINES	= 2
 HDATA	= hl_data
 HPAGES	= >[hl_end-hl_data]
 	.endif
@@ -222,6 +219,6 @@ s_hl1	dta d'HELLO 7 TIMES: VOICES 1-4, SPEAKER,',$FF
 s_hl2	dta d'VOICES 1+2 AND 3+4. SCREEN OFF MEANWHILE',$FF
 s_hl3	dta d'HEARD ALL 7? Y/START=YES, N/SELECT=NO',$FF
 	.ifndef ROM
-hl_data	ins '../cart/audio/hello-ram.bin'	; (whole pages)
+hl_data	ins '../cart/audio/hello-15k.bin'	; (whole pages)
 hl_end
 	.endif

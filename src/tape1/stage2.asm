@@ -214,6 +214,16 @@ no_os	lda DISPOK
 	beq fin
 	jsr summary
 fin
+	.ifdef ONE16		; R: the whole RAM test again (stage 1's again);
+	lda #<S1AGAIN		; the 8k tape: this stage's tests again (stage 1
+	sta RETESTV		; is in RAM, its results in its BSS: entry2 takes
+	lda #>S1AGAIN		; them over again)
+	.else
+	lda #<entry2
+	sta RETESTV
+	lda #>entry2
+	.endif
+	sta RETESTV+1
 	.ifdef ROM
 	lda #<tomenu		; START: on to the system tests' bank
 	sta CONTVEC
@@ -581,9 +591,9 @@ s_nextok dta d'ALL PASSED. NEXT: DIAG-8K-02-ROM',$FF
 s_nextbad dta d'FIX THIS FIRST',$FF
 	.endif
 	.ifdef GOMENU
-s_toggle2 dta d'ANY KEY=GO ON  SELECT=REPLAY',$FF
+s_toggle2 dta d'R=RETEST  T=TONES  ANY KEY=GO ON',$FF
 	.else
-s_toggle2 dta d'SELECT=REPLAY  OPTION=FLASH',$FF
+s_toggle2 dta d'R=RETEST  ANY KEY=TONES',$FF
 	.endif
 
 	.ifndef ROM		; (in ROM every byte counts: no page alignment)

@@ -69,7 +69,7 @@ at least its RAM, and stops clearly on a smaller one. Some tapes need more than 
 
 ### Disk files
 
-`XEXES` in `tools/build.py` lists them: the 32k+ tape and `diag-memtest`,
+`XEXES` in `tools/build.py` lists them: the 32k+ tape and `diag-16k-memtest`,
 built again by the same builders with `XEX=1` and wrapped by
 `tools/mkxex.py`. XEX changes only the title bar and leaves out NEEDPG;
 everything it changes is under `.ifdef XEX`, so the tapes build
@@ -137,22 +137,6 @@ brings back), which each part sets as it starts. The standalone programs
 the cartridge's system banks) include `lib.asm` itself, with the same
 defines as before.
 
-### A system tape's part two (diag-8k-05-av)
-
-The GTIA test's second page (`src/system/t_gtia2.asm`, the display modes)
-doesn't fit the 8K sound and video tape, so that tape (`GPART2`) has it as
-a part two: `src/system/gpart2.asm`, the next file on the tape. After page
-1, part one reads it with `common/loader.asm` (as tape 1 reads its stage 2;
-`SYSPART`: no RAM size check, a failure goes to `p2fail`, START tries
-again, SELECT ends test 7 without it) into its own RAM at `P2AT`, which
-is its `LOAD`: the boot code and the tests are done with by then, and the
-test list (`tlist.asm`) is moved after the library for this tape. It
-enters it at `P2AT+6`. Part two may reach `TESTEND` (past the boot's
-display code, also done with); it checks that itself. It uses part one's library, test 7's
-`gwave` and `gans` (kept in `common.asm`, outside the overwritten tests),
-and `tend`: build.py writes their addresses to `build/part1.asm` from part
-one's label table (the `PART1` list).
-
 ### The ROM test's self-check
 
 The ROM test also checks the program it is part of (`selfchk`, item 6).
@@ -204,7 +188,7 @@ zeros and got through.
 |---|---|
 | `src/common/` | shared code: boot (alive, checksum, low RAM test, size probe), display checks, the beep and flash reporter, the text screen, the RAM tests, XL/XE RAM, the stage loader |
 | `src/tape1/` | the RAM tape: stage 1, and stage 2 (relocated test, RAM under the OS, 130XE banks) |
-| `src/tape2/` | the memory test (one source, two builds: `diag-8k-memtest` with OWNTEST and NOXL, `diag-memtest` with BOUNCE) |
+| `src/tape2/` | the memory test (one source, two builds: `diag-8k-memtest` with OWNTEST and NOXL, `diag-16k-memtest` with BOUNCE) |
 | `src/disk/` | the disk files' guard and mover (`xexwrap.asm`) |
 | `src/cart/` | the cartridge's bank layout and checksum (`romsum.asm`) and the long memory test's loader (`ldmem.asm`) |
 | `src/system/` | the system tests: `main.asm` builds a tape from the tests that `WANT_*` defines pick; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia`); `common.asm` has the test flow and the menu |

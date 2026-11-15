@@ -49,8 +49,9 @@ RUNS = {
     'ports': ('diag-8k-04-ports', ['--auto', '--until', '90'], [
         ('STICK 4', 1, 'ports-01-joysticks'),
         ('VAL MIN MAX', 2, 'ports-02-paddles')]),
-    'av': ('diag-8k-05-av', ['--auto', '--until', '120'], [
-        ('VOICE 2:', 0.4, 'av-01-pokey'),
+    'av': ('diag-8k-05-sound', ['--auto', '--until', '120'], [
+        ('VOICE 2:', 0.4, 'av-01-pokey')]),
+    'video': ('diag-8k-06-video', ['--auto', '--until', '60'], [
         ('LOOKS RIGHT?', 1, 'av-02-gtia')]),
     'cart': ('diag-cart.car', ['--ram', '0x4000', '--con', 'START:8:0.4,START:14:0.4',
                                '--until', '24'], [   # (no --auto: it would run ALL)
@@ -67,9 +68,9 @@ RUNS = {
                                '--until', '1200'], [
         ('^START=RUN', 0.5, '32k-02-menu'),
         ('^START = MENU', 1, '32k-03-results')]),
-    'memtest': ('diag-memtest', ['--ram', '0x8000', '--stuck', '6FFC-6FFF:3:1',
+    'memtest': ('diag-16k-memtest', ['--ram', '0x8000', '--stuck', '6FFC-6FFF:3:1',
                                  '--key', '150', '--until', '220'], [
-        ('PASS 4', 3, 'memtest-01-running'),
+        ('PASSES 4', 3, 'memtest-01-running'),
         ('FIX SOLID', 1, 'memtest-02-summary')]),
     # the screen sweep is timed, not text-triggered: at 10 s on 8K it is on
     # row 13 (the save-page churn and the sweep alternate every pass)

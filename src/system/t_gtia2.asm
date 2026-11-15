@@ -1,6 +1,4 @@
-; Test 7, page 2 (item 2): the display modes. Included by t_gtia.asm, or
-; on the 8K sound and video tape the tape's part two (gpart2.asm), which
-; uses part one's library and its gwave and gans (common.asm).
+; Test 7, page 2 (item 2): the display modes (included by t_gtia.asm).
 ; ---------------------------------------------------------------------------
 ; Page 2, item 2: the display modes, one screen, each with a line of text
 ; above it saying what it is:

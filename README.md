@@ -37,11 +37,11 @@ below leave the `-v0.9` out.
 
    | RAM | Tapes (in `cassettes/`) |
    |---|---|
-   | 8K or more (every Atari) | the 8k set: `diag-8k-01-ram` to `diag-8k-05-av`, about 2 min each; long test `diag-8k-memtest` |
-   | 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, about 3.5 min each; long test `diag-memtest`; the sampled sound test `diag-16k-03-hello` |
-   | 32K or more (an 800 with 32K-48K, any 64K or 128K XL/XE) | the 32k+ tape: `diag-32k-xl-xe`, one tape, about 6 min; long test `diag-memtest` |
+   | 8K or more (every Atari) | the 8k set: `diag-8k-01-ram` to `diag-8k-06-video`, about 2 min each; long test `diag-8k-memtest` |
+   | 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, about 3.5 min each; long test `diag-16k-memtest`; the sampled sound test `diag-16k-03-hello` |
+   | 32K or more (an 800 with 32K-48K, any 64K or 128K XL/XE) | the 32k+ tape: `diag-32k-xl-xe`, one tape, about 6 min; long test `diag-16k-memtest` |
    | keyboard, joysticks, paddles only (16K or more) | `diag-controls`: no test harness needed; goes with Atari's SALT disks |
-   | with a disk drive or a MiSTer: 32K or more | `disks/diag-32k-xl-xe.xex`: everything in one file, the long test as menu line 9; the long test alone: `disks/diag-memtest.xex` (16K) |
+   | with a disk drive or a MiSTer: 32K or more | `disks/diag-32k-xl-xe.xex`: everything in one file; the long test: `disks/diag-16k-memtest.xex` (16K) |
    | a MiSTer, or an AtariMax 128K flash cartridge: any machine, 8K or more | `carts/diag-cart.car`: every test, run from ROM, with the menu; the long test from its line 8 (16K) |
    | a BASIC cartridge (400/800, 1200XL) | BASCRC: `disks/diag-bascrc.xex` (from DOS, 16K), or as a BASIC program: `cassettes/diag-bascrc.cas` (`ENTER "C:"`), `disks/bascrc.lst` (`ENTER "D:"`); see the user guide |
 
@@ -75,8 +75,7 @@ and beeps, loading from a PC, and what to do when something fails.
   - GTIA test, page 2: every display mode on one screen (ANTIC 6, 7, the
     bitmaps 8, A, B, D, F with a wave drawn in each, and GTIA's 9, 10, 11),
     a line wiggling sideways (HSCROL) and the question bobbing (VSCROL);
-    item 2. On `diag-8k-05-av` it doesn't fit, so it is the tape's part
-    two, loaded after page 1 (`diag-8k-05-av-part2.cas` for AspeQt).
+    item 2.
   - The ATARI word scrolls right to left; each letter rides the wave on its
     own counter, as in 0.8. The hue bands are 4 lines (from 5), and the
     word sits in the middle of the space that leaves.
@@ -87,6 +86,22 @@ and beeps, loading from a PC, and what to do when something fails.
   - The final result when nothing failed but not every test ran (skipped,
     or not run from the menu): steady yellow and the start-up chirp, not
     the green double charge.
+  - Keys at every result: R re-test (the test again; at a tape's end its
+    tests; at a RAM summary the RAM test), T or SELECT the tones again, F
+    or OPTION full-screen flashes, any other key goes on (at the end of a
+    tape without a menu: the tones). In the user guide's first section.
+  - The 8k sound and video tape is two tapes, `diag-8k-05-sound` and
+    `diag-8k-06-video`, each one load (no part two), so R can run every
+    test again. The 8k tapes carry only their own tests' names.
+  - "hello": the cartridge's recording everywhere (15.7 kHz, seven plays);
+    `diag-16k-03-hello` loads in 3.5 min. The disk file no longer carries
+    the long memory test (it could never come back to the menu): that is
+    `diag-16k-memtest.xex`, and the tape `diag-16k-memtest` (was
+    `diag-memtest`).
+  - The memory test's summary shows the passes done again; R restarts it.
+  - The keyboard test ends on any console key. The Atari key shows the
+    logo on every machine. `diag-8k-01-ram` shows the main RAM (48K on an
+    XL/XE) until part 2 tests the rest.
   - Test 7 is named GTIA/ANTIC (its page 2 is mostly ANTIC's modes).
   - Prompts say ANY KEY where any key goes on (`ANY KEY = GO ON`,
     `ANY KEY = MENU`), so a dead START or key isn't a dead end. The

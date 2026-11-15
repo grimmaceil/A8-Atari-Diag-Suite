@@ -51,14 +51,12 @@ RBE	= BSS+$30
 PCY	= BSS+$31	; putc: saved Y
 INV	= BSS+$32	; putc: $80 = inverse
 DVAL	= BSS+$33	; 2: putdec value
-SECLEFT	= BSS+$35	; video check countdown
-FRM	= BSS+$36	; frames left in this second
-ARMED	= BSS+$37	; video check: inputs were seen released
+RETESTV	= BSS+$35	; 2: where R in a result's pause goes (0 = nowhere): the
+		; test again (report.asm's hold)
 ISPAL	= BSS+$38
 LEAD	= BSS+$39	; putdec: still in leading zeros
 SCRERR	= BSS+$3A	; 2: error count before a screen-block test
 RROW	= BSS+$3C	; results: current row
-LASTCH	= BSS+$3D	; video check: in the last-chance period
 HOLDC	= BSS+$3E	; hold: border color
 SCRON	= BSS+$3F	; nonzero while the text screen is on
 STACKOK	= BSS+$D0	; low RAM passed: stack/zero page usable, controls read

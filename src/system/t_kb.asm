@@ -1,8 +1,8 @@
 ; Test 2: keyboard. A key already down at the start is stuck (item 1). Then
 ; every key pressed shows on the map, and clicks the console speaker and
 ; POKEY voice 1; SHIFT
-; and CONTROL show with it, BREAK through its own interrupt latch. START
-; ends the test; a key not pressed by then fails item 2. HELP and F1-F4
+; and CONTROL show with it, BREAK through its own interrupt latch. Any
+; console key (START, SELECT, OPTION) ends the test; a key not pressed by then fails item 2. HELP and F1-F4
 ; (XL) show but aren't required.
 
 KBSEEN	= TSCR+$00		; 8: KBCODEs seen, one bit each
@@ -64,10 +64,8 @@ kb_rows	stx CNT
 	inx
 	cpx #KBROWS
 	bne kb_rows
-	lda MACHINE		; the 400/800: that key carries the Atari logo,
-	bne kb_xl		; not the XL/XE's inverse video sign
-	PRINT KBROW+3, 32, s_logo
-kb_xl	PRINT KBROW+5, 0, s_kb2	; the legend, DONE in inverse
+	PRINT KBROW+3, 32, s_logo	; that key: the Atari logo (400/800, XL)
+	PRINT KBROW+5, 0, s_kb2	; the legend, DONE in inverse
 	lda #KL_DONE
 	jsr light
 
@@ -143,9 +141,10 @@ kb_brk	lda IRQST
 	lda #20
 	sta BRKT
 	jsr click
-kb_st	lda CONSOL		; START ends it
-	lsr
-	bcc kb_done
+kb_st	lda CONSOL		; any console key ends it (the keys are what is
+	and #7			; being tested)
+	cmp #7
+	bne kb_done
 	jmp kb_lp
 kb_done
 
@@ -375,10 +374,10 @@ click	lda #F_SHORT		; (and on POKEY: one of the two may be dead)
 	icl 'kbmap.asm'
 kbrtab	.word kbrow0, kbrow1, kbrow2, kbrow3, kbrow4
 
-s_kb1	dta d'PRESS EVERY KEY. START ENDS THE TEST.',$FF
+s_kb1	dta d'PRESS EVERY KEY. A CONSOLE KEY ENDS IT.',$FF
 s_logo	.byte $0F, $7C, $3C, $FF	; /|\ (three columns, as INV: same key cell)
 s_kb2	dta d'PLAIN=TO DO  INVERSE=DONE  BLINK=HELD',$FF
 s_kb3	dta d'INVERSE = PRESSED',$FF
 KL_DONE	= 5*40+13		; the legend's INVERSE=DONE, as a keyboard offset
-s_stuck	dta d'A KEY WAS DOWN AT THE START: STUCK?'*,$FF
+s_stuck	dta d'A KEY WAS DOWN AT THE START'*,$FF
 s_kleft	dta d'KEYS LEFT ',$FF

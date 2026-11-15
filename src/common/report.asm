@@ -324,7 +324,9 @@ pa_hold	lda #50
 	lda #C_GREEN
 	sta HOLDC
 	NCALL RET1, hold
-	jmp pa_top
+	lda HSEL		; T, SELECT (or a key at the end): the charge
+	beq pa_top		; again
+	jmp pass
 
 ; hold: border = HOLDC for RCNT tenths of a second (set HOLDC before the
 ; NCALL: NCALL itself clobbers A). Once low RAM has passed (STACKOK) it
@@ -334,6 +336,10 @@ pa_hold	lda #50
 ;   SELECT                 end the pause: replay the code now
 ;   OPTION                 text <-> full-screen flashes (if the display
 ;                          checks passed); holding it holds the result
+;   (each with a key too, for a dead console key: T = SELECT, F = OPTION)
+;   R                      the test again (RETESTV, if one is set)
+; With no CONTVEC (the end of a tape) a key plays the tones again, as
+; SELECT does.
 ; (HARMED, "seen released", is cleared by whoever starts a result: pass,
 ; report. Not here: a pause is entered over and over, and a tap
 ; that began just then was lost.)
@@ -357,19 +363,26 @@ ho_in	ora SLATCH
 	beq ho_n
 	lsr			; bit 0: go on
 	bcc ho_sel
-	ldx CONTVEC+1
-	beq ho_n
+	ldx CONTVEC+1		; (none: the end: the tones again)
+	beq ho_tn
 	jsr waitrel
 	jmp (CONTVEC)
-ho_sel	lsr			; bit 1: SELECT
+ho_sel	lsr			; bit 1: SELECT or T: the tones again
 	bcc ho_opt
-	jsr waitrel
+ho_tn	jsr waitrel
 	lda #1
 	sta HSEL
 	jmp (RET1)
-ho_opt	lda DISPOK		; bit 2: OPTION
+ho_opt	lsr			; bit 2: OPTION or F: the flashes
+	bcc ho_rt
+	ldx DISPOK
 	beq ho_n
-	jsr scrtoggle
+	jsr scrtoggle		; (returns with Z set)
+	beq ho_n
+ho_rt	ldx RETESTV+1		; bit 3: R: the test again
+	beq ho_n
+	jsr waitrel
+	jmp (RETESTV)
 ho_n	dec RCNT
 	bne ho_lp
 	jmp (RET1)
@@ -380,29 +393,42 @@ ho_n	dec RCNT
 arm	lda #0
 	sta HARMED
 	sta SLATCH
+	sta HSEL
 	jsr inputs
 	bne am_x
 	inc HARMED
 am_x	rts
 
-; inputs: A = bit 0 go on (START, a key, fire 0/1), bit 1 SELECT,
-; bit 2 OPTION. Zero (Z set) when nothing is pressed.
+; inputs: A = bit 0 go on (START, a key, fire 0/1), bit 1 SELECT or T,
+; bit 2 OPTION or F, bit 3 R. Zero (Z set) when nothing is pressed.
 inputs	lda CONSOL		; 0 = pressed
 	eor #7
 	and #7
 	sta INB
 	lda SKSTAT		; bit 2 = 0 while a key is held
 	and #4
-	beq in_go
-	lda TRIG0
+	bne in_tr
+	lda KBCODE
+	and #$3F
+	ldx #3
+in_k	cmp in_kc-1,x		; T, F, R
+	beq in_kx
+	dex
+	bne in_k
+in_kx	lda in_kb,x		; (X = 0: another key: go on)
+	ora INB
+	sta INB
+in_tr	lda TRIG0
 	and TRIG1
 	and #1
 	bne in_x
-in_go	lda INB
+	lda INB
 	ora #1
 	sta INB
 in_x	lda INB
 	rts
+in_kc	.byte $2D, $38, $28	; T, F, R (KBCODE)
+in_kb	.byte 1, 2, 4, 8
 
 ; waitrel: wait until every control is released.
 waitrel	jsr inputs

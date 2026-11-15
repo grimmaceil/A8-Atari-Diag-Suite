@@ -80,6 +80,6 @@ lc_lp	lda (CUR),y
 lc_x	rts
 
 s_con1	dta d'PRESS START, SELECT AND OPTION.',$FF
-s_con2	dta d'ONE DEAD? ANY KEY GOES ON. X = SKIP',$FF
+s_con2	dta d'ONE DEAD? A KEY GOES ON. X=SKIP',$FF
 s_cons	dta d'START  SELECT  OPTION',$FF
-s_spk	dta d'LISTEN: A TONE FROM THE CONSOLE SPEAKER',$FF
+s_spk	dta d'LISTEN: A TONE FROM THE SPEAKER',$FF

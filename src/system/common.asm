@@ -101,6 +101,21 @@ tk_go
 	.endif
 	jmp (NEXTVEC)
 
+	.ifndef MENU
+; trestart: R at the end of a tape without a menu: its tests again from the
+; first, with fresh results.
+trestart lda #0
+	sta ENDING
+	sta TIDX
+	sta MRUN
+	ldx #7
+trs_cl	sta BADMASK,x
+	dex
+	bne trs_cl
+	jsr tnextv
+	jmp (NEXTVEC)
+	.endif
+
 ; tnextv: NEXTVEC = the next tlist entry.
 tnextv	ldx TIDX
 	lda tlist,x
@@ -264,6 +279,10 @@ tresult
 	jmp final
 tr_nl
 	.endif
+	lda #<tr_rt		; R: this test again
+	sta RETESTV
+	lda #>tr_rt
+	sta RETESTV+1
 	jsr tshow
 	ldx TEST
 	lda BADMASK,x
@@ -288,7 +307,9 @@ tr_ps
 	lda NEXTVEC+1
 	sta CONTVEC+1
 	jmp pass
-tr_fail	ldx #8
+tr_fail	lda #<tr_rtf		; (R: the others' results back first)
+	sta RETESTV
+	ldx #8
 tf_st	lda BADMASK,x
 	sta STASH-1,x
 	cpx TEST
@@ -302,12 +323,29 @@ tf_keep	dex
 	lda #>tr_back
 	sta CONTVEC+1
 	jmp report
-tr_back	ldx #8
+tr_back	jsr unstash
+	jmp (NEXTVEC)
+; tr_rt: R at a test's result: the same test again, its result fresh (tend
+; has moved TIDX past the next entry: this test's is 2 entries back).
+tr_rtf	jsr unstash
+tr_rt	ldx TEST
+	lda #0
+	sta BADMASK,x
+	lda TIDX
+	sec
+	sbc #4
+	sta TIDX
+	jsr tnextv
+	jmp (NEXTVEC)
+	.if [tr_rtf>>8]<>[tr_rt>>8]	; (tr_fail sets only the low byte)
+	.error "tr_rtf and tr_rt must share a page"
+	.endif
+unstash	ldx #8
 tf_rs	lda STASH-1,x
 	sta BADMASK,x
 	dex
 	bne tf_rs
-	jmp (NEXTVEC)
+	rts
 
 ; tpage: a fresh page for test TEST, titled A/Y.
 tpage	ldx DISPOK
@@ -375,7 +413,7 @@ ts_go
 	.ifdef MENU
 	lda MMODE
 	bne ts_ng
-	PRINT 23, 0, s_toggle3	; ANY KEY = MENU
+	PRINT 23, 0, s_toggle3	; R, T, a key = the menu
 	rts
 ts_ng
 	.endif
@@ -474,11 +512,17 @@ final
 	.ifdef MENU
 	lda #8			; tshow, as redraw, shows the results from here
 	sta TEST
-	lda #<menu		; START: back to the menu
+	lda #0			; (R: nothing here: the menu has ALL)
+	sta RETESTV+1
+	lda #<menu		; a key: back to the menu
 	sta CONTVEC
 	lda #>menu
 	.else
-	lda #0
+	lda #<trestart		; R: the tape's tests again
+	sta RETESTV
+	lda #>trestart
+	sta RETESTV+1
+	lda #0			; (a key: the tones again)
 	.endif
 	sta CONTVEC+1
 	lda #2			; the result stays up (2: a pass plays the charge
@@ -890,8 +934,8 @@ s_mram	dta d'0 RAM',$FF
 	.else
 s_m2	dta d'OR PRESS 1-8 FOR THAT LINE',$FF
 	.endif
-s_toggle3 dta d'ANY KEY = MENU',$FF
-s_mpass	dta d'MENU IN 2 S.  OPTION = FLASH',$FF
+s_toggle3 dta d'R=RETEST  T=TONES  ANY KEY=MENU',$FF
+s_mpass	dta d'MENU IN 2 S.  R=RETEST',$FF
 	.endif
 
 	.ifdef MENU
@@ -1004,7 +1048,7 @@ s_hres	dta d'RESULTS',$FF
 
 bitn	.byte 1, 2, 4, 8, 16, 32, 64, 128
 
-	.ifdef WANT_GTIA	; (test 7, here: not under the tape's part two)
+	.ifdef WANT_GTIA	; (test 7)
 ; gans: the answer: A = 1 yes (Y, START), 2 no (N, SELECT), 0 none (Z set).
 gans	lda SKSTAT
 	and #4
@@ -1057,46 +1101,47 @@ gqsin	.byte 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4	; 4 sin, a quarter
 s_gq	dta d'LOOKS RIGHT? Y/START=YES, N/SELECT=NO',$FF
 	.endif
 
-	.ifdef GPART2
-; p2fail: the tape's part two didn't load (common/loader.asm; L2MSG says
-; why). Any key (or START, or fire) tries again, SELECT ends test 7
-; without its page 2.
-p2fail	PRINT 22, 0, s_l2pre	; (rows 22-23: cleared by load2's message)
-	lda L2MSG
-	ldy L2MSG+1
-	jsr puts
-	PRINT 23, 0, s_l2key
-	jsr waitrel
-pf_lp	jsr inputs
-	lsr
-	bcs pf_go		; a key, START, fire
-	lsr
-	bcc pf_lp
-	jsr waitrel		; SELECT
-	jmp tend
-pf_go	jsr waitrel
-	jmp load2
-s_l2load dta d'LOADING PART 2',$FF
-s_l2pre	dta d'PART 2: ',$FF
-s_l2key	dta d'ANY KEY=AGAIN SELECT=SKIP',$FF
-s_l2_big			; (one message for every way it fails)
-s_l2_sio
-s_l2_hdr
-s_l2_sum dta d'DID NOT LOAD',$FF
-	.endif
 
+; tnames: the tests' names (a tape without a menu: only its own; the menu
+; lists them all).
 tnames	.word s_t1, s_t2, s_t3, s_tjoy, s_tpad, s_tpok, s_t7
+	.if .def MENU .or .def WANT_ROM
 s_t1	dta d'1 ROMS',$FF
+	.else
+s_t1	= 0
+	.endif
+	.if .def MENU .or .def WANT_KB
 s_t2	dta d'2 KEYBOARD',$FF
+	.else
+s_t2	= 0
+	.endif
+	.if .def MENU .or .def WANT_CON
 s_t3	dta d'3 CONSOLE KEYS',$FF
+	.else
+s_t3	= 0
+	.endif
+	.if .def MENU .or .def WANT_JOY
 s_tjoy	dta d'4 JOYSTICKS',$FF
+	.else
+s_tjoy	= 0
+	.endif
+	.if .def MENU .or .def WANT_PAD
 s_tpad	dta d'5 PADDLES',$FF
+	.else
+s_tpad	= 0
+	.endif
 	.ifdef WANT_SND
 s_tpok	dta d'6 POKEY: HELLO',$FF
-	.else
+	.elseif .def MENU .or .def WANT_POK
 s_tpok	dta d'6 POKEY',$FF
+	.else
+s_tpok	= 0
 	.endif
+	.if .def MENU .or .def WANT_GTIA
 s_t7	dta d'7 GTIA/ANTIC',$FF
+	.else
+s_t7	= 0
+	.endif
 	.ifdef RAM8
 s_t8	dta d'0 RAM, BANKS',$FF
 	.endif
@@ -1109,29 +1154,31 @@ s_test	dta d'TEST ',$FF
 s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_items	dta d', ITEMS',$FF
-s_tpass	dta d'NEXT TEST IN 2 S. OPTION=FLASH',$FF
-s_goon	dta d'ANY KEY = GO ON',$FF
+s_tpass	dta d'NEXT TEST IN 2 S.  R=RETEST',$FF
+s_goon	dta d'R=RETEST  T=TONES  ANY KEY=GO ON',$FF
 	.ifdef NEEDYN
-s_heard	dta d'HEARD IT? Y/START = YES, N/SELECT = NO',$FF
+s_heard	dta d'HEARD IT? Y/START=YES, N/SELECT=NO',$FF
 	.endif
 	.ifndef MENU
 ; s_next: the end of a tape without a menu: what to load next.
 	.if SETNO=0
-	.if TAPENO=5
-s_next	dta d'TEST COMPLETE: LAST 8K TAPE',$FF
+	.if TAPENO=6
+s_next	dta d'DONE. R=RETEST. LAST 8K TAPE',$FF
 	.else
-s_next	dta d'TEST COMPLETE. NEXT: DIAG-8K-0',[TAPENO+$11]
+s_next	dta d'DONE. R=RETEST. NEXT: DIAG-8K-0',[TAPENO+$11]
 	.if TAPENO=2
 	dta d'-INPUT',$FF
 	.elseif TAPENO=3
 	dta d'-PORTS',$FF
+	.elseif TAPENO=4
+	dta d'-SOUND',$FF
 	.else
-	dta d'-AV',$FF
+	dta d'-VIDEO',$FF
 	.endif
 	.endif
 	.elseif SETNO=1
-s_next	dta d'TEST COMPLETE: LAST 16K TAPE',$FF
+s_next	dta d'DONE. R=RETEST. LAST 16K TAPE',$FF
 	.else
-s_next	dta d'TEST COMPLETE',$FF
+s_next	dta d'DONE. R=RETEST',$FF
 	.endif
 	.endif

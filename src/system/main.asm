@@ -57,11 +57,8 @@ RAMAGAIN = xram			; and the RAM test again is in bank 0
 SKIPKEY	= 1			; tape1/main.asm): its line says so
 	.endif
 	.ifdef ROM		; common.asm: the long memory test on the menu (9):
-LONGT	= 1			; the cartridge, and the disk file, which carries
-	.elseif .def XEX	; its image behind the system tests (MEMAT)
-LONGT	= 1
-xmem	= ldmem
-	.endif
+LONGT	= 1			; the cartridge (on disk it is a file of its own,
+	.endif			; diag-16k-memtest.xex: it can't come back)
 	.ifdef WANT_POK		; cart/hello.asm: sampled sound, where there is
 	.ifdef ROM		; room: the cartridge and the disk file, and the
 SAMPLED	= 1			; 8k hello tape (WANT_SND)
@@ -75,8 +72,6 @@ SAMPLED	= 1
 NEEDYN	= 1
 	.elseif .def WANT_POK
 NEEDYN	= 1
-	.elseif .def WANT_GTIA
-NEEDYN	= 1
 	.endif
 	.ifdef WANT_ROM		; the ROM test checks this program's own copy too
 	.ifndef ROM		; (t_rom.asm's selfchk): a tape or disk file on its
@@ -87,11 +82,6 @@ SELFPG	= [IMGEND-LOAD]/256
 CRCAT	= LOAD
 	.endif
 	.endif
-	.endif
-	.ifdef GPART2		; the 8K sound and video tape: test 7's page 2 is
-SYSPART	= 1			; the tape's part two (gpart2.asm), loaded over
-NORAMCHK = 1			; the tests already run (common/loader.asm)
-LDTO	= P2AT
 	.endif
 	.ifndef WANT_ROM
 NOFONT	= 1			; display.asm, info.asm: only the ROM test shows
@@ -262,13 +252,7 @@ ch_nk
 	jmp trun
 	.endif
 
-	.ifndef GPART2		; (GPART2: after the library, out of part two's way)
 	icl 'tlist.asm'
-	.endif
-TESTBEG
-	.ifdef GPART2		; part two loads over the boot code and the tests,
-P2AT	= LOAD			; all done with by then (tlist.asm is further on)
-	.endif
 
 	.ifdef WANT_ROM
 	icl 't_rom.asm'
@@ -318,8 +302,6 @@ pats	.byte $00,$FF,$55,$AA
 	.byte $FE,$FD,$FB,$F7,$EF,$DF,$BF,$7F
 NPAT	= *-pats
 	.endif
-TESTEND				; (GPART2: part two may reach here: the tests and
-				; the boot's own code are done with by then)
 
 	.ifdef SHLIB
 	icl '../../build/shlib.asm'	; the library's addresses (tape 1's part)
@@ -330,13 +312,6 @@ NORAMT	= 1			; (no RAM test here)
 	icl 'common.asm'
 	.ifdef SAMPLED
 	icl '../cart/hello.asm'
-	.endif
-	.ifdef XEX
-	icl '../cart/ldmem.asm'
-	.endif
-	.ifdef GPART2
-	icl '../common/loader.asm'
-	icl 'tlist.asm'
 	.endif
 
 	.ifdef ROM

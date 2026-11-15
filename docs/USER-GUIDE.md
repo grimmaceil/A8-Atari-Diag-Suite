@@ -23,6 +23,27 @@ come as disk files, in the `disks` folder (see [From disk](#from-disk)),
 and all of the tests are on one cartridge, in the `carts` folder (see
 [From the cartridge](#from-the-cartridge)).
 
+## Keys
+
+Every result screen and every pause in a beep code takes these keys. Each
+action has a console key and a keyboard key, so one dead key never traps
+you:
+
+| Key | Does |
+|---|---|
+| **R** | re-test: the test you just saw again (at the end of a tape without a menu: all its tests; at the end of a RAM test: the whole RAM test) |
+| **T** or SELECT | the tones (the beep code, or the pass tune) again |
+| **F** or OPTION | full-screen flashes on and off: the whole screen flashes with the code, easier to see when the picture is garbled |
+| START, any other key, or a joystick button | go on: the next test, or back to the menu. At the end of a tape without a menu, where there is nothing to go on to: the tones again |
+
+Other keys:
+- questions: Y or START = yes, N or SELECT = no;
+- the keyboard test ends on any console key (the keys are what it tests),
+  and the console key test goes on with any key;
+- S skips the cartridge's RAM test, X the ROM test and the console key
+  test;
+- the memory test stops after its pass on any key.
+
 Pictures in this guide come from the project's simulator, using the MiSTer
 Atari800 core's NTSC palette and a real Atari OS font. The colours and
 their RGB values are what the MiSTer core shows; a real TV or monitor may
@@ -73,8 +94,8 @@ is tested before a test asks you a yes/no question.
 | RAM | Tapes, in this order | Long test (optional) |
 |---|---|---|
 | 8K or more | the 8k set: `diag-8k-01-ram`, `-02-rom`, `-03-input`, `-04-ports`, `-05-av` | `diag-8k-memtest` |
-| 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system` (and `diag-16k-03-hello`, the sampled sound) | `diag-memtest` |
-| 32K or more | the 32k+ tape: `diag-32k-xl-xe` | `diag-memtest` |
+| 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system` (and `diag-16k-03-hello`, the sampled sound) | `diag-16k-memtest` |
+| 32K or more | the 32k+ tape: `diag-32k-xl-xe` | `diag-16k-memtest` |
 
 For the keyboard, joysticks and paddles only: `diag-controls` (16K or more).
 
@@ -106,13 +127,14 @@ All the tapes:
 | `diag-8k-02-rom` | 8K | 2 min | test 1, the ROMs |
 | `diag-8k-03-input` | 8K | 2 min | tests 2 and 3, the keyboard and the console keys |
 | `diag-8k-04-ports` | 8K | 2 min | tests 4 and 5, the joysticks and the paddles |
-| `diag-8k-05-av` | 8K | 2 min, then 20 s for part 2 | tests 6 and 7, the sound (POKEY) and the video (GTIA). Part 2: the GTIA test's second page, the display modes |
+| `diag-8k-05-sound` | 8K | 1.5 min | test 6, the sound (POKEY) |
+| `diag-8k-06-video` | 8K | 2 min | test 7, the video (GTIA/ANTIC), both pages |
 | `diag-8k-memtest` | 8K | 2 min | the memory test, until you stop it (main RAM only) |
 | `diag-16k-01-ram` | 16K | 3.5 min | the whole RAM test in one load: all the RAM, the tape's own, under an XL/XE's OS, and a 130XE's extra RAM |
 | `diag-16k-02-system` | 16K | 3.5 min | tests 1-7, with a menu |
-| `diag-16k-03-hello` | 16K | 1 min | the sampled "hello" (POKEY item 7): too big for 8K |
+| `diag-16k-03-hello` | 16K | 3.5 min | the sampled "hello" (POKEY item 7), as the cartridge plays it: too big for 8K |
 | `diag-32k-xl-xe` | 32K | 6 min | the whole RAM test, then tests 1-7 with a menu, in one load |
-| `diag-memtest` | 16K | 2.5 min | the memory test, until you stop it (all the RAM) |
+| `diag-16k-memtest` | 16K | 2.5 min | the memory test, until you stop it (all the RAM) |
 | `diag-controls` | 16K | 2 min | tests 2, 4 and 5 only: keyboard, joysticks, paddles |
 
 `diag-controls` is a companion to Atari's SALT diagnostic disks: their
@@ -121,10 +143,12 @@ controller tests need a test harness plugged in, and this tape doesn't.
 `diag-8k-01-ram-part2` is the second part of the 8k RAM tape as a file of
 its own. A machine with 8K never loads it (the screen says
 `STAGE 2: 16K ONLY. NEXT: DIAG-8K-02-ROM`); a bigger machine running the
-8k set does. `diag-8k-05-av-part2` is the same for the sound and video
-tape: its GTIA test's second page, which every machine loads. You only
-need these files with a player that can't wait between the two parts (see
-[AspeQt](#from-a-pc-usb-sio-interface-and-aspeqt)).
+8k set does. You only need it with a player that can't wait between the
+two parts (see [AspeQt](#from-a-pc-usb-sio-interface-and-aspeqt)).
+
+On an XL/XE, `diag-8k-01-ram`'s first part shows `RAM 48K`: the main RAM
+it tests. The RAM under the OS and a 130XE's extra RAM are part 2's, on a
+machine with 16K or more.
 
 ## Loading a tape
 
@@ -184,11 +208,8 @@ for a few minutes before it asks for part two, and by then AspeQt has
 played past it. The screen then says `STAGE 2: NOT ON TAPE` or
 `STAGE 2: ERROR` and a number.
 When that happens, play `diag-8k-01-ram-part2.cas` and press a key on the
-Atari: it tries again. `diag-8k-05-av` is two parts as well: after the
-GTIA test's first page it loads its second. If AspeQt has played past it,
-the screen says `PART 2: NOT ON TAPE` or `PART 2: READ ERROR`: play
-`diag-8k-05-av-part2.cas` and press a key (SELECT goes on without it).
-Every other tape is a single part and doesn't have this problem.
+Atari: it tries again. Every other tape is a single part and doesn't
+have this problem.
 
 ### From a real cassette recorder
 
@@ -203,8 +224,12 @@ folder. They load in seconds, not minutes:
 
 | File | Same tests as | Needs |
 |---|---|---|
-| `diag-32k-xl-xe.xex` | everything in one file: the RAM test, tests 1-7 with the menu, and the long memory test as menu line 9 | 32K |
-| `diag-memtest.xex` | the `diag-memtest` tape | 16K |
+| `diag-32k-xl-xe.xex` | everything in one file: the RAM test and tests 1-7 with the menu | 32K |
+| `diag-16k-memtest.xex` | the `diag-16k-memtest` tape: the long memory test | 16K |
+| `diag-bascrc.xex` | a BASIC cartridge's check (see [BASIC cartridges](#basic-cartridges-bascrc)) | 16K, DOS |
+
+The long memory test is a file of its own on disk: it needs all the RAM,
+the menu's program included, so it couldn't come back to the menu anyway.
 
 To load one:
 
@@ -394,25 +419,23 @@ failed. The results screen says `NUMBERS AFTER FAIL = ITEMS THAT FAILED`.
 
 ### Keys during a result
 
-| Key | Does |
-|---|---|
-| START, any key, or a joystick button | go on (between the beeps of a code too) |
-| SELECT | play the beep code again |
-| OPTION | switch between the text screen and full-screen flashes (the whole screen flashes with the code: easier to see when the picture is garbled) |
+See [Keys](#keys) at the start: R re-test, T or SELECT the tones, F or
+OPTION full-screen flashes, any other key goes on.
 
 A test that passes moves on by itself after about 2 seconds, except the ROM
 test, which waits so you can read the names and checksums. The end of a
 tape:
-- the 8k tapes 02-05, `diag-16k-03-hello` and `diag-controls` (no menu):
+- the 8k tapes 02-06, `diag-16k-03-hello` and `diag-controls` (no menu):
   the last test's screen stays up, with a line for each test on the tape
-  and what to load next, for example `TEST COMPLETE. NEXT:
-  DIAG-8K-03-INPUT`. Nothing needs a press. The last test goes straight
-  there: the pass or fail sound plays once, for the whole tape.
+  and what to load next, for example `DONE. R=RETEST. NEXT:
+  DIAG-8K-03-INPUT`. Nothing needs a press; R runs the tape's tests again,
+  any other key plays the tones again. The last test goes straight there:
+  the pass or fail sound plays once, for the whole tape.
 - `diag-16k-01-ram`, and `diag-8k-01-ram` on an 8K machine: the summary
-  stays up, with what to load next. Nothing needs a press.
-- the menu tapes (`diag-16k-02-system`, `diag-32k-xl-xe`): START goes back
+  stays up, with what to load next. R runs the RAM test again.
+- the menu tapes (`diag-16k-02-system`, `diag-32k-xl-xe`): a key goes back
   to the menu
-- `diag-32k-xl-xe`'s RAM summary: START goes on to the system tests
+- `diag-32k-xl-xe`'s RAM summary: a key goes on to the system tests
 
 After the opening video check, no question has a time limit: every question
 waits until you answer it, with a purple border, and a test that asks about
@@ -540,7 +563,9 @@ Or the BASIC program:
 
 1. Switch on with the BASIC cartridge in (no START held), to `READY`.
 2. Load BASCRC, one of three ways:
-   - **Tape** (`cassettes/diag-bascrc`): type `ENTER "C:"` and
+   - **Tape** (`cassettes/diag-bascrc`): type `ENTER "C:"` (not
+     `CLOAD`: CLOAD only reads a program saved with `CSAVE`, and on this
+     listing it stops with `ERROR- 21`, "not a SAVE file") and
      press RETURN. It beeps once: start the tape and press a key. It reads
      about a minute, stopping between blocks.
    - **Disk:** copy `disks/bascrc` (`.lst`) onto a DOS disk as
@@ -652,7 +677,7 @@ test.
    still: a large jitter means a dirty or worn paddle. A `T` at the end
    means the paddle's button is pressed.
 
-### Sound and video (`diag-8k-05-av`; tests 6 and 7)
+### Sound and video (`diag-8k-05-sound`, `diag-8k-06-video`; tests 6 and 7)
 
 **POKEY.** The sound chip's timer and random-number generator are checked
 automatically. Then each of its four voices plays, one voice at a time,
@@ -671,11 +696,10 @@ all. Answer whether you heard them all.
 
 The screen goes dark while it plays: the video chip borrows the processor
 on every line it draws, which would make the samples come late and
-unevenly, and sound rough. The cartridge plays a sample every scan line
-(15.7 kHz), from a bank of its own. The disk file and the hello tape play
-one every other line (7.85 kHz) from a recording made at half that rate,
-so it comes out twice as fast and higher: a squeaky "hello", in a quarter
-of the cartridge's bytes, which is what lets the disk file load on 32K.
+unevenly, and sound rough. Every version plays the same recording, a
+sample every scan line (15.7 kHz): the cartridge from a bank of its own,
+the disk file and the hello tape from RAM (which is why the hello tape
+needs 16K and takes 3.5 minutes to load).
 
 The recording is a public-domain one from Wikimedia Commons,
 `En-us-hello.ogg` by Dvortygirl, prepared for 4 bits by
@@ -720,9 +744,7 @@ text above it saying what it is:
   and one that moves up and down (fine vertical scroll).
 - The question, which stays still.
 
-Answer whether it all looks right (item 2). On `diag-8k-05-av` this page
-is the tape's part 2: after page 1 the tape plays on and loads it
-(`LOADING PART 2`, about 20 s).
+Answer whether it all looks right (item 2).
 
 ### The menu (`diag-16k-02-system` and `diag-32k-xl-xe`)
 
@@ -798,7 +820,7 @@ and up, with nothing else: no menu, no RAM or ROM test. They run in order,
 and at the end START runs them again. Use it alongside Atari's SALT
 diagnostic disks, whose controller tests need a test harness.
 
-### Memory test (`diag-memtest`, `diag-8k-memtest`)
+### Memory test (`diag-16k-memtest`, `diag-8k-memtest`)
 
 The memory test (a burn-in) repeats the RAM tests until you press a key:
 leave it running for an hour or a day to catch faults that only show when
@@ -808,13 +830,13 @@ that failed every time is **solid**; one that only fails sometimes is
 **intermittent**.
 
 What each one covers:
-- **`diag-memtest`** (16K or more): all the RAM. That's main RAM, the RAM
+- **`diag-16k-memtest`** (16K or more): all the RAM. That's main RAM, the RAM
   under an XL/XE's OS, and a 130XE's extra RAM. The one exception is the
   last page under the OS, $FF00-$FFFF, which holds the memory test's own
   interrupt vectors while the OS is switched out. The RAM tapes test that
   page.
 - **`diag-8k-memtest`** (8K or more): main RAM only. On an XL/XE, use
-  `diag-memtest` for the rest.
+  `diag-16k-memtest` for the rest.
 
 ![Memory test running](img/memtest-01-running.png)
 
@@ -830,15 +852,16 @@ yellow if anything intermittent has been seen.
 
 ![Memory test summary](img/memtest-02-summary.png)
 
-1. The time and the result.
+1. The passes done, the time and the result. R starts the memory test
+   again; any other key plays the tones again.
 2. The log.
 
 The memory test also tests the RAM it runs in:
-- **`diag-8k-memtest`**, and **`diag-memtest` on 16K:** each page of its
+- **`diag-8k-memtest`**, and **`diag-16k-memtest` on 16K:** each page of its
   own code is moved aside, tested and put back, every pass. While that
   happens the top of the screen shows the page being worked on, as a
   jumble of characters.
-- **`diag-memtest` on 32K and up:** it keeps two copies of itself that take
+- **`diag-16k-memtest` on 32K and up:** it keeps two copies of itself that take
   turns, each testing the other's RAM. So the RAM it sits in gets the same
   full test as all the rest.
 

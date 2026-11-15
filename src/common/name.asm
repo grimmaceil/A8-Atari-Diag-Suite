@@ -7,11 +7,11 @@ s_hpre	dta d' DIAG-CART  ',$FF
 	.if .def NOXL
 s_hpre	dta d' DIAG-8K-MEMTEST  ',$FF
 	.elseif .def XEX
-s_hpre	dta d' DIAG-MEMTEST-XEX  ',$FF
+s_hpre	dta d' DIAG-16K-MEMTEST-XEX  ',$FF
 	.elseif .def CART
 s_hpre	dta d' DIAG-MEMTEST-CART  ',$FF
 	.else
-s_hpre	dta d' DIAG-MEMTEST  ',$FF
+s_hpre	dta d' DIAG-16K-MEMTEST  ',$FF
 	.endif
 	.elseif .def ONE32		; the 32k+ program (its RAM stages)
 	.ifdef XEX
@@ -44,8 +44,10 @@ s_hpre	dta d' DIAG-8K-0',[TAPENO+$10]
 	dta d'-INPUT  ',$FF
 	.elseif TAPENO=4
 	dta d'-PORTS  ',$FF
+	.elseif TAPENO=5
+	dta d'-SOUND  ',$FF
 	.else
-	dta d'-AV  ',$FF
+	dta d'-VIDEO  ',$FF
 	.endif
 	.endif
 	.else				; the 8k set's RAM tape

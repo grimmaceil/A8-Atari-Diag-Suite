@@ -138,7 +138,7 @@ LOAD	= $0800
 
 	icl '../common/boot.asm'
 
-	ldx #0			; clear the log pages
+mtinit	ldx #0			; clear the log pages
 	txa
 cl_log	sta FIRSTLO,x
 	sta FIRSTLO+$100,x
@@ -356,6 +356,13 @@ ps_next	lda STOPREQ
 stop	lda #0
 	sta NMIEN
 	sta IRQEN
+	inc PASSNO		; (so showpass, PASSNO-1, counts this one: done)
+	bne st_pn
+	inc PASSNO+1
+st_pn	lda #<mtagain		; R: the memory test again
+	sta RETESTV
+	lda #>mtagain
+	sta RETESTV+1
 	ldx #15
 st_m	lda EVER,x
 	sta BADMASK,x
@@ -388,6 +395,29 @@ st_bad	lda BCOL		; yellow if every error was intermittent
 	jmp report
 
 redraw	= summary		; scrtoggle's text screen
+
+; mtagain: R at the end: the memory test from the start, a fresh log, clock
+; and pass count. Without BOUNCE: the boot again (the image is intact: its
+; own pages are tested and put back). With it the copy running now may be
+; B, at another address: a fresh start in place (what the boot found stays).
+	.ifndef BOUNCE
+mtagain	= LOAD+6
+	.else
+mtagain	sei
+	ldx #$FF
+	txs
+	lda #0
+	ldx #$8F		; the results and first errors, BSS $40-$CF
+mg_c1	sta BSS+$40,x
+	dex
+	bpl mg_c1
+	ldx #LOGIX-PASSNO	; this tape's state, PASSNO-LOGIX
+mg_c2	sta PASSNO,x
+	dex
+	bpl mg_c2
+	sta ENDING
+	jmp mtinit
+	.endif
 
 	.ifdef CART
 ; backcart: the cartridge back in (a bank select switches it on again) and
@@ -739,8 +769,7 @@ summary	jsr scr_on
 	lda #3
 	jsr chinfo
 	.endif
-	PRINT 5, 0, [s_time+3]	; (the time only: the passes are in the log)
-	jsr puttime
+	jsr showpass		; the passes done and the time
 	PRINT 6, 0, s_result
 	lda NSOLID
 	ora NINT
@@ -1206,12 +1235,12 @@ NPAT	= *-pats
 s_hburn	dta d'MEMTEST',$FF
 s_hsum	dta d'SUMMARY',$FF
 s_legend dta d'BANK BIT  FIRST  FAILED/PASSES',$FF
-s_stop	dta d'ANY KEY: END AFTER PASS',$FF
-s_stopping dta d'ENDING AFTER THIS PASS ',$FF
+s_stop	dta d'KEY: END AFTER PASS',$FF
+s_stopping dta d'ENDING AFTER PASS  ',$FF
 s_now	dta d'NOW: ',$FF
-s_low	dta d'LOW RAM $0000-$07FF',$FF
+s_low	dta d'LOW RAM',$FF
 s_bank	dta d'BANK ',$FF
-s_aia	dta d'ADDRESS TEST',$FF
+s_aia	dta d'ADDRESSES',$FF
 	.ifndef NOXL
 s_os	dta d'UNDER THE OS',$FF
 s_xe	dta d'130XE BANKS 5-8',$FF
@@ -1226,11 +1255,11 @@ s_result dta d'RESULT: ',$FF
 s_noerr	dta d'NO ERRORS',$FF
 s_nsol	dta d' SOLID, ',$FF
 s_nextok dta d'ALL PASSED',$FF
-s_nextbad dta d'FIX SOLID ONES FIRST',$FF
+s_nextbad dta d'FIX SOLID FIRST',$FF
 	.ifdef CART
-s_toggle2 dta d'ANY KEY=MENU SELECT=REPLAY OPTION=FLASH',$FF
+s_toggle2 dta d'R=RETEST  T=TONES  ANY KEY=MENU',$FF
 	.else
-s_toggle2 dta d'SELECT=REPLAY  OPTION=FLASH',$FF
+s_toggle2 dta d'R=RETEST  ANY KEY=TONES',$FF
 	.endif
 
 	.ifdef BOUNCE
