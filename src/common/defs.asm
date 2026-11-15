@@ -51,10 +51,10 @@ T_END	= 2		; end of list: low, long, red
 T_J1	= 3		; pass: the charge, G4 C5 E5 G5, green
 T_J4	= 6
 T_GLONG	= 7		; pass: one long green flash per bank
-T_TR1	= 8		; fail: the sad trombone, two long notes falling
-T_TR2	= 9
-T_RLONG	= 10		; the ROM test's group A and B, lower than the RAM's,
-T_RSHORT = 11		; so the two can be told apart by ear
+T_DM1	= 8		; fail: impending doom, C4 C4 F#3 (the tritone, the
+T_DM3	= 10		; devil's interval), dun dun DUNNN
+T_RLONG	= 11		; the ROM test's group A and B, lower than the RAM's,
+T_RSHORT = 12		; so the two can be told apart by ear
 
 C_TEXTBG = $00		; text area background (COLPF2); the border keeps the status color
 C_TEXTLUM = $0C		; text luminance (COLPF1)

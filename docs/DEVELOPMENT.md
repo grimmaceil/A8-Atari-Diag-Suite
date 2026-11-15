@@ -137,6 +137,21 @@ brings back), which each part sets as it starts. The standalone programs
 the cartridge's system banks) include `lib.asm` itself, with the same
 defines as before.
 
+### A system tape's part two (diag-8k-05-av)
+
+The GTIA test's second page (`src/system/t_gtia2.asm`, the display modes)
+doesn't fit the 8K sound and video tape, so that tape (`GPART2`) has it as
+a part two: `src/system/gpart2.asm`, the next file on the tape. After page
+1, part one reads it with `common/loader.asm` (as tape 1 reads its stage 2;
+`SYSPART`: no RAM size check, a failure goes to `p2fail`, START tries
+again, SELECT ends test 7 without it) into its own RAM at `P2AT`, the
+first page of its tests, which are done with by then, and enters it at
+`P2AT+6`. Part two may reach `TESTEND` (past the boot's display code, also
+done with); it checks that itself. It uses part one's library, test 7's
+`gwave` and `gans` (kept in `common.asm`, outside the overwritten tests),
+and `tend`: build.py writes their addresses to `build/part1.asm` from part
+one's label table (the `PART1` list).
+
 ### 130XE banks and the 32k+ image
 
 Stage 2 tests a 130XE's extended banks by switching them in at

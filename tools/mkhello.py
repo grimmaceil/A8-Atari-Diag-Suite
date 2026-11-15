@@ -5,10 +5,11 @@ src/cart/audio/En-us-hello.ogg, and a preview to listen to on a PC.
   src/cart/audio/hello-15k.bin   the cartridge: one sample a scan line
                                  (15.7 kHz), one byte each, 0-30 (two
                                  voices' levels added), in a bank of its own
-  src/cart/audio/hello-8k.bin    the disk file and the 8k hello tape: one
-                                 sample every two scan lines (7.85 kHz), 4
-                                 bits each, two to a byte (high nibble
-                                 first): a quarter of the bytes, for RAM
+  src/cart/audio/hello-ram.bin   the disk file and the 16k hello tape: the
+                                 same, recorded at a quarter of the rate
+                                 (3.9 kHz) and played every two lines (7.85
+                                 kHz): twice as fast and squeaky, a quarter
+                                 of the bytes
   build/hello-preview.wav        what the Atari plays, in the order it plays
                                  it: 4 bits (one voice), 1 bit (the console
                                  speaker), 5 bits (two voices), for both
@@ -52,7 +53,8 @@ ROOT = Path(__file__).resolve().parent.parent
 AUDIO = ROOT / 'src' / 'cart' / 'audio'
 SRC = AUDIO / 'En-us-hello.ogg'
 LINE = 15700.0                  # NTSC scan lines a second (PAL: 15557, 1% slower)
-OUTS = [(AUDIO / 'hello-15k.bin', 1, 5), (AUDIO / 'hello-8k.bin', 2, 4)]   # file, lines a sample, bits
+# file, scan lines a sample when played, how many times faster than recorded
+OUTS = [(AUDIO / 'hello-15k.bin', 1, 1), (AUDIO / 'hello-ram.bin', 2, 2)]
 PREVIEW = ROOT / 'build' / 'hello-preview.wav'
 PREV_SR = 44100
 
@@ -106,8 +108,8 @@ def clean(d, sr):
     return y
 
 
-def quantize(y, bits):
-    """0-30 (5 bits: two voices) or 0-15 (4 bits: one voice)."""
+def quantize(y, bits=5):
+    """0-30 (5 bits: two voices' levels added)."""
     top = 30 if bits == 5 else 15
     y = y / np.abs(y).max()                          # 6. normalize, soft clip
     y = np.tanh(1.3 * y) / np.tanh(1.3)
@@ -140,20 +142,17 @@ def main():
     y = clean(d, sr)
     gap = np.zeros(int(PREV_SR * 0.3))
     preview = []
-    for path, lines, bits in OUTS:
-        rate = LINE / lines
-        q = quantize(resample(y, sr, rate), bits)
-        mid = 15 if bits == 5 else 7
-        ramp = np.round(np.linspace(0, mid, int(rate * 0.005))).astype(int)
+    for path, lines, fast in OUTS:
+        rate = LINE / lines / fast                       # recorded at
+        q = quantize(resample(y, sr, rate))
+        ramp = np.round(np.linspace(0, 15, max(4, int(rate * 0.005)))).astype(int)
         q = np.concatenate([ramp, q, ramp[::-1]])
-        per = 256 if bits == 5 else 512                  # samples a page
-        q = np.concatenate([q, np.zeros(-len(q) % per, int)])
-        data = (bytes(q.tolist()) if bits == 5 else
-                bytes((q[i] << 4 | q[i + 1]) for i in range(0, len(q), 2)))
-        path.write_bytes(data)
-        print(f'{path.name}: {len(q)} samples at {rate:.0f} Hz, {len(q) / rate:.2f} s, '
-              f'{bits} bits, {len(data)} bytes ({len(data) // 256} pages)')
-        for mode in ((4, 1, 5) if bits == 5 else (4, 1)):
+        q = np.concatenate([q, np.zeros(-len(q) % 256, int)])
+        path.write_bytes(bytes(q.tolist()))
+        print(f'{path.name}: {len(q)} samples recorded at {rate:.0f} Hz, played at '
+              f'{LINE / lines:.0f} Hz ({len(q) * lines / LINE:.2f} s), {len(q)} bytes '
+              f'({len(q) // 256} pages)')
+        for mode in (4, 1, 5):
             preview += [play(q, lines, mode), gap]
     orig = resample(d / np.abs(d).max(), sr, PREV_SR) * 0.8
     preview += [gap, orig]

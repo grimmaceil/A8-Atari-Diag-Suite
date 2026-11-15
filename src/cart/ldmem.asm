@@ -30,6 +30,8 @@ ldmem	sei
 	lda #MEMBK
 	sta LDBANK
 	.else
+	lda #<MEMAT		; (anywhere: the system tests aren't padded)
+	sta PTR
 	lda #>MEMAT
 	sta PTR+1
 	.endif

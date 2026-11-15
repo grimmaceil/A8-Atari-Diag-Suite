@@ -13,6 +13,7 @@ NEXTVEC	= BSS+$E1		; 2: where the test flow goes on to
 STASH	= BSS+$E3		; 8: BADMASK 1-8 while one test's code plays
 KEEP	= BSS+$EB		; nonzero: STASH holds the tests' results (ramagain)
 TIDX	= BSS+$ED		; next tlist entry, times 2
+MRUN	= BSS+$F0		; tests run so far, bit per test number
 T3D	= $A0			; 96 bytes of test data, in zero page ($A0-$FF:
 				; nothing else uses it once the boot is over, and
 				; each instruction that uses it is a byte shorter):
@@ -60,26 +61,12 @@ tst_nt	stx MNT
 	.endif
 	rts
 
-; trestart: the tape's tests again from the first, with fresh results (not
-; test 8, the 32k+ tape's RAM).
-trestart lda #0
-	sta ENDING
-	sta TIDX
-	ldx #7
-trs_cl	sta BADMASK,x
-	dex
-	bne trs_cl
-	jsr tnextv
-	jmp (NEXTVEC)
-
 ; tend: the end of a test: its result, then the next one on the list (from
 ; the menu: back to the menu, the next test highlighted).
-tend	.ifdef MENU
-	ldx TEST
+tend	ldx TEST		; (run: its line says PASS or FAIL, not SKIPPED)
 	lda bitn-1,x
 	ora MRUN
 	sta MRUN
-	.endif
 	jsr tnextv
 	.ifdef MENU
 	lda MMODE
@@ -262,11 +249,22 @@ ynoff
 yf_x	rts
 	.endif
 
-; tresult: the end of test TEST. A pass gives the jingle and goes on after
-; ~2 s (OPTION holds it). A fail gives one low tone and a steady red border,
-; and waits for START, a key or fire; the ROM test plays its code first
-; (only its own). Then the flow goes on at NEXTVEC.
-tresult	jsr tshow
+; tresult: the end of test TEST. A pass gives the charge and goes on after
+; ~2 s (OPTION holds it). A fail: report.asm's doom and a steady red border,
+; waiting for START, a key or fire; the ROM test plays its code too. Only
+; this test's result is in BADMASK meanwhile (the others wait in STASH), so
+; no other test's code plays. Then the flow goes on at NEXTVEC.
+; A tape without a menu: after its last test, straight to final (the end:
+; its lines and its sound say it all, no pause before them).
+tresult
+	.ifndef MENU
+	lda TIDX		; (tnextv has read final's entry, the last)
+	cmp #ttests-tlist
+	bne tr_nl
+	jmp final
+tr_nl
+	.endif
+	jsr tshow
 	ldx TEST
 	lda BADMASK,x
 	bne tr_fail
@@ -290,11 +288,7 @@ tr_ps
 	lda NEXTVEC+1
 	sta CONTVEC+1
 	jmp pass
-tr_fail
-	.ifdef WANT_ROM
-	cpx #1
-	bne tr_nc
-	ldx #8
+tr_fail	ldx #8
 tf_st	lda BADMASK,x
 	sta STASH-1,x
 	cpx TEST
@@ -314,22 +308,6 @@ tf_rs	lda STASH-1,x
 	dex
 	bne tf_rs
 	jmp (NEXTVEC)
-	.endif
-tr_nc	lda NEXTVEC
-	sta CONTVEC
-	lda NEXTVEC+1
-	sta CONTVEC+1
-; nocode: a fail without a code: the sad trombone, then steady red until a
-; press goes on to CONTVEC.
-nocode	jsr arm
-	BEEP T_TR1		; the sad trombone
-	BEEP T_TR2
-nc_w	lda #C_RED
-	sta HOLDC
-	lda #50
-	sta RCNT
-	NCALL RET1, hold
-	jmp nc_w
 
 ; tpage: a fresh page for test TEST, titled A/Y.
 tpage	ldx DISPOK
@@ -347,12 +325,17 @@ tpage	ldx DISPOK
 tp_x	rts
 
 ; tshow: the result lines of test TEST on rows 21-23 (the test's own screen
-; stays above). Also scrtoggle's redraw.
-tshow	lda TEST		; 8: past the last test, the tape's results
+; stays above). Also scrtoggle's redraw. A tape without a menu, at its end
+; (ENDING 2): every test's line and what to load next (tsend).
+tshow
+	.ifdef MENU
+	lda TEST		; 8: past the last test, the results
 	cmp #8
 	bne ts_t
 	jmp results
-ts_t	lda DISPOK
+ts_t
+	.endif
+	lda DISPOK
 	beq ts_x
 	lda SCRON
 	bne ts_on
@@ -363,9 +346,75 @@ ts_t	lda DISPOK
 	lda tnames-2,x
 	ldy tnames-1,x
 	jsr header
-ts_on	lda #21
+ts_on	lda #23
 	jsr clrrow
-	PRINT 21, 0, s_test
+	.ifndef MENU
+	lda ENDING
+	cmp #2
+	beq tsend
+	.endif
+	lda #21
+	jsr tline
+	ldx TEST
+	lda BADMASK,x
+	bne ts_go
+	.ifdef WANT_ROM
+	dex			; (the ROMs wait for a press)
+	beq ts_go
+	.endif
+	.ifdef MENU
+	lda MMODE		; one test from the menu: back to it
+	bne ts_np
+	PRINT 23, 0, s_mpass
+	rts
+ts_np
+	.endif
+	PRINT 23, 0, s_tpass
+ts_x	rts
+ts_go
+	.ifdef MENU
+	lda MMODE
+	bne ts_ng
+	PRINT 23, 0, s_toggle3	; START = MENU
+	rts
+ts_ng
+	.endif
+	PRINT 23, 0, s_goon
+	rts
+
+	.ifndef MENU
+; tsend: the end of a tape without a menu: a line for each test on it (two
+; at most: rows 21-22), then what to load next. Nothing to press.
+tsend	lda TEST
+	pha
+	ldx #0
+te_lp	stx CNT
+	lda ttests,x
+	beq te_x
+	sta TEST
+	txa
+	clc
+	adc #21
+	jsr tline
+	ldx CNT
+	inx
+	bne te_lp
+te_x	pla
+	sta TEST
+	PRINT 23, 0, s_next
+	rts
+	.endif
+
+; tline: on row A, "TEST n PASS" or "TEST n FAIL, ITEMS 1 3" for test TEST
+; (a tape without a menu: SKIPPED for one left with X).
+tline	pha
+	jsr clrrow
+	pla
+	ldx #0
+	jsr at
+	lda #<s_test
+	ldy #>s_test
+	jsr puts
 	lda TEST
 	clc
 	adc #$10
@@ -373,34 +422,28 @@ ts_on	lda #21
 	lda #0
 	jsr putc
 	ldx TEST
+	.ifndef MENU
+	lda bitn-1,x
+	and MRUN
+	bne tl_ran
+	lda #<s_skipd
+	ldy #>s_skipd
+	jmp puts
+tl_ran
+	.endif
 	lda BADMASK,x
-	bne ts_fail
+	bne tl_f
 	lda #<s_pass
 	ldy #>s_pass
-	jsr puts
-	.ifdef WANT_ROM
-	ldx TEST		; (the ROMs wait for a press)
-	dex
-	beq ts_go
-	.endif
-	PRINT 23, 0, s_tpass
-ts_x	rts
-	.ifdef WANT_ROM
-ts_go	PRINT 23, 0, s_goon
-	rts
-	.endif
-ts_fail	lda #<s_fail
+	jmp puts
+tl_f	pha
+	lda #<s_fail
 	ldy #>s_fail
 	jsr puts
 	lda #<s_items
 	ldy #>s_items
 	jsr puts
-	ldx TEST
-	lda BADMASK,x
-	jsr putitems
-	PRINT 23, 0, s_goon
-	rts
-
+	pla
 ; putitems: the set bits of A as item numbers, " 1 3".
 putitems sta MTMP
 	ldx #0
@@ -421,44 +464,36 @@ redraw	= tshow			; scrtoggle's text screen
 
 ; ---------------------------------------------------------------------------
 	.ifndef XFINAL
-; final: past the last test: the results. A ROM or RAM fault plays its code;
-; any other failed test: one low tone and a red border; all passed: the
-; jingle and green.
-final	lda #8			; tshow, as redraw, shows the results from here
-	sta TEST
+; final: past the last test: the results. A failed test: the doom, and a
+; ROM or RAM fault's code; all passed: the charge, twice, and green. With a
+; menu: the results page, START back to the menu. Without: the tape's lines
+; on the last test's screen, and it stays: nothing to press.
+final
 	.ifdef MENU
+	lda #8			; tshow, as redraw, shows the results from here
+	sta TEST
 	lda #<menu		; START: back to the menu
 	sta CONTVEC
 	lda #>menu
 	.else
-	lda #<trestart		; START: the tape's tests again
-	sta CONTVEC
-	lda #>trestart
+	lda #0
 	.endif
 	sta CONTVEC+1
-	lda #2			; and the result stays up till then (2: a pass
-	sta ENDING		; plays the charge twice)
+	lda #2			; the result stays up (2: a pass plays the charge
+	sta ENDING		; twice; tshow: the end of a tape)
 	ldx #0
 fi_cnt	lda ttests,x
 	beq fi_n
 	inx
 	bne fi_cnt
 fi_n	stx NBANKS
-	lda DISPOK
-	beq fi_chk
-	jsr results
-fi_chk	lda BADMASK+1
-	.ifdef RAM8
-	ora BADMASK+8		; (the RAM)
-	.endif
-	bne fi_bad
-	ldx #7
-fi_lp	lda BADMASK,x
-	bne fi_nc
+	jsr tshow
+fi_chk	ldx #8			; any failed test: the doom, and the codes of the
+fi_lp	lda BADMASK,x		; ROMs and the RAM (report.asm); all passed: the
+	bne fi_bad		; charge, twice
 	dex
 	bne fi_lp
 	jmp pass
-fi_nc	jmp nocode
 fi_bad	jmp report
 	.endif
 
@@ -472,7 +507,6 @@ fi_bad	jmp report
 MSEL	= BSS+$EE		; highlighted line: a ttests index, MNT = ALL,
 				; MNT+1 = the results
 MMODE	= BSS+$EF		; nonzero: running all of them in order
-MRUN	= BSS+$F0		; tests run so far, bit per test number
 MNT	= BSS+$F3		; tests on the tape
 	.ifdef RAMAGAIN		; the first test's row: under the RAM line (0)
 MROW0	= 5
@@ -817,8 +851,10 @@ s_mram	dta d'0 RAM',$FF
 s_m2	dta d'OR PRESS 1-8 FOR THAT LINE',$FF
 	.endif
 s_toggle3 dta d'START = MENU',$FF
+s_mpass	dta d'MENU IN 2 S.  OPTION = FLASH',$FF
 	.endif
 
+	.ifdef MENU
 ; results: every test on the tape, PASS or FAIL and its items, then the ROM
 ; names if test 1 ran.
 	.ifdef RAM8		; the first test's row: under the RAM line (0)
@@ -920,14 +956,97 @@ rz_rd	inc CNT
 	jsr rominfo
 	.endif
 	PRINT 18, 0, s_items2
-	.ifdef MENU
 	PRINT 23, 0, s_toggle3	; START: back to the menu
-	.else
-	PRINT 23, 0, s_toggle4	; START: the tests again
-	.endif
 	rts
+s_items2 dta d'NUMBERS AFTER FAIL = FAILED ITEMS',$FF
+s_hres	dta d'RESULTS',$FF
+	.endif
 
 bitn	.byte 1, 2, 4, 8, 16, 32, 64, 128
+
+	.ifdef WANT_GTIA	; (test 7, here: not under the tape's part two)
+; gans: the answer: A = 1 yes (Y, START), 2 no (N, SELECT), 0 none (Z set).
+gans	lda SKSTAT
+	and #4
+	bne ga_c
+	lda KBCODE
+	and #$3F
+	cmp #$2B		; Y
+	beq ga_y
+	cmp #$23		; N
+	beq ga_n
+ga_c	lda CONSOL
+	lsr
+	bcc ga_y		; START
+	lsr
+	bcc ga_n		; SELECT
+	lda #0
+	rts
+ga_y	lda #1
+	rts
+ga_n	lda #2
+	rts
+
+; gwave: A = 0-63, a point on the wave -> A = 4 + 4 sin, 0-8. The table is
+; a quarter of it (gqsin, 16 steps); the rest by symmetry: the second
+; quarter backwards, the second half below the middle. Keeps X.
+gwave	pha
+	and #15
+	tay
+	pla
+	pha
+	and #16
+	beq gw_q
+	tya			; the second and fourth quarters: backwards
+	eor #15
+	tay
+gw_q	pla
+	and #32
+	beq gw_up
+	lda gqsin,y		; the second half: 4 - it
+	eor #$FF
+	clc
+	adc #5
+	rts
+gw_up	lda gqsin,y		; the first half: 4 + it
+	clc
+	adc #4
+	rts
+
+gqsin	.byte 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4	; 4 sin, a quarter
+s_gq	dta d'LOOKS RIGHT? Y/START=YES, N/SELECT=NO',$FF
+	.endif
+
+	.ifdef GPART2
+; p2fail: the tape's part two didn't load (common/loader.asm; L2MSG says
+; why). START tries again, SELECT ends test 7 without its page 2.
+p2fail	lda #22
+	jsr clrrow
+	PRINT 22, 0, s_l2pre
+	lda L2MSG
+	ldy L2MSG+1
+	jsr puts
+	lda #23
+	jsr clrrow
+	PRINT 23, 0, s_l2key
+	jsr waitrel
+pf_lp	lda CONSOL
+	lsr
+	bcc pf_go		; START
+	lsr
+	bcs pf_lp
+	jsr waitrel		; SELECT
+	jmp tend
+pf_go	jsr waitrel
+	jmp load2
+s_l2load dta d'LOADING PART 2...',$FF
+s_l2pre	dta d'PART 2: ',$FF
+s_l2key	dta d'START=AGAIN  SELECT=SKIP IT',$FF
+s_l2_big dta d'TOO BIG',$FF
+s_l2_sio dta d'READ ERROR',$FF
+s_l2_hdr dta d'NOT ON TAPE',$FF
+s_l2_sum dta d'BAD CHECKSUM',$FF
+	.endif
 
 tnames	.word s_t1, s_t2, s_t3, s_tjoy, s_tpad, s_tpok, s_t7
 s_t1	dta d'1 ROMS',$FF
@@ -946,6 +1065,8 @@ s_t8	dta d'0 RAM, BANKS',$FF
 	.endif
 	.ifdef SKIPKEY
 s_skipd	dta d'SKIPPED',$FF
+	.elseif .not .def MENU
+s_skipd	dta d'SKIPPED',$FF
 	.endif
 s_test	dta d'TEST ',$FF
 s_pass	dta d'PASS',$FF
@@ -953,9 +1074,27 @@ s_fail	dta d'FAIL'*,$FF
 s_items	dta d', ITEMS',$FF
 s_tpass	dta d'NEXT TEST IN 2 S.  OPTION = FLASH',$FF
 s_goon	dta d'START = GO ON',$FF
-s_toggle4 dta d'START = AGAIN',$FF
-s_items2 dta d'NUMBERS AFTER FAIL = FAILED ITEMS',$FF
 	.ifdef NEEDYN
 s_heard	dta d'HEARD IT? Y/START = YES, N/SELECT = NO',$FF
 	.endif
-s_hres	dta d'RESULTS',$FF
+	.ifndef MENU
+; s_next: the end of a tape without a menu: what to load next.
+	.if SETNO=0
+	.if TAPENO=5
+s_next	dta d'TEST COMPLETE: LAST TAPE OF THE 8K SET',$FF
+	.else
+s_next	dta d'TEST COMPLETE. NEXT: DIAG-8K-0',[TAPENO+$11]
+	.if TAPENO=2
+	dta d'-INPUT',$FF
+	.elseif TAPENO=3
+	dta d'-PORTS',$FF
+	.else
+	dta d'-AV',$FF
+	.endif
+	.endif
+	.elseif SETNO=1
+s_next	dta d'TEST COMPLETE: LAST TAPE OF THE 16K SET',$FF
+	.else
+s_next	dta d'TEST COMPLETE',$FF
+	.endif
+	.endif

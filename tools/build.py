@@ -33,7 +33,7 @@ SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTe
 # right of every screen's title bar, so a file and what it shows can be
 # matched. One digit each side of the point (screen.asm). build/ keeps the
 # plain names.
-VERSION = '0.8'
+VERSION = '0.9'
 VDEFS = dict(zip(('VMAJ', 'VMIN'), VERSION.split('.')))
 
 # Each tape: source dir, name, stages (first = boot), defines. A later stage
@@ -57,8 +57,8 @@ TAPES = [('tape1', 'diag-8k-01-ram', ['main.asm', 'stage2.asm'], {}),
           dict(S8, TAPENO=3, WANT_KB=1, WANT_CON=1)),
          ('system', 'diag-8k-04-ports', ['main.asm'],
           dict(S8, TAPENO=4, WANT_JOY=1, WANT_PAD=1)),
-         ('system', 'diag-8k-05-av', ['main.asm'],
-          dict(S8, TAPENO=5, WANT_POK=1, WANT_GTIA=1)),
+         ('system', 'diag-8k-05-av', ['main.asm', 'gpart2.asm'],   # test 7's page 2:
+          dict(S8, TAPENO=5, WANT_POK=1, WANT_GTIA=1, GPART2=1)),     # part two
          ('one16', 'diag-16k-01-ram', [], N16),
          ('system', 'diag-16k-02-system', ['main.asm'],
           dict(ALL7, **N16, SETNO=1, TAPENO=2, MENU=1, BIGSTAGE=1)),
@@ -115,10 +115,19 @@ def gen_shlib(lab_path):
     return hi - lo
 
 
+# The labels a system tape's part two (gpart2.asm) takes from part one.
+PART1 = ('SCR_ON', 'HEADER', 'AT', 'PUTS', 'WAITREL', 'TPAGE', 'TEND', 'GWAVE',
+         'GANS', 'S_T7', 'S_GQ', 'GPX', 'TSCR', 'BSS', 'P2AT', 'TESTEND')
+
+
 def build(src, name, stages, defines, label):
     out = BUILD / name
     mads(src, stages[0], out, defines)
     s1 = labels(f'{out}.lab')
+    if len(stages) > 1:
+        (BUILD / 'part1.asm').write_text(
+            "; build.py: part one's labels for its part two\n"
+            + ''.join(f'{n}\t= ${s1[n]:04X}\n' for n in PART1 if n in s1))
     prev, nexts = s1, []
     for k, asm in enumerate(stages[1:], 2):
         # 'dir/file.asm' takes a stage from another source dir. PREVBSS: the

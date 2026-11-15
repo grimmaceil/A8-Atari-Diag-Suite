@@ -8,6 +8,7 @@ PAL	= $D014		; bits 1-3: %000 = PAL, %111 = NTSC
 CONSOL	= $D01F		; read: START/SELECT/OPTION (0 = pressed); write bit 3: speaker
 TRIG0	= $D010		; joystick fire, 0 = pressed
 TRIG1	= $D011
+COLPF0	= $D016		; playfield 0
 COLPF1	= $D017		; GRAPHICS 0 text luminance
 COLPF2	= $D018		; GRAPHICS 0 text background
 COLPF3	= $D019		; playfield 3; the fifth player's color (PRIOR bit 4)
@@ -43,6 +44,8 @@ DMACTL	= $D400
 CHACTL	= $D401		; 2 = show inverse characters
 DLISTL	= $D402
 DLISTH	= $D403
+HSCROL	= $D404		; fine scroll: color clocks right (DL bit 4 lines)
+VSCROL	= $D405		; fine scroll: scan lines up (DL bit 5 regions)
 CHBASE	= $D409		; font page; $E0 = OS ROM font
 PMBASE	= $D407		; P/M memory page (1K-aligned for double-line resolution)
 WSYNC	= $D40A		; any write halts the CPU until the next horizontal blank
@@ -72,7 +75,7 @@ F_J0	= 81		; ~390 Hz  pass: the charge, G4 C5 E5 G5
 F_J1	= 60		; ~523 Hz
 F_J2	= 47		; ~659 Hz
 F_J3	= 40		; ~784 Hz
-F_TR1	= 108		; ~294 Hz  fail: the sad trombone, D4 then C#4
-F_TR2	= 114		; ~279 Hz
+F_D1	= 121		; ~262 Hz  fail: impending doom, C4 C4 F#3 (the tritone)
+F_D2	= 172		; ~185 Hz
 F_SIRH	= 50		; ~627 Hz  siren
 F_SIRL	= 67		; ~470 Hz

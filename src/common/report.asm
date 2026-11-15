@@ -30,21 +30,21 @@ RPEND	= 1
 
 ; Tone table: frequency, flash color, length and the pause after it, both
 ; in units of 256 scan lines (16 ms). The numbers: defs.asm.
-;	A long  B short  END    the charge: G4 C5 E5 G5        GLONG   TR1    TR2
-tt_frq	.byte F_LONG, F_SHORT, F_END, F_J0, F_J1, F_J2, F_J3, F_LONG, F_TR1, F_TR2
+;	A long  B short  END    the charge: G4 C5 E5 G5        GLONG   doom: C4 C4 F#3
+tt_frq	.byte F_LONG, F_SHORT, F_END, F_J0, F_J1, F_J2, F_J3, F_LONG, F_D1, F_D1, F_D2
 	.ifdef RPSYS
 	.byte F_RLONG, F_RSHORT
 	.endif
 tt_col	.byte C_FLASH, C_FLASH, C_FLASH, C_GFLASH, C_GFLASH, C_GFLASH, C_GFLASH
-	.byte C_GFLASH, C_FLASH, C_FLASH
+	.byte C_GFLASH, C_FLASH, C_FLASH, C_FLASH
 	.ifdef RPSYS
 	.byte C_FLASH, C_FLASH
 	.endif
-tt_len	.byte 37, 12, 37, 7, 7, 7, 20, 37, 25, 49	; (600 ms = 37)
+tt_len	.byte 37, 12, 37, 7, 7, 7, 20, 37, 15, 15, 55	; (600 ms = 37)
 	.ifdef RPSYS
 	.byte 37, 12
 	.endif
-tt_gap	.byte 12, 12, 12, 2, 2, 2, 12, 12, 3, 12	; (200 ms = 12)
+tt_gap	.byte 12, 12, 12, 2, 2, 2, 12, 12, 6, 6, 25	; (200 ms = 12)
 	.ifdef RPSYS
 	.byte 12, 12
 	.endif
@@ -137,8 +137,14 @@ rp_na
 	sta COLBK
 	WAITMS 1000
 
-rp_top	BEEP T_TR1		; the sad trombone, then the code
-	BEEP T_TR2
+rp_top	lda #T_DM1		; impending doom (C4 C4 F#3), then the code
+	sta RCNT
+rp_dm	ldx RCNT
+	NCALL RET1, tone
+	inc RCNT
+	lda RCNT
+	cmp #T_DM3+1
+	bne rp_dm
 	lda LOADERR
 	beq rp_banks
 	BEEP T_ALONG
@@ -329,7 +335,7 @@ pa_hold	lda #50
 ;   OPTION                 text <-> full-screen flashes (if the display
 ;                          checks passed); holding it holds the result
 ; (HARMED, "seen released", is cleared by whoever starts a result: pass,
-; report, nocode. Not here: a pause is entered over and over, and a tap
+; report. Not here: a pause is entered over and over, and a tap
 ; that began just then was lost.)
 ; Before low RAM passes STACKOK is 0 and no JSR runs. Returns via RET1.
 hold

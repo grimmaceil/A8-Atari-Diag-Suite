@@ -78,6 +78,11 @@ NEEDYN	= 1
 	.elseif .def WANT_GTIA
 NEEDYN	= 1
 	.endif
+	.ifdef GPART2		; the 8K sound and video tape: test 7's page 2 is
+SYSPART	= 1			; the tape's part two (gpart2.asm), loaded over
+NORAMCHK = 1			; the tests already run (common/loader.asm)
+LDTO	= P2AT
+	.endif
 	.ifndef WANT_ROM
 NOFONT	= 1			; display.asm, info.asm: only the ROM test shows
 	.endif			; the font's sum (the 8k tapes are short of room)
@@ -327,6 +332,8 @@ ttests
 	.byte 7
 	.endif
 	.byte 0
+TESTBEG
+P2AT	= [[TESTBEG+$FF]/$100]*$100	; (GPART2: part two loads here)
 
 	.ifdef WANT_ROM
 	icl 't_rom.asm'
@@ -376,6 +383,8 @@ pats	.byte $00,$FF,$55,$AA
 	.byte $FE,$FD,$FB,$F7,$EF,$DF,$BF,$7F
 NPAT	= *-pats
 	.endif
+TESTEND				; (GPART2: part two may reach here: the tests and
+				; the boot's own code are done with by then)
 
 	.ifdef SHLIB
 	icl '../../build/shlib.asm'	; the library's addresses (tape 1's part)
@@ -390,6 +399,9 @@ NORAMT	= 1			; (no RAM test here)
 	.ifdef XEX
 	icl '../cart/ldmem.asm'
 	.endif
+	.ifdef GPART2
+	icl '../common/loader.asm'
+	.endif
 
 	.ifdef ROM
 	.if *>$BFE0
@@ -399,12 +411,15 @@ IMGEND
 BSS	= $0800			; in RAM, shared by the banks
 TSTART	= [>BSS]+1
 	.else
+	.ifndef CHAIN		; (the one-load image: no pages of its own, so the
+				; disk file needs no more than 32K)
 ; Pad to a whole page; the last two bytes hold the image sum (mkcas.py).
 PADTO	= [[*+2+$FF]/$100]*$100
 	.if PADTO-*-2>0
 	:[PADTO-*-2] .byte 0
 	.endif
 CKSUM	.word 0			; (as stage 3: the loader's plain sum)
+	.endif
 IMGEND
 NREC	= [IMGEND-LOAD]/128
 	.ifdef SHAREBSS

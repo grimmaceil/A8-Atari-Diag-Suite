@@ -106,7 +106,7 @@ All the tapes:
 | `diag-8k-02-rom` | 8K | 2 min | test 1, the ROMs |
 | `diag-8k-03-input` | 8K | 2 min | tests 2 and 3, the keyboard and the console keys |
 | `diag-8k-04-ports` | 8K | 2 min | tests 4 and 5, the joysticks and the paddles |
-| `diag-8k-05-av` | 8K | 2 min | tests 6 and 7, the sound (POKEY) and the video (GTIA) |
+| `diag-8k-05-av` | 8K | 2 min, then 20 s for part 2 | tests 6 and 7, the sound (POKEY) and the video (GTIA). Part 2: the GTIA test's second page, the display modes |
 | `diag-8k-memtest` | 8K | 2 min | the memory test, until you stop it (main RAM only) |
 | `diag-16k-01-ram` | 16K | 3.5 min | the whole RAM test in one load: all the RAM, the tape's own, under an XL/XE's OS, and a 130XE's extra RAM |
 | `diag-16k-02-system` | 16K | 3.5 min | tests 1-7, with a menu |
@@ -118,11 +118,13 @@ All the tapes:
 `diag-controls` is a companion to Atari's SALT diagnostic disks: their
 controller tests need a test harness plugged in, and this tape doesn't.
 
-`diag-8k-01-ram-part2` is the second part of the 400 RAM tape as a file of
+`diag-8k-01-ram-part2` is the second part of the 8k RAM tape as a file of
 its own. A machine with 8K never loads it (the screen says
 `STAGE 2: 16K ONLY. NEXT: DIAG-8K-02-ROM`); a bigger machine running the
-400 set does. You only need it with a player that can't wait between the two parts
-(see [AspeQt](#from-a-pc-usb-sio-interface-and-aspeqt)).
+8k set does. `diag-8k-05-av-part2` is the same for the sound and video
+tape: its GTIA test's second page, which every machine loads. You only
+need these files with a player that can't wait between the two parts (see
+[AspeQt](#from-a-pc-usb-sio-interface-and-aspeqt)).
 
 ## Loading a tape
 
@@ -182,8 +184,11 @@ for a few minutes before it asks for part two, and by then AspeQt has
 played past it. The screen then says `STAGE 2: NOT ON TAPE` or
 `STAGE 2: ERROR` and a number.
 When that happens, play `diag-8k-01-ram-part2.cas` and press START on the
-Atari: it tries again. Every other tape is a single part and doesn't have
-this problem.
+Atari: it tries again. `diag-8k-05-av` is two parts as well: after the
+GTIA test's first page it loads its second. If AspeQt has played past it,
+the screen says `PART 2: NOT ON TAPE` or `PART 2: READ ERROR`: play
+`diag-8k-05-av-part2.cas` and press START (SELECT goes on without it).
+Every other tape is a single part and doesn't have this problem.
 
 ### From a real cassette recorder
 
@@ -328,7 +333,7 @@ Every flash comes with a beep, so you can read the code by eye or by ear.
 | Sound | Flash | Meaning |
 |---|---|---|
 | the charge: four rising notes, da-da-da-DAH (twice for the final pass) | bright green | a pass |
-| sad trombone: two long falling notes | bright red | a fail; any beep code follows |
+| impending doom: three notes, dun dun DUNNN (C, C, then the F-sharp below: the tritone) | bright red | a fail; any beep code follows |
 | long beep (about 0.6 s, 440 Hz) | bright red | group A: **where**, counted. The RAM bank (1-4; the 130XE's extra banks are 5-8), or the test number |
 | short beep (about 0.2 s, 880 Hz) | bright red | group B: **what**, counted. For RAM, the data bit, D0 = 1 up to D7 = 8; for a test, the item |
 | low beep (about 0.6 s, 220 Hz) | bright red | the end of the list |
@@ -348,7 +353,7 @@ machine with no picture can still tell you about.
   pitch than the RAM's (330 Hz), then one short beep (660 Hz) per failed
   item number, then the low beep. SELECT plays it again.
 - **Every other test** only shows its result. A pass plays the charge; a
-  fail plays one low beep and waits for START with a red border.
+  fail plays the doom and waits for START with a red border.
 - **The final result** plays a code only for ROM and RAM faults: for the
   RAM one long beep at the RAM's pitch (440 Hz), then one short beep per
   bad bank number.
@@ -382,8 +387,8 @@ failed. The results screen says `NUMBERS AFTER FAIL = ITEMS THAT FAILED`.
 | 3 Console keys | 1 START, 2 SELECT, 3 OPTION never seen; 4 the speaker tone not heard |
 | 4 Joysticks | the port, 1-4: a line was already active at the start (stuck) |
 | 5 Paddles | the paddle, 1-8: it didn't read as unplugged in the open-input check |
-| 6 POKEY | 1 timer interrupt; 2 random numbers; 3-6 voice 1-4 (scale and hiss); 7 the sampled "hello" (cartridge and disk file) |
-| 7 GTIA | 1 the ramps or the sprites look wrong |
+| 6 POKEY | 1 timer interrupt; 2 random numbers; 3-6 voice 1-4 (scale and hiss); 7 the sampled "hello" (cartridge, disk file and `diag-16k-03-hello`) |
+| 7 GTIA | 1 the ramps or the sprites look wrong; 2 the display modes look wrong |
 
 ### Keys during a result
 
@@ -394,12 +399,17 @@ failed. The results screen says `NUMBERS AFTER FAIL = ITEMS THAT FAILED`.
 | OPTION | switch between the text screen and full-screen flashes (the whole screen flashes with the code: easier to see when the picture is garbled) |
 
 A test that passes moves on by itself after about 2 seconds, except the ROM
-test, which waits so you can read the names and checksums. At the end of a
-tape the results stay up until you press START:
-- the 8k tapes 02-05 and `diag-controls`: START runs that tape's tests again
-- the menu tapes (`diag-16k-02-system`, `diag-32k-xl-xe`): START goes back to
-  the menu
-- `diag-16k-01-ram`: START runs the whole RAM test again
+test, which waits so you can read the names and checksums. The end of a
+tape:
+- the 8k tapes 02-05, `diag-16k-03-hello` and `diag-controls` (no menu):
+  the last test's screen stays up, with a line for each test on the tape
+  and what to load next, for example `TEST COMPLETE. NEXT:
+  DIAG-8K-03-INPUT`. Nothing needs a press. The last test goes straight
+  there: the pass or fail sound plays once, for the whole tape.
+- `diag-16k-01-ram`, and `diag-8k-01-ram` on an 8K machine: the summary
+  stays up, with what to load next. Nothing needs a press.
+- the menu tapes (`diag-16k-02-system`, `diag-32k-xl-xe`): START goes back
+  to the menu
 - `diag-32k-xl-xe`'s RAM summary: START goes on to the system tests
 
 After the opening video check, no question has a time limit: every question
@@ -578,16 +588,17 @@ On the cartridge and the disk file one more check follows (item 7), and
 `diag-16k-03-hello` is that check on its own: the word "hello", a short
 recording. The first four plays use each voice's volume control as a
 4-bit sample player; the fifth uses the console speaker, which is only on
-or off, so it sounds rougher. On the cartridge two more follow, on two
-voices at once (1+2, then 3+4), which doubles the number of levels and
-sounds clearer: seven in all. Answer whether you heard them all.
+or off, so it sounds rougher. Two more follow, on two voices at once (1+2,
+then 3+4), which doubles the number of levels and sounds clearer: seven in
+all. Answer whether you heard them all.
 
 The screen goes dark while it plays: the video chip borrows the processor
 on every line it draws, which would make the samples come late and
 unevenly, and sound rough. The cartridge plays a sample every scan line
 (15.7 kHz), from a bank of its own. The disk file and the hello tape play
-one every other line (7.85 kHz), 4 bits each, two to a byte: a quarter of
-the RAM, which is what lets the disk file load on 32K.
+one every other line (7.85 kHz) from a recording made at half that rate,
+so it comes out twice as fast and higher: a squeaky "hello", in a quarter
+of the cartridge's bytes, which is what lets the disk file load on 32K.
 
 The recording is a public-domain one from Wikimedia Commons,
 `En-us-hello.ogg` by Dvortygirl, prepared for 4 bits by
@@ -606,8 +617,8 @@ what the Atari plays, to listen to on a PC.
 bigger than the gray steps), and under them the sprites: the word ATARI,
 made of the four players and the four missiles, with the letters taken
 from the character ROM, scrolling across in rainbow colours that move down
-the letters. Each letter rides a wave, a little behind the one before, so
-the word snakes as it scrolls. Answer whether it all looks right (item 1).
+the letters. The letters follow a fixed wave as they scroll left to right,
+so the word snakes along it. Answer whether it all looks right (item 1).
 Without a working screen the test is skipped.
 
 ![GTIA](img/av-02-gtia.png)
@@ -617,6 +628,16 @@ Without a working screen the test is skipped.
 3. Sixteen different colours.
 4. ATARI, moving.
 5. The question: does it look right?
+
+**GTIA, page 2: the display modes.** One screen with a band of each mode:
+ANTIC 6 and 7 (big colour text), the bitmaps 8, A, B, D and F, each with
+a wave drawn across it (a mode that fetches or shows its bytes wrong
+breaks the wave), and GTIA's own modes 9, 10 and 11 (16 shades, 9
+colours, 16 hues). A line of text slides from side to side (ANTIC's fine
+horizontal scroll) and the question bobs up and down (fine vertical
+scroll). Answer whether it all looks right (item 2). On `diag-8k-05-av`
+this page is the tape's part 2: after page 1 the tape plays on and loads
+it (`LOADING PART 2...`, about 20 s).
 
 ### The menu (`diag-16k-02-system` and `diag-32k-xl-xe`)
 
@@ -712,19 +733,19 @@ What each one covers:
 
 ![Memory test running](img/memtest-01-running.png)
 
-1. The pass number and how long it has run.
+1. The passes done (`PASSES 0` during the first) and how long it has run.
 2. What it's testing now.
 3. The log: bank (B1-B8; B9 is the memory test's own RAM, when it tests it
    page by page), bit, the first pass it failed in, and failed/passes.
-4. Press a key (or START, SELECT, OPTION or a joystick button) to stop
-   after the pass in progress.
+4. Press a key (or START, SELECT, OPTION or a joystick button) to end
+   after the pass in progress: the line then says `ENDING AFTER THIS PASS`.
 
 The border shows the state so far: green no errors, red solid errors only,
 yellow if anything intermittent has been seen.
 
 ![Memory test summary](img/memtest-02-summary.png)
 
-1. Passes, time and the result.
+1. The time and the result.
 2. The log.
 
 The memory test also tests the RAM it runs in:

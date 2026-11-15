@@ -228,13 +228,6 @@ fin
 	sta CONTVEC+1
 	lda #1			; the summary stays up till then
 	sta ENDING
-	.elseif .def ONE16
-	lda #<S1AGAIN		; START: the whole test again (stage 1's again)
-	sta CONTVEC
-	lda #>S1AGAIN
-	sta CONTVEC+1
-	lda #1
-	sta ENDING
 	.endif
 	ldx #LDRIDX
 fin_lp	lda BADMASK,x
@@ -589,8 +582,6 @@ s_nextbad dta d'FIX THIS FIRST',$FF
 	.endif
 	.ifdef GOMENU
 s_toggle2 dta d'START=GO ON  SELECT=RE-BEEP',$FF
-	.elseif .def ONE16
-s_toggle2 dta d'START=AGAIN SELECT=RE-BEEP OPTION=FLASH',$FF
 	.else
 s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FLASH',$FF
 	.endif

@@ -80,11 +80,19 @@ rt_go	jsr ramtest
 	.ifdef ONE16
 	jmp PAYAT+6		; no results here: stage 2's summary has them all
 	.else
-	lda #<load2		; a press (or a pass) goes on to stage 2
+	lda RAMTOP		; 16K and up: a press (or a pass) goes on to
+	cmp #$40		; stage 2. 8K: the end, nothing to press; the
+	bcc rt_8k		; results' stage 2 line says what to load next
+	lda #<load2
 	sta CONTVEC
 	lda #>load2
 	sta CONTVEC+1
-	lda DISPOK
+	bne rt_res
+rt_8k	lda #<s_l2_8k
+	sta L2MSG
+	lda #>s_l2_8k
+	sta L2MSG+1
+rt_res	lda DISPOK
 	beq final
 	jsr results
 final	ldx #4

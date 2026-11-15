@@ -60,6 +60,31 @@ and beeps, loading from a PC, and what to do when something fails.
 
 ## Versions
 
+- **0.9** (2026-11-15)
+  - The end of a tape without a menu (the 8k tapes, `diag-16k-03-hello`,
+    `diag-controls`): no more `START = AGAIN`. The last test's screen
+    stays up with a line for each test on the tape and what to load next
+    (`TEST COMPLETE. NEXT: DIAG-8K-03-INPUT`), and nothing needs a press.
+    The last test goes straight there, without its own result pause.
+    `diag-16k-01-ram`, and `diag-8k-01-ram` on an 8K machine, end the same
+    way.
+  - A fail now plays "impending doom" (C4, C4, F#3, the tritone) before
+    its beep code, instead of the sad trombone, and every failed test plays
+    it, at the test and at the end.
+  - GTIA test, page 2: every display mode on one screen (ANTIC 6, 7, the
+    bitmaps 8, A, B, D, F with a wave drawn in each, and GTIA's 9, 10, 11),
+    a line wiggling sideways (HSCROL) and the question bobbing (VSCROL);
+    item 2. On `diag-8k-05-av` it doesn't fit, so it is the tape's part
+    two, loaded after page 1 (`diag-8k-05-av-part2.cas` for AspeQt).
+  - The ATARI letters follow one fixed wave as they scroll, left to right.
+  - "hello" on the disk file and the hello tape: all seven plays, as on
+    the cartridge (the two-voice ones too), from a recording at half the
+    rate played twice as fast: a squeaky "hello".
+  - Long memory test: the count is passes done (0 in the first). A key
+    shows `ENDING AFTER THIS PASS`; the summary shows the time, not a pass
+    count.
+  - The menu's results say `MENU IN 2 S` and `START = MENU` when one test
+    was run from the menu, not `NEXT TEST`.
 - **0.8** (2026-11-15)
   - The 400 set is now the 8k set: `diag-8k-01-ram` to `diag-8k-05-av` and
     `diag-8k-memtest`. It runs on any Atari, tells a 400/800 from an XL/XE

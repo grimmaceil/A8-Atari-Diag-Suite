@@ -1,7 +1,9 @@
 ; Next-stage loader, shared by the multi-stage tapes. Needs from the stage:
 ; results (redraws its text screen with the L2MSG line), final (the final
 ; result), the s_l2* strings, s_l2load. NORAMCHK: don't require RAM test
-; results for banks 1-2 (tape 3 has none; its BADMASK holds test results).
+; results for banks 1-2 (a system tape has none; its BADMASK holds test
+; results). SYSPART (the 8K sound and video tape's part two, LDTO in its
+; own RAM): no RAM size check, and a failure goes to p2fail (common.asm).
 
 ; ---------------------------------------------------------------------------
 ; Stage 2: the next file on the tape, after this file's EOF record (which
@@ -30,6 +32,7 @@ ATRACT	= $4D
 
 load2	lda #0			; from here on a result is final
 	sta CONTVEC+1
+	.ifndef SYSPART
 	lda RAMTOP
 	cmp #>LDTO+$20	; the next stage needs 8K from LDTO
 	bcs l2_ram
@@ -46,6 +49,7 @@ l2_ram
 	lda #<s_l2_bad
 	ldy #>s_l2_bad
 	jmp l2_fail
+	.endif
 
 l2_go	lda SCRON
 	beq l2_os
@@ -164,10 +168,14 @@ l2_retry ldx #<load2
 l2_fail	sta L2MSG
 	sty L2MSG+1
 	jsr l2stop
+	.ifdef SYSPART
+	jmp p2fail
+	.else
 	lda SCRON
 	beq l2_end
 	jsr results
 l2_end	jmp final
+	.endif
 
 ; rdrec: read the next tape record into CASBUF, as the OS's RBLOK does.
 ; C clear if it read a data record; else C set, A = SIO status (1 = fine

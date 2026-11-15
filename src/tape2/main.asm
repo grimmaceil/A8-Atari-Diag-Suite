@@ -343,8 +343,7 @@ ps_log
 	jsr pulse
 	lda DISPOK
 	beq ps_next
-	jsr showpass
-	jsr showlog
+	jsr showlog		; (the pass count: when the next one starts)
 ps_next	lda STOPREQ
 	bne stop
 	.ifdef BOUNCE
@@ -586,13 +585,17 @@ putc_s	ldx DISPOK
 	beq st_x
 	jmp putc
 
-; showpass: "PASS n   TIME h:mm:ss" on row 5.
+; showpass: "PASSES n   TIME h:mm:ss" on row 5, as a pass starts
+; (PASSNO counts the passes started, this one too: 0 in the first).
 showpass lda DISPOK
 	beq st_x
 	PRINT 5, 0, s_pass
 	lda PASSNO
+	sec
+	sbc #1
 	sta DVAL
 	lda PASSNO+1
+	sbc #0
 	sta DVAL+1
 	jsr putdec
 	lda #<s_time
@@ -736,7 +739,8 @@ summary	jsr scr_on
 	lda #3
 	jsr chinfo
 	.endif
-	jsr showpass
+	PRINT 5, 0, [s_time+3]	; (the time only: the passes are in the log)
+	jsr puttime
 	PRINT 6, 0, s_result
 	lda NSOLID
 	ora NINT
@@ -1202,8 +1206,8 @@ NPAT	= *-pats
 s_hburn	dta d'MEMTEST',$FF
 s_hsum	dta d'SUMMARY',$FF
 s_legend dta d'BANK BIT  FIRST  FAILED/PASSES',$FF
-s_stop	dta d'KEY = STOP AFTER THIS PASS',$FF
-s_stopping dta d'STOPPING AFTER THIS PASS  ',$FF
+s_stop	dta d'KEY: END AFTER THIS PASS',$FF
+s_stopping dta d'ENDING AFTER THIS PASS  ',$FF
 s_now	dta d'NOW: ',$FF
 s_low	dta d'LOW RAM $0000-$07FF',$FF
 s_bank	dta d'BANK ',$FF
@@ -1212,7 +1216,7 @@ s_aia	dta d'ADDRESS TEST',$FF
 s_os	dta d'UNDER THE OS',$FF
 s_xe	dta d'130XE BANKS 5-8',$FF
 	.endif
-s_pass	dta d'PASS ',$FF
+s_pass	dta d'PASSES ',$FF
 s_time	dta d'   TIME ',$FF
 s_first	dta d'  FIRST ',$FF
 s_failed dta d'  FAILED ',$FF
