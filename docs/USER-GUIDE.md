@@ -183,11 +183,11 @@ AspeQt can't rewind or pause a tape. On a machine with 16K or more,
 for a few minutes before it asks for part two, and by then AspeQt has
 played past it. The screen then says `STAGE 2: NOT ON TAPE` or
 `STAGE 2: ERROR` and a number.
-When that happens, play `diag-8k-01-ram-part2.cas` and press START on the
+When that happens, play `diag-8k-01-ram-part2.cas` and press a key on the
 Atari: it tries again. `diag-8k-05-av` is two parts as well: after the
 GTIA test's first page it loads its second. If AspeQt has played past it,
 the screen says `PART 2: NOT ON TAPE` or `PART 2: READ ERROR`: play
-`diag-8k-05-av-part2.cas` and press START (SELECT goes on without it).
+`diag-8k-05-av-part2.cas` and press a key (SELECT goes on without it).
 Every other tape is a single part and doesn't have this problem.
 
 ### From a real cassette recorder
@@ -347,7 +347,7 @@ machine with no picture can still tell you about.
 
 - **The RAM test** runs first, before anyone has said they can see the
   screen. A fail flashes the border with every beep, holds red for 3 s
-  and plays again, over and over, until you press START. A pass plays the
+  and plays again, over and over, until you press a key. A pass plays the
   charge, then one long green flash per bank every 5 s, until START.
 - **From the ROM test on** the border stays steady and nothing repeats.
 - **The ROM test** (test 1) plays its code once: one long beep in a lower
@@ -372,7 +372,7 @@ needs more RAM than the machine has.
 
 The test numbers are the same on every tape, disk file and the cartridge:
 0 RAM, 1 ROMs, 2 keyboard, 3 console keys, 4 joysticks, 5 paddles, 6 POKEY,
-7 GTIA. (Before version 0.5, 4 was POKEY, 5 joysticks, 6 paddles, and the
+7 GTIA/ANTIC. (Before version 0.5, 4 was POKEY, 5 joysticks, 6 paddles, and the
 RAM was 8.)
 
 ### Failed item numbers
@@ -389,7 +389,7 @@ failed. The results screen says `NUMBERS AFTER FAIL = ITEMS THAT FAILED`.
 | 4 Joysticks | the port, 1-4: a line was already active at the start (stuck) |
 | 5 Paddles | the paddle, 1-8: it didn't read as unplugged in the open-input check |
 | 6 POKEY | 1 timer interrupt; 2 random numbers; 3-6 voice 1-4 (scale and hiss); 7 the sampled "hello" (cartridge, disk file and `diag-16k-03-hello`) |
-| 7 GTIA | 1 the ramps or the sprites look wrong; 2 the display modes look wrong |
+| 7 GTIA/ANTIC | 1 the ramps or the sprites look wrong; 2 the display modes look wrong |
 
 ### Keys during a result
 
@@ -422,8 +422,8 @@ a sound keeps playing it until you answer.
 ### RAM test (`-01-ram`, and the start of `diag-32k-xl-xe`)
 
 There is no separate video check. The RAM result screen is the picture
-check: its code keeps flashing and beeping until you press START, and
-pressing START says you can see it.
+check: its code keeps flashing and beeping until you press a key (or
+START, or a joystick button), and pressing it says you can see it.
 
 **Testing.** Each 16K bank is tested in turn; the screen says which. On a
 machine with a lot of RAM this takes a few minutes.
@@ -627,7 +627,7 @@ the button show inverse while active. START (or any key) ends the test.
 1. One line per port: four on a 400/800, two on an XL/XE. Something
    already active at the start counts as stuck (item = port).
 
-**Paddles.** First, unplug all paddles and press START: with nothing
+**Paddles.** First, unplug all paddles and press a key: with nothing
 plugged in, every paddle input must read 228 (SELECT skips this check).
 Then plug the paddles back in and turn each one. START or any key ends the
 test.
@@ -684,8 +684,8 @@ what the Atari plays, to listen to on a PC.
 bigger than the gray steps), and under them the sprites: the word ATARI,
 made of the four players and the four missiles, with the letters taken
 from the character ROM, scrolling across in rainbow colours that move down
-the letters. The letters follow a fixed wave as they scroll left to right,
-so the word snakes along it. Answer whether it all looks right (item 1).
+the letters. A wave runs through the letters from left to right, twice as
+fast as the word moves, so the word snakes along. Answer whether it all looks right (item 1).
 Without a working screen the test is skipped.
 
 ![GTIA](img/av-02-gtia.png)

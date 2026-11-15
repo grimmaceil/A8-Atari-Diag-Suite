@@ -388,8 +388,8 @@ s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_bank4	dta d'BANK 4 $C000-$FFFF  IN STAGE 2',$FF
 s_result dta d'RESULT: ',$FF
-s_toggle dta d'START=GO ON SELECT=RE-BEEP OPTION=FLASH',$FF
-s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FLASH',$FF
+s_toggle dta d'ANY KEY=GO ON SELECT=REPLAY OPTION=FLASH',$FF
+s_toggle2 dta d'SELECT=REPLAY  OPTION=FLASH',$FF
 s_l2load dta d'LOADING STAGE 2...',$FF
 s_l2pre	dta d'STAGE 2: ',$FF
 s_l2_8k	dta d'16K ONLY. NEXT: DIAG-8K-02-ROM',$FF

@@ -375,7 +375,7 @@ ts_go
 	.ifdef MENU
 	lda MMODE
 	bne ts_ng
-	PRINT 23, 0, s_toggle3	; START = MENU
+	PRINT 23, 0, s_toggle3	; ANY KEY = MENU
 	rts
 ts_ng
 	.endif
@@ -850,7 +850,7 @@ s_mram	dta d'0 RAM',$FF
 	.else
 s_m2	dta d'OR PRESS 1-8 FOR THAT LINE',$FF
 	.endif
-s_toggle3 dta d'START = MENU',$FF
+s_toggle3 dta d'ANY KEY = MENU',$FF
 s_mpass	dta d'MENU IN 2 S.  OPTION = FLASH',$FF
 	.endif
 
@@ -1019,7 +1019,8 @@ s_gq	dta d'LOOKS RIGHT? Y/START=YES, N/SELECT=NO',$FF
 
 	.ifdef GPART2
 ; p2fail: the tape's part two didn't load (common/loader.asm; L2MSG says
-; why). START tries again, SELECT ends test 7 without its page 2.
+; why). Any key (or START, or fire) tries again, SELECT ends test 7
+; without its page 2.
 p2fail	lda #22
 	jsr clrrow
 	PRINT 22, 0, s_l2pre
@@ -1030,18 +1031,18 @@ p2fail	lda #22
 	jsr clrrow
 	PRINT 23, 0, s_l2key
 	jsr waitrel
-pf_lp	lda CONSOL
+pf_lp	jsr inputs
 	lsr
-	bcc pf_go		; START
+	bcs pf_go		; a key, START, fire
 	lsr
-	bcs pf_lp
+	bcc pf_lp
 	jsr waitrel		; SELECT
 	jmp tend
 pf_go	jsr waitrel
 	jmp load2
 s_l2load dta d'LOADING PART 2...',$FF
 s_l2pre	dta d'PART 2: ',$FF
-s_l2key	dta d'START=AGAIN  SELECT=SKIP IT',$FF
+s_l2key	dta d'ANY KEY=AGAIN  SELECT=SKIP IT',$FF
 s_l2_big dta d'TOO BIG',$FF
 s_l2_sio dta d'READ ERROR',$FF
 s_l2_hdr dta d'NOT ON TAPE',$FF
@@ -1059,7 +1060,7 @@ s_tpok	dta d'6 POKEY: HELLO',$FF
 	.else
 s_tpok	dta d'6 POKEY',$FF
 	.endif
-s_t7	dta d'7 GTIA',$FF
+s_t7	dta d'7 GTIA/ANTIC',$FF
 	.ifdef RAM8
 s_t8	dta d'0 RAM, BANKS',$FF
 	.endif
@@ -1073,7 +1074,7 @@ s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_items	dta d', ITEMS',$FF
 s_tpass	dta d'NEXT TEST IN 2 S.  OPTION = FLASH',$FF
-s_goon	dta d'START = GO ON',$FF
+s_goon	dta d'ANY KEY = GO ON',$FF
 	.ifdef NEEDYN
 s_heard	dta d'HEARD IT? Y/START = YES, N/SELECT = NO',$FF
 	.endif

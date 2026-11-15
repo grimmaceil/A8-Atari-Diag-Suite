@@ -77,14 +77,20 @@ and beeps, loading from a PC, and what to do when something fails.
     a line wiggling sideways (HSCROL) and the question bobbing (VSCROL);
     item 2. On `diag-8k-05-av` it doesn't fit, so it is the tape's part
     two, loaded after page 1 (`diag-8k-05-av-part2.cas` for AspeQt).
-  - The ATARI letters follow one fixed wave as they scroll, left to right.
+  - The ATARI letters: the wave runs left to right through them, twice as
+    fast as the word moves, so each rise and fall goes A, T, A, R, I.
+  - Test 7 is named GTIA/ANTIC (its page 2 is mostly ANTIC's modes).
+  - Prompts say ANY KEY where any key goes on (`ANY KEY = GO ON`,
+    `ANY KEY = MENU`), so a dead START or key isn't a dead end. The
+    paddle test's first step and the 8k av tape's part two retry now take
+    any key too, not only START.
   - "hello" on the disk file and the hello tape: all seven plays, as on
     the cartridge (the two-voice ones too), from a recording at half the
     rate played twice as fast: a squeaky "hello".
   - Long memory test: the count is passes done (0 in the first). A key
     shows `ENDING AFTER THIS PASS`; the summary shows the time, not a pass
     count.
-  - The menu's results say `MENU IN 2 S` and `START = MENU` when one test
+  - The menu's results say `MENU IN 2 S` and `ANY KEY = MENU` when one test
     was run from the menu, not `NEXT TEST`.
   - ROM test: a self-check line. The tape or disk file checks its own copy
     in RAM by CRC32, and the cartridge checks each of its program banks

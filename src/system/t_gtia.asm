@@ -6,10 +6,11 @@
 ;     and the four missiles side by side as the I (PRIOR bit 4: they take
 ;     COLPF3's color), all double width, scrolling across one color clock a
 ;     frame under the ramps, a new color on every scan line and the rainbow
-;     moving a step each frame. And a snake: the letters follow a fixed sine
-;     wave (8 scan lines up and down, 128 color clocks long) as they scroll
-;     along it, left to right; they are written again at their new heights
-;     every frame.
+;     moving a step each frame. And a snake: a sine wave (8 scan lines up
+;     and down, 128 color clocks long) runs left to right through the
+;     letters at twice the word's speed, so each rise and fall goes A, T, A,
+;     R, I, the way the word moves; they are written again at their new
+;     heights every frame.
 ;   item 2 (page 2, t_gtia2.asm): the display modes look wrong. On the 8K
 ;     sound and video tape it is the tape's part two (GPART2), loaded now
 ;     over the tests already run (common/loader.asm).
@@ -190,19 +191,20 @@ gs_off	sta HPOSP0,x
 	.endif
 
 ; gletters: the five letters, from the ROM font, each where the wave is at
-; its place on the screen (GPX + 20 a letter, halved: a wave is 128 color
-; clocks): 0-8 bytes into the zone, their top at row 19 to row 21. The rest
-; of the zone clear.
+; its place: 20 color clocks a letter less GPX (the wave moves 2 a frame,
+; the word 1), halved (a wave is 128 color clocks): 0-8 bytes into the
+; zone, their top at row 19 to row 21. The rest of the zone clear.
 gletters ldx #4
-gl_let	txa			; this letter's place: GPX + 20x
+gl_let	txa			; this letter's place on the wave: 20x - GPX
 	asl
 	asl
 	sta CNT			; (4x)
 	asl
 	asl
 	adc CNT			; 20x (C clear: at most 80)
-	adc GPX
-	ror			; halved, the carry in: 0-63 is a wave
+	sec
+	sbc GPX
+	lsr			; halved: 0-63 is a wave
 	jsr gwave
 	sta CNT
 	lda gdestl,x		; the zone's top in this player or the missiles

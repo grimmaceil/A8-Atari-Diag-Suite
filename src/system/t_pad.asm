@@ -27,12 +27,12 @@ t_pad	lda #5
 pd_s0	lda #0
 	sta PFAST
 	jsr waitrel
-pd_w	jsr vsync		; START: check, SELECT: skip it
-	lda CONSOL
+pd_w	jsr vsync		; a key (START, fire): check, SELECT: skip it
+	jsr inputs
 	lsr
-	bcc pd_chk
+	bcs pd_chk
 	lsr
-	bcs pd_w
+	bcc pd_w
 	jmp pd_live
 pd_chk	jsr potscan		; one scan to start, one to read
 	jsr potscan
@@ -261,7 +261,7 @@ p3_o	pha
 	adc #$10
 	jmp putc
 
-s_pd1	dta d'UNPLUG ALL PADDLES, THEN PRESS START',$FF
+s_pd1	dta d'UNPLUG ALL PADDLES, THEN PRESS A KEY',$FF
 s_pd2	dta d'(SELECT SKIPS THE OPEN-INPUT CHECK)',$FF
 s_pd3	dta d'TURN EACH. SELECT=FAST. START/KEY ENDS.',$FF
 s_pdh	dta d'                       VAL MIN MAX JIT',$FF

@@ -1206,8 +1206,8 @@ NPAT	= *-pats
 s_hburn	dta d'MEMTEST',$FF
 s_hsum	dta d'SUMMARY',$FF
 s_legend dta d'BANK BIT  FIRST  FAILED/PASSES',$FF
-s_stop	dta d'KEY: END AFTER THIS PASS',$FF
-s_stopping dta d'ENDING AFTER THIS PASS  ',$FF
+s_stop	dta d'ANY KEY: END AFTER PASS',$FF
+s_stopping dta d'ENDING AFTER THIS PASS ',$FF
 s_now	dta d'NOW: ',$FF
 s_low	dta d'LOW RAM $0000-$07FF',$FF
 s_bank	dta d'BANK ',$FF
@@ -1228,9 +1228,9 @@ s_nsol	dta d' SOLID, ',$FF
 s_nextok dta d'ALL PASSED',$FF
 s_nextbad dta d'FIX SOLID ONES FIRST',$FF
 	.ifdef CART
-s_toggle2 dta d'START=MENU  SELECT=RE-BEEP  OPTION=FLASH',$FF
+s_toggle2 dta d'ANY KEY=MENU SELECT=REPLAY OPTION=FLASH',$FF
 	.else
-s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FLASH',$FF
+s_toggle2 dta d'SELECT=REPLAY  OPTION=FLASH',$FF
 	.endif
 
 	.ifdef BOUNCE

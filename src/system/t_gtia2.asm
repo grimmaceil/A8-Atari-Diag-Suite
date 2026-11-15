@@ -259,7 +259,7 @@ gmprior	.byte $40, $80, $C0, $00		; GTIA 9, 10, 11, then off
 gmramp	.rept 40				; 16 values, 5 pixels each
 	.byte [[[#*2]/5]<<4]|[[#*2+1]/5]
 	.endr
-s_t7m	dta d'7 GTIA: MODES',$FF
+s_t7m	dta d'7 VIDEO MODES',$FF
 s_gml	dta d'ANTIC 6 7 8 A B D F  GTIA 9 10 11',$FF
 s_gm6	dta d' ANTIC 6',$FF
 s_gm7	dta d' ANTIC 7',$FF

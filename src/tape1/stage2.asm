@@ -581,9 +581,9 @@ s_nextok dta d'ALL PASSED. NEXT: DIAG-8K-02-ROM',$FF
 s_nextbad dta d'FIX THIS FIRST',$FF
 	.endif
 	.ifdef GOMENU
-s_toggle2 dta d'START=GO ON  SELECT=RE-BEEP',$FF
+s_toggle2 dta d'ANY KEY=GO ON  SELECT=REPLAY',$FF
 	.else
-s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FLASH',$FF
+s_toggle2 dta d'SELECT=REPLAY  OPTION=FLASH',$FF
 	.endif
 
 	.ifndef ROM		; (in ROM every byte counts: no page alignment)
