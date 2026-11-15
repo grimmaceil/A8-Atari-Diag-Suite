@@ -1,6 +1,10 @@
-# A8 Cassette Diagnostics
+# A8 Atari Diag Suite
 
-Diagnostic tapes for every Atari 8-bit computer: the 400, 800, 1200XL,
+Free to use, copy and share. Please credit **Michael Grimm** (and
+Claude, the AI that helped write it) when you pass it on.
+
+Diagnostics for every Atari 8-bit computer, on cassette, disk and
+cartridge: the 400, 800, 1200XL,
 600XL, 800XL, 65XE, 800XE, 130XE and XE Game System. Load one like
 any cassette program and it tests the machine: RAM, ROMs, keyboard, console
 keys, joysticks, paddles, sound and video, plus a memory test (burn-in) for faults that
@@ -20,10 +24,10 @@ memory test also come as **disk files** (`.xex`, in `disks/`) that load in
 seconds. All of it is also on one **cartridge** (in `carts/`): plug it in,
 switch on, pick a test.
 
-Version 0.7. Every file has its version in its name
-(`diag-32k-xl-xe-v0.7.xex`) and every screen shows it at the right of the
-title bar (`V0.7`), so you can tell which one you are running. The names
-below leave the `-v0.7` out.
+Version 0.8. Every file has its version in its name
+(`diag-32k-xl-xe-v0.8.xex`) and every screen shows it at the right of the
+title bar (`V0.8`), so you can tell which one you are running. The names
+below leave the `-v0.8` out.
 
 ![The menu](docs/img/system-01-menu.png)
 
@@ -33,14 +37,14 @@ below leave the `-v0.7` out.
 
    | RAM | Tapes (in `cassettes/`) |
    |---|---|
-   | 8K or more (every Atari) | the 400 set: `diag-400-01-ram` to `diag-400-05-av`, about 2 min each; long test `diag-400-memtest` |
-   | 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, about 3.5 min each; long test `diag-memtest` |
+   | 8K or more (every Atari) | the 8k set: `diag-8k-01-ram` to `diag-8k-05-av`, about 2 min each; long test `diag-8k-memtest` |
+   | 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, about 3.5 min each; long test `diag-memtest`; the sampled sound test `diag-16k-03-hello` |
    | 32K or more (an 800 with 32K-48K, any 64K or 128K XL/XE) | the 32k+ tape: `diag-32k-xl-xe`, one tape, about 6 min; long test `diag-memtest` |
    | keyboard, joysticks, paddles only (16K or more) | `diag-controls`: no test harness needed; goes with Atari's SALT disks |
-   | with a disk drive or a MiSTer: 48K or 64K | `disks/diag-32k-xl-xe.xex`: everything in one file, the long test as menu line 9 (needs 34K); the long test alone: `disks/diag-memtest.xex` (16K) |
+   | with a disk drive or a MiSTer: 32K or more | `disks/diag-32k-xl-xe.xex`: everything in one file, the long test as menu line 9; the long test alone: `disks/diag-memtest.xex` (16K) |
    | a MiSTer, or an AtariMax 128K flash cartridge: any machine, 8K or more | `carts/diag-cart.car`: every test, run from ROM, with the menu; the long test from its line 8 (16K) |
 
-   A machine that won't get through its own set: use the 400 set. A tape
+   A machine that won't get through its own set: use the 8k set. A tape
    that needs more RAM than the machine has stops at once: red border, a
    low tone on and off.
 
@@ -56,6 +60,23 @@ and beeps, loading from a PC, and what to do when something fails.
 
 ## Versions
 
+- **0.8** (2026-11-15)
+  - The 400 set is now the 8k set: `diag-8k-01-ram` to `diag-8k-05-av` and
+    `diag-8k-memtest`. It runs on any Atari, tells a 400/800 from an XL/XE
+    and tests every RAM bank the machine has.
+  - Sounds: a pass plays the first four notes of the "charge" fanfare
+    (twice for the final pass); a fail plays a sad trombone (two long
+    falling notes) before its beep code.
+  - The disk file loads on 32K again (0.7 needed 34K): its "hello" is now
+    4 bits, a quarter of the bytes, played on the four voices and the
+    speaker. The cartridge keeps its 15.7 kHz version and the two-voice
+    plays.
+  - `diag-16k-03-hello`: the sampled sound test on its own tape (too big
+    for 8K).
+  - GTIA test: the sixteen colour bands are bigger (5 lines, from 3) and
+    the gray steps smaller (3 lines, from 7). The ATARI letters snake: each
+    rides the wave a little behind the one before, on every version (the
+    wave is a 16-byte quarter table).
 - **0.7** (2026-11-14)
   - The ROM test runs by itself only at power on; the RAM test run from
     the menu comes back to the menu. The RAM summary waits for START.
@@ -147,8 +168,8 @@ and beeps, loading from a PC, and what to do when something fails.
   - The cartridge menu: too little RAM for one program shows the message
     and comes back to the menu, so the other can still be picked.
   - The video check shows all 64 characters, normal and inverse.
-  - `diag-400-memtest` no longer shows the character ROM sum (no room in
-    8K); `diag-400-01-ram` shows it.
+  - `diag-8k-memtest` no longer shows the character ROM sum (no room in
+    8K); `diag-8k-01-ram` shows it.
 - **0.3** (2026-11-08)
   - Fixed: on a 130XE the 32k+ tape and `diag-32k-xl-xe.xex` crashed as
     the RAM test went from the RAM under the OS to extended bank 5. Their
@@ -190,7 +211,7 @@ and beeps, loading from a PC, and what to do when something fails.
   - At the end of a tape, START runs the tests again; the ROM test waits for
     a key so you can read it; the summaries name the next tape.
   - The burn-in is renamed the memory test (`diag-memtest`,
-    `diag-400-memtest`).
+    `diag-8k-memtest`).
   - Fixed: the keyboard test's stray lines on the INV key; a scrambled
     screen in the 32k+ tape's ROM test on the XL/XE.
 - **0.1** (2026-11-07): the first release.

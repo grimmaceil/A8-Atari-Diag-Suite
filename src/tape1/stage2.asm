@@ -584,7 +584,7 @@ s_nextbad dta d'FIX THIS FIRST',$FF
 s_nextok dta d'ALL PASSED. NEXT: DIAG-16K-02-SYSTEM',$FF
 s_nextbad dta d'FIX THIS FIRST',$FF
 	.else
-s_nextok dta d'ALL PASSED. NEXT: DIAG-400-02-ROM',$FF
+s_nextok dta d'ALL PASSED. NEXT: DIAG-8K-02-ROM',$FF
 s_nextbad dta d'FIX THIS FIRST',$FF
 	.endif
 	.ifdef GOMENU

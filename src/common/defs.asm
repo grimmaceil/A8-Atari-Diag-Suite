@@ -44,16 +44,17 @@ ret
 C_FLASH	= C_RED+4	; fail flash: brighter than the steady fail color
 C_GFLASH = C_GREEN+4
 
-; Tone table (report.asm): frequency, flash color, length.
+; Tone table (report.asm): frequency, flash color, length, the pause after.
 T_ALONG	= 0		; group A: long, red
 T_BSHORT = 1		; group B: short, red
 T_END	= 2		; end of list: low, long, red
-T_J1	= 3		; pass jingle, green
-T_J2	= 4
-T_J3	= 5
-T_GLONG	= 6		; pass: one long green flash per bank
-T_RLONG	= 7		; the ROM test's group A and B, lower than the RAM's,
-T_RSHORT = 8		; so the two can be told apart by ear
+T_J1	= 3		; pass: the charge, G4 C5 E5 G5, green
+T_J4	= 6
+T_GLONG	= 7		; pass: one long green flash per bank
+T_TR1	= 8		; fail: the sad trombone, two long notes falling
+T_TR2	= 9
+T_RLONG	= 10		; the ROM test's group A and B, lower than the RAM's,
+T_RSHORT = 11		; so the two can be told apart by ear
 
 C_TEXTBG = $00		; text area background (COLPF2); the border keeps the status color
 C_TEXTLUM = $0C		; text luminance (COLPF1)

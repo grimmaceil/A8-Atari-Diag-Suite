@@ -41,7 +41,7 @@ entry	sei
 ; of the image into RAM that isn't there, so nothing past this point can
 ; run. The OS sized the RAM at power-on (RAMTOP, $6A: a cartridge counts
 ; as the end of RAM). Halt: red border and the low end tone, on and off,
-; for good. Use the tapes for a smaller machine (the 400 set fits all).
+; for good. Use the tapes for a smaller machine (the 8k set fits all).
 	lda $6A
 	cmp #NEEDPG
 	bcs rm_ok

@@ -1,6 +1,9 @@
-# Development
+# A8 Atari Diag Suite: development
 
-Version 0.3. This is for anyone who wants to build the tapes from source,
+Free to use, copy and share. Please credit **Michael Grimm** (and
+Claude, the AI that helped write it) when you pass it on.
+
+This is for anyone who wants to build the tapes from source,
 change them, or check how they work. To test a machine you only need the `.cas` files in
 `cassettes/` (or the `.xex` files in `disks/`) and the [user guide](USER-GUIDE.md).
 
@@ -130,7 +133,7 @@ and those parts include it instead of the modules. What the parts do
 differently, the reporter decides at run time: `SYSMODE` (the system tests:
 a beep code only for the ROMs and the RAM) and `REDRAWV` (the screen OPTION
 brings back), which each part sets as it starts. The standalone programs
-(the 400 tapes, the 16k system tape, the controls tape, the memory test,
+(the 8k tapes, the 16k system tape, the controls tape, the memory test,
 the cartridge's system banks) include `lib.asm` itself, with the same
 defines as before.
 
@@ -157,7 +160,7 @@ zeros and got through.
 |---|---|
 | `src/common/` | shared code: boot (alive, checksum, low RAM test, size probe), display checks, the beep and flash reporter, the text screen, the RAM tests, XL/XE RAM, the stage loader |
 | `src/tape1/` | the RAM tape: stage 1, and stage 2 (relocated test, RAM under the OS, 130XE banks) |
-| `src/tape2/` | the memory test (one source, two builds: `diag-400-memtest` with OWNTEST and NOXL, `diag-memtest` with BOUNCE) |
+| `src/tape2/` | the memory test (one source, two builds: `diag-8k-memtest` with OWNTEST and NOXL, `diag-memtest` with BOUNCE) |
 | `src/disk/` | the disk files' guard and mover (`xexwrap.asm`) |
 | `src/cart/` | the cartridge's bank layout and checksum (`romsum.asm`) and the long memory test's loader (`ldmem.asm`) |
 | `src/system/` | the system tests: `main.asm` builds a tape from the tests that `WANT_*` defines pick; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia`); `common.asm` has the test flow and the menu |
@@ -203,8 +206,8 @@ as a picture. `--auto` answers the prompts as a person would; `--menuwalk`
 runs the menu's tests one by one.
 
 ```
-python tools/sim.py build/diag-400-03-input.cas --auto --until 90
-python tools/sim.py build/diag-400-01-ram.cas --stuck 2:5:1 --until 200
+python tools/sim.py build/diag-8k-03-input.cas --auto --until 90
+python tools/sim.py build/diag-8k-01-ram.cas --stuck 2:5:1 --until 200
 python tools/sim.py build/diag-32k-xl-xe.cas --xl --auto --until 900
 python tools/sim.py disks/diag-32k-xl-xe.xex --ram 0x4000 --until 4 --snap 3.5   # the guard
 ```

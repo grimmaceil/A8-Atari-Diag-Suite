@@ -8,7 +8,7 @@
 ;   page $FF) and the 130XE banks (5-8).
 ; Not covered: $0800 up to TSTART, where this stage runs (tape 1's stage 2
 ; tests it), unless built with:
-;   OWNTEST (diag-400-burnin): every pass also checks this stage's own RAM.
+;   OWNTEST (diag-8k-burnin): every pass also checks this stage's own RAM.
 ;     Its image sum must not change from pass 1's (the code changes a few of
 ;     its own operands as it runs, the same way every pass). Then each page
 ;     from $0800 up to TSTART is saved in the screen block, given March C-
@@ -22,7 +22,7 @@
 ;     (zp),y only so they run from anywhere and never test themselves; the
 ;     VBI and ANTIC are off. Faults go in the log as bank 9 ("B9", this
 ;     tape's RAM), and beep as bank 1.
-;   NOXL (diag-400-burnin): no RAM under the OS, no 130XE banks (an 8K
+;   NOXL (diag-8k-burnin): no RAM under the OS, no 130XE banks (an 8K
 ;     machine is never an XL), which leaves the room for OWNTEST.
 ;   BOUNCE (diag-burnin, 16K and up): two copies take turns. Copy A runs at
 ;     $0800; at the end of each pass the running copy writes the other one

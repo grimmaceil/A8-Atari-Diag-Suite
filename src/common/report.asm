@@ -28,22 +28,25 @@ RPEND	= 1
 	.endif
 	.endif
 
-; Tone table: frequency, flash color, length (the numbers: defs.asm).
-tt_frq	.byte F_LONG, F_SHORT, F_END, F_J1, F_J2, F_J3, F_LONG
+; Tone table: frequency, flash color, length and the pause after it, both
+; in units of 256 scan lines (16 ms). The numbers: defs.asm.
+;	A long  B short  END    the charge: G4 C5 E5 G5        GLONG   TR1    TR2
+tt_frq	.byte F_LONG, F_SHORT, F_END, F_J0, F_J1, F_J2, F_J3, F_LONG, F_TR1, F_TR2
 	.ifdef RPSYS
 	.byte F_RLONG, F_RSHORT
 	.endif
 tt_col	.byte C_FLASH, C_FLASH, C_FLASH, C_GFLASH, C_GFLASH, C_GFLASH, C_GFLASH
+	.byte C_GFLASH, C_FLASH, C_FLASH
 	.ifdef RPSYS
 	.byte C_FLASH, C_FLASH
 	.endif
-tt_lx	.byte <[600*157/10], <[200*157/10], <[600*157/10], <[100*157/10], <[100*157/10], <[300*157/10], <[600*157/10]
+tt_len	.byte 37, 12, 37, 7, 7, 7, 20, 37, 25, 49	; (600 ms = 37)
 	.ifdef RPSYS
-	.byte <[600*157/10], <[200*157/10]
+	.byte 37, 12
 	.endif
-tt_ly	.byte >[600*157/10+255], >[200*157/10+255], >[600*157/10+255], >[100*157/10+255], >[100*157/10+255], >[300*157/10+255], >[600*157/10+255]
+tt_gap	.byte 12, 12, 12, 2, 2, 2, 12, 12, 3, 12	; (200 ms = 12)
 	.ifdef RPSYS
-	.byte >[600*157/10+255], >[200*157/10+255]
+	.byte 12, 12
 	.endif
 
 ; ---------------------------------------------------------------------------
@@ -72,13 +75,14 @@ dl_nt	dex
 	bne dl_lp
 	jmp (RET2)
 
-; tone: flash and beep tone X of the table, then 200 ms black and silent.
-; Returns via RET1.
+; tone: flash and beep tone X of the table, then its pause, black and
+; silent (200 ms; the charge's notes run on). Returns via RET1.
 ; QUIET (the picture confirmed and the text on): the result is on the
 ; screen, so the border keeps its steady color and only the sound plays.
 ; After the tone it looks at the controls (once low RAM has passed: rpkey
 ; uses the stack), so a press doesn't have to wait for the end of a code.
-tone	lda QUIET
+tone	stx TCUR
+	lda QUIET
 	bne tn_nf
 	lda tt_col,x
 	sta COLBK
@@ -88,9 +92,8 @@ tn_nf	lda tt_frq,x
 	sta AUDC1
 	lda #$08
 	sta SPKMASK
-	ldy tt_ly,x
-	lda tt_lx,x
-	tax
+	ldy tt_len,x
+	ldx #0			; (delay: 256 lines a step)
 	NCALL RET2, delay
 	lda #AUD_OFF
 	sta AUDC1
@@ -103,7 +106,10 @@ tn_nf	lda tt_frq,x
 	bne tn_nb
 	lda #C_BLACK
 	sta COLBK
-tn_nb	WAITMS 200
+tn_nb	ldx TCUR
+	ldy tt_gap,x
+	ldx #0
+	NCALL RET2, delay
 	lda STACKOK
 	beq tn_x
 	jsr rpkey
@@ -131,7 +137,9 @@ rp_na
 	sta COLBK
 	WAITMS 1000
 
-rp_top	lda LOADERR
+rp_top	BEEP T_TR1		; the sad trombone, then the code
+	BEEP T_TR2
+	lda LOADERR
 	beq rp_banks
 	BEEP T_ALONG
 	WAITMS 800
@@ -259,21 +267,33 @@ rq_in	ora SLATCH
 rq_x	rts
 
 ; ---------------------------------------------------------------------------
-; pass: rising jingle. With a continue vector: hold green ~2 s, then go on.
+; pass: the charge (G4 C5 E5 G5); twice at the end (no continue vector, or
+; ENDING 2: the final results). With a continue vector: hold green ~2 s,
+; then go on.
 ; Without (the end of the tape): every ~5 s one long green flash per bank
 ; tested, steady green between, forever; quiet (see tone): steady green and
 ; silent.
 pass	lda #C_GREEN
 	sta COLBK
 	jsr arm
-	lda #T_J1
+	ldx #1			; once, or twice at the end
+	lda CONTVEC+1
+	beq pa_2
+	lda ENDING
+	cmp #2
+	bne pa_n
+pa_2	inx
+pa_n	stx RBIT		; (repeats left: RBIT is free here)
+pa_rep	lda #T_J1
 	sta RCNT
 pa_jin	ldx RCNT
 	NCALL RET1, tone
 	inc RCNT
 	lda RCNT
-	cmp #T_J3+1
+	cmp #T_J4+1
 	bne pa_jin
+	dec RBIT
+	bne pa_rep
 	lda #20
 	sta RCNT
 	lda #C_GREEN

@@ -29,48 +29,50 @@ CASSETTES = ROOT / 'cassettes'  # the release tapes (in git): what users load
 DISKS = ROOT / 'disks'          # the release disk files (.xex, in git)
 CARTS = ROOT / 'carts'          # the release cartridge (.car, in git)
 SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTer Atari800 core's folder
-# The version: in every release file's name (diag-...-v0.7.cas) and at the
+# The version: in every release file's name (diag-...-v0.8.cas) and at the
 # right of every screen's title bar, so a file and what it shows can be
 # matched. One digit each side of the point (screen.asm). build/ keeps the
 # plain names.
-VERSION = '0.7'
+VERSION = '0.8'
 VDEFS = dict(zip(('VMAJ', 'VMIN'), VERSION.split('.')))
 
 # Each tape: source dir, name, stages (first = boot), defines. A later stage
 # is told where the boot stage keeps its BSS and where its own test area ends.
 # The system tapes are one main.asm with the tests picked by WANT_* defines.
-# The 400 and 16k sets share tape 1: its stage 2 (16K and up) relocates the
+# The 8k and 16k sets share tape 1: its stage 2 (16K and up) relocates the
 # RAM test to the RAM stage 1 sat in, and tests the XL/XE extras where it
 # finds them. The one-load 16k and 32k+ RAM tapes are built by build_one16
 # and build_one32.
 ALL7 = dict(WANT_ROM=1, WANT_KB=1, WANT_CON=1, WANT_JOY=1, WANT_PAD=1,
             WANT_POK=1, WANT_GTIA=1)
-S400 = {'SETNO': 0}
+S8 = {'SETNO': 0}
 # NEEDPG: the RAM a tape needs, in pages. Below it the tape halts at once
 # (boot.asm): red border, the low tone on and off. Every tape runs on any
 # machine with at least that much RAM, the bigger and newer ones included.
-# The 400 set needs 8K, which every Atari has, so it has no check.
+# The 8k set needs 8K, which every Atari has, so it has no check.
 N16 = {'NEEDPG': '$40'}
-TAPES = [('tape1', 'diag-400-01-ram', ['main.asm', 'stage2.asm'], {}),
-         ('system', 'diag-400-02-rom', ['main.asm'], dict(S400, TAPENO=2, WANT_ROM=1)),
-         ('system', 'diag-400-03-input', ['main.asm'],
-          dict(S400, TAPENO=3, WANT_KB=1, WANT_CON=1)),
-         ('system', 'diag-400-04-ports', ['main.asm'],
-          dict(S400, TAPENO=4, WANT_JOY=1, WANT_PAD=1)),
-         ('system', 'diag-400-05-av', ['main.asm'],
-          dict(S400, TAPENO=5, WANT_POK=1, WANT_GTIA=1)),
+TAPES = [('tape1', 'diag-8k-01-ram', ['main.asm', 'stage2.asm'], {}),
+         ('system', 'diag-8k-02-rom', ['main.asm'], dict(S8, TAPENO=2, WANT_ROM=1)),
+         ('system', 'diag-8k-03-input', ['main.asm'],
+          dict(S8, TAPENO=3, WANT_KB=1, WANT_CON=1)),
+         ('system', 'diag-8k-04-ports', ['main.asm'],
+          dict(S8, TAPENO=4, WANT_JOY=1, WANT_PAD=1)),
+         ('system', 'diag-8k-05-av', ['main.asm'],
+          dict(S8, TAPENO=5, WANT_POK=1, WANT_GTIA=1)),
          ('one16', 'diag-16k-01-ram', [], N16),
          ('system', 'diag-16k-02-system', ['main.asm'],
           dict(ALL7, **N16, SETNO=1, TAPENO=2, MENU=1, BIGSTAGE=1)),
+         ('system', 'diag-16k-03-hello', ['main.asm'],     # the sampled sound: too big
+          dict(N16, SETNO=1, TAPENO=3, WANT_SND=1, BIGSTAGE=1)),   # for 8K
          ('one32', 'diag-32k-xl-xe', [], {'NEEDPG': '$80'}),
          ('system', 'diag-controls', ['main.asm'],
           dict(N16, SETNO=3, WANT_KB=1, WANT_JOY=1, WANT_PAD=1, BIGSTAGE=1)),
-         ('tape2', 'diag-400-memtest', ['main.asm'], {'OWNTEST': 1, 'NOXL': 1, 'NORAMK': 1, 'NOFONT': 1}),
+         ('tape2', 'diag-8k-memtest', ['main.asm'], {'OWNTEST': 1, 'NOXL': 1, 'NORAMK': 1, 'NOFONT': 1}),
          ('bounce', 'diag-memtest', [], dict(N16, BOUNCE=1, BIGSTAGE=1, OWNTEST=1))]
 # The disk files (Atari-diag-disk-scope.md): the same programs as these
 # tapes, built with XEX (their own title bar, no NEEDPG: the wrapper's guard
 # checks the RAM before the file loads) and wrapped by mkxex.py.
-XEXES = [('one32', 'diag-32k-xl-xe', {}, 0x88),      # (34K: the image loads at $2000, above DOS)
+XEXES = [('one32', 'diag-32k-xl-xe', {}, 0x80),      # (32K: the image loads at $2000, above DOS)
          ('bounce', 'diag-memtest', dict(BOUNCE=1, BIGSTAGE=1, OWNTEST=1), 0x40)]
 # The cartridge (mkcar.py, src/cart/romsum.asm): the tests run from ROM,
 # one program to an 8K bank (build_car), and need 8K of RAM. Only the long

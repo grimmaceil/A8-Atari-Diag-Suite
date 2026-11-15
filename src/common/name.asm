@@ -5,7 +5,7 @@
 s_hpre	dta d' DIAG-CART  ',$FF
 	.elseif .def OWNTEST		; the memory test (tape2)
 	.if .def NOXL
-s_hpre	dta d' DIAG-400-MEMTEST  ',$FF
+s_hpre	dta d' DIAG-8K-MEMTEST  ',$FF
 	.elseif .def XEX
 s_hpre	dta d' DIAG-MEMTEST-XEX  ',$FF
 	.elseif .def CART
@@ -21,7 +21,7 @@ s_hpre	dta d' DIAG-32K-XL-XE  ',$FF
 	.endif
 	.elseif .def ONE16
 s_hpre	dta d' DIAG-16K-01-RAM  ',$FF
-	.elseif .def SETNO		; the system tests (SETNO 0 = the 400 set,
+	.elseif .def SETNO		; the system tests (SETNO 0 = the 8k set,
 	.if SETNO=4			; 1 = 16K, 3 = controls, 4 = 32k+)
 	.ifdef XEX
 s_hpre	dta d' DIAG-32K-XEX  ',$FF
@@ -31,9 +31,13 @@ s_hpre	dta d' DIAG-32K-XL-XE  ',$FF
 	.elseif SETNO=3
 s_hpre	dta d' DIAG-CONTROLS  ',$FF
 	.elseif SETNO=1
-s_hpre	dta d' DIAG-16K-02-SYSTEM  ',$FF
+	.if TAPENO=3
+s_hpre	dta d' DIAG-16K-03-HELLO  ',$FF
 	.else
-s_hpre	dta d' DIAG-400-0',[TAPENO+$10]
+s_hpre	dta d' DIAG-16K-02-SYSTEM  ',$FF
+	.endif
+	.else
+s_hpre	dta d' DIAG-8K-0',[TAPENO+$10]
 	.if TAPENO=2
 	dta d'-ROM  ',$FF
 	.elseif TAPENO=3
@@ -44,6 +48,6 @@ s_hpre	dta d' DIAG-400-0',[TAPENO+$10]
 	dta d'-AV  ',$FF
 	.endif
 	.endif
-	.else				; the 400 set's RAM tape
-s_hpre	dta d' DIAG-400-01-RAM  ',$FF
+	.else				; the 8k set's RAM tape
+s_hpre	dta d' DIAG-8K-01-RAM  ',$FF
 	.endif

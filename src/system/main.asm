@@ -6,6 +6,7 @@
 ;   4 joysticks (WANT_JOY)       live, per port
 ;   5 paddles (WANT_PAD)         open-input check, then live values
 ;   6 POKEY (WANT_POK)           timer IRQ, RANDOM, the voices and noise by ear
+;     or (WANT_SND, the 16k hello tape) the sampled "hello" only
 ;   7 GTIA (WANT_GTIA)           ramps and sprites by eye
 ; They run in that order (progressive: the Y/N answers later tests ask for
 ; come from the keyboard and console keys tested before them), and the menu
@@ -62,11 +63,13 @@ LONGT	= 1
 xmem	= ldmem
 	.endif
 	.ifdef WANT_POK		; cart/hello.asm: sampled sound, where there is
-	.ifdef ROM		; room: the cartridge and the disk file
-SAMPLED	= 1
+	.ifdef ROM		; room: the cartridge and the disk file, and the
+SAMPLED	= 1			; 8k hello tape (WANT_SND)
 	.elseif .def XEX
 SAMPLED	= 1
 	.endif
+	.elseif .def WANT_SND
+SAMPLED	= 1
 	.endif
 	.ifdef WANT_CON		; common.asm: the tests that ask Y/N
 NEEDYN	= 1
@@ -77,7 +80,7 @@ NEEDYN	= 1
 	.endif
 	.ifndef WANT_ROM
 NOFONT	= 1			; display.asm, info.asm: only the ROM test shows
-	.endif			; the font's sum (the 400 tapes are short of room)
+	.endif			; the font's sum (the 8k tapes are short of room)
 
 	opt h-
 	.if .def ROM
@@ -273,6 +276,8 @@ tlist
 	.endif
 	.ifdef WANT_POK
 	.word t_pok
+	.elseif .def WANT_SND
+	.word t_snd
 	.elseif .def ROM
 	.word xt6
 	.endif
@@ -311,6 +316,8 @@ ttests
 	.endif
 	.ifdef WANT_POK
 	.byte 6
+	.elseif .def WANT_SND
+	.byte 6
 	.elseif .def ROM
 	.byte 6
 	.endif
@@ -338,6 +345,16 @@ ttests
 	.endif
 	.ifdef WANT_POK
 	icl 't_pok.asm'
+	.elseif .def WANT_SND
+; t_snd: test 6, the sampled "hello" only (the 16k hello tape: the rest of
+; the POKEY test is on the system tapes). Item 7 as in the full test.
+t_snd	lda #6
+	sta TEST
+	lda #<s_tpok
+	ldy #>s_tpok
+	jsr tpage
+	jsr hello
+	jmp tend
 	.endif
 	.ifdef WANT_GTIA
 	icl 't_gtia.asm'

@@ -30,27 +30,27 @@ BASIC = 'BASIC - Revision A.rom'
 # with FAST=1, made by fastbuilds() into build/): the same screens, a fraction
 # of the simulator's time (py65 is slow on a big march).
 RUNS = {
-    'ram-pass': ('diag-400-01-ram', ['--ram', '0x4000', '--key', '10', '--until', '300'], [
+    'ram-pass': ('diag-8k-01-ram', ['--ram', '0x4000', '--key', '10', '--until', '300'], [
         ('TESTING BANK 1', 1, 'ram-02-testing'),
         ('ALL RAM PASSED', 2, 'ram-03-pass'),       # (past the jingle: steady
         ('ALL PASSED. NEXT', 2, 'ram-04-summary')]),  # green, not a flash gap)
-    'ram-fail': ('diag-400-01-ram', ['--ram', '0x4000', '--stuck', '3000-30FF:5:1', '--until', '200'], [
+    'ram-fail': ('diag-8k-01-ram', ['--ram', '0x4000', '--stuck', '3000-30FF:5:1', '--until', '200'], [
         ('BITS D4', 1, 'ram-05-fail')]),
-    'rom-400': ('diag-400-02-rom', ['--ram', '0xA000', '--auto', '--basic', '@BASIC',
+    'rom-400': ('diag-8k-02-rom', ['--ram', '0xA000', '--auto', '--basic', '@BASIC',
                                     '--until', '60'], [
         ('TEST 1 PASS', 1, 'rom-01-400')]),
-    'rom-xl': ('diag-400-02-rom', ['--xl', '--auto', '--basic', '@BASIC', '--until', '60'], [
+    'rom-xl': ('diag-8k-02-rom', ['--xl', '--auto', '--basic', '@BASIC', '--until', '60'], [
         ('TEST 1 PASS', 1, 'rom-02-xl')]),
-    'input': ('diag-400-03-input', ['--auto', '--until', '90'], [
+    'input': ('diag-8k-03-input', ['--auto', '--until', '90'], [
         ('KEYS LEFT 2', 0.1, 'input-01-keyboard'),
         ('HEARD IT?', 1, 'input-02-console'),
         ('3 CONSOLE KEYS', 1, 'input-03-results')]),
-    'input-fail': ('diag-400-03-input', ['--auto', '--skip', '5', '--until', '60'], [
+    'input-fail': ('diag-8k-03-input', ['--auto', '--skip', '5', '--until', '60'], [
         ('START = GO ON', 1, 'input-04-fail')]),
-    'ports': ('diag-400-04-ports', ['--auto', '--until', '90'], [
+    'ports': ('diag-8k-04-ports', ['--auto', '--until', '90'], [
         ('STICK 4', 1, 'ports-01-joysticks'),
         ('VAL MIN MAX', 2, 'ports-02-paddles')]),
-    'av': ('diag-400-05-av', ['--auto', '--until', '120'], [
+    'av': ('diag-8k-05-av', ['--auto', '--until', '120'], [
         ('VOICE 2:', 0.4, 'av-01-pokey'),
         ('LOOKS RIGHT?', 1, 'av-02-gtia')]),
     'cart': ('diag-cart.car', ['--ram', '0x4000', '--con', 'START:8:0.4,START:14:0.4',
@@ -74,7 +74,7 @@ RUNS = {
         ('FIX SOLID', 1, 'memtest-02-summary')]),
     # the screen sweep is timed, not text-triggered: at 10 s on 8K it is on
     # row 13 (the save-page churn and the sweep alternate every pass)
-    'memtest-sweep': ('diag-400-memtest', ['--ram', '0x2000', '--until', '11',
+    'memtest-sweep': ('diag-8k-memtest', ['--ram', '0x2000', '--until', '11',
                                            '--shot', '10:@RAW/memtest-03-sweep.png'], []),
 }
 
@@ -94,7 +94,7 @@ ANNOT = {
     'ports-01-joysticks': [(7, 10, 1)],
     'ports-02-paddles': [(5, 5, 1), (7, 7, 2), (8, 15, 3)],
     'av-01-pokey': [(5, 5, 1), (7, 7, 2), (8, 8, 3)],
-    'av-02-gtia': [(3, 3, 1), (5, 11, 2), (13, 18, 3), (19, 22, 4), (23, 23, 5)],
+    'av-02-gtia': [(3, 3, 1), (5, 7, 2), (9, 18, 3), (19, 22, 4), (23, 23, 5)],
     'system-01-menu': [(4, 10, 1), (11, 11, 2), (12, 12, 3), (18, 19, 4)],
     'system-02-results': [(4, 10, 1), (12, 16, 2)],
     '16k-01-summary': [(5, 6, 1), (7, 10, 2), (14, 16, 3), (23, 23, 4)],

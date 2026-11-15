@@ -74,7 +74,9 @@ PBSAVE	= BSS+$DC	; PORTB as the OS left it (xlram.asm)
 OSRAM	= BSS+$DD	; 0 = not an XL/XE, 1 = no RAM under the OS, 2 = tested
 XERAM	= BSS+$DE	; nonzero: 130XE extended banks found
 XEBANK	= BSS+$DF	; extended bank being tested (0-3)
-ENDING	= BSS+$F7	; nonzero: the end of a program: START goes on, nothing by itself
+TCUR	= BSS+$F8	; tone: the tone being played (its pause, after)
+ENDING	= BSS+$F7	; nonzero: the end of a program: START goes on, nothing by itself;
+			; 2: the final results (pass: the charge twice)
 RAMK	= BSS+$F9	; all the RAM found, in K (boot.asm: for the machine line)
 HSEL	= BSS+$FA	; hold: it ended on SELECT (report: play the code again)
 INRT	= BSS+$FF	; nonzero: the RAM test proper runs (SKIPKEY: its march looks for S)

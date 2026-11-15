@@ -6,18 +6,19 @@
 ;     and the four missiles side by side as the I (PRIOR bit 4: they take
 ;     COLPF3's color), all double width, scrolling across one color clock a
 ;     frame under the ramps, a new color on every scan line and the rainbow
-;     moving a step each frame. On the cartridge (ROM) the word also bounces
-;     up and down, 8 scan lines each way: the letters are written again at
-;     a new height every frame.
+;     moving a step each frame. And a snake: each letter rides a sine wave,
+;     8 scan lines up and down, an eighth of a wave behind the letter before
+;     it; the letters are written again at their new heights every frame.
 ; The video standard is shown. Without a picture there is nothing to judge:
 ; the test is skipped.
-GL_ROW	= 5			; first text row of the luminance ramp (rows 5-11)
-GH_ROW	= 13			; first text row of the hue ramp (rows 13-18)
-GROW	= 19			; the letters' zone: rows 19-22 (they sit in 20-21,
-				; or move through all four)
+GL_ROW	= 5			; first text row of the luminance ramp: 8 steps of
+				; 3 lines, rows 5-7
+GH_ROW	= 9			; first text row of the hue ramp: 16 steps of 5
+				; lines, rows 9-18 (bigger than the gray steps)
+GROW	= 19			; the letters' zone: rows 19-22
 GPX	= TSCR+$00		; the word's left edge, color clocks
 GBASE	= TSCR+$01		; the rainbow's first color, 0-15
-GPH	= TSCR+$02		; ROM: the bounce, 0-63
+GPH	= TSCR+$02		; the wave, 0-63
 GPM	= $04			; P/M block: missiles $0580, players $0600-$07FF
 GY	= 16+GROW*4		; P/M byte of row GROW (double-line): the zone's top
 
@@ -30,7 +31,7 @@ t_gtia	lda #7
 	bne gt_go
 	jmp tend
 gt_go	PRINT 4, 0, s_glum
-	PRINT 12, 0, s_ghue
+	PRINT 8, 0, s_ghue
 	PRINT 23, 0, s_gq
 	lda #<s_vntsc
 	ldy #>s_vntsc
@@ -59,7 +60,6 @@ gs_pm	sta GPM*$100+$100,y	; the P/M block clear
 	sta GPX
 	sta GBASE
 	sta GPH
-	lda #4			; the letters, mid-zone
 	jsr gletters
 	ldx #3
 gs_sz	lda #1			; players double width
@@ -78,24 +78,22 @@ gs_sz	lda #1			; players double width
 	sta GRACTL
 	jsr waitrel
 
-gt_lp	lda VCOUNT		; luminance: 8 steps of 7 lines, rows 5-11 (8 of 8
-	cmp #[32+GL_ROW*8]/2-1	; ran into row 12's label). VCOUNT counts line
-	bne gt_lp		; pairs: start a pair early, end inside row 11
+gt_lp	lda VCOUNT		; luminance: 8 steps of 3 lines, rows 5-7. VCOUNT
+	cmp #[32+GL_ROW*8]/2-1	; counts line pairs: start a pair early
+	bne gt_lp
 	ldx #0
 gt_l	txa
 	asl
 	sta WSYNC
 	sta COLPF2
-	ldy #6
-gt_l1	sta WSYNC
-	dey
-	bne gt_l1
+	sta WSYNC
+	sta WSYNC
 	inx
 	cpx #8
 	bne gt_l
 	lda #C_TEXTBG		; (in the horizontal blank after the last WSYNC)
 	sta COLPF2
-gt_w	lda VCOUNT		; hue: 16 steps of 3 lines, rows 13-18
+gt_w	lda VCOUNT		; hue: 16 steps of 5 lines, rows 9-18
 	cmp #[32+GH_ROW*8]/2-1
 	bne gt_w
 	ldx #0
@@ -107,8 +105,10 @@ gt_h	txa
 	ora #8
 	sta WSYNC
 	sta COLPF2
-	sta WSYNC
-	sta WSYNC
+	ldy #4
+gt_h1	sta WSYNC
+	dey
+	bne gt_h1
 	inx
 	cpx #16
 	bne gt_h
@@ -132,14 +132,8 @@ gt_r	txa			; hue in the high nibble, luminance 8)
 	dey
 	bne gt_r
 
-	.ifdef ROM		; the bounce: the letters at the next height
-	inc GPH			; (now: ANTIC is past them, below row 22)
-	lda GPH
-	and #63
-	tax
-	lda gsine,x
-	jsr gletters
-	.endif
+	inc GPH			; the snake: the letters at their next heights
+	jsr gletters		; (now: ANTIC is past them, below row 22)
 	inc GPX			; each frame: one step across, one rainbow step
 	lda GPX
 	ldx #0
@@ -192,11 +186,20 @@ gs_off	sta HPOSP0,x
 	jsr waitrel
 	jmp tend
 
-; gletters: the five letters, from the ROM font, A bytes into the zone
-; (0-8: their top at row 19 to row 21), the rest of the zone clear.
-gletters sta CNT
-	ldx #4
-gl_let	lda gdestl,x		; the zone's top in this player or the missiles
+; gletters: the five letters, from the ROM font, each at its point on the
+; wave (gwave of GPH less 8 a letter: 0-8 bytes into the zone, their top
+; at row 19 to row 21), the rest of the zone clear.
+gletters ldx #4
+gl_let	txa			; this letter's point on the wave
+	asl
+	asl
+	asl
+	eor #$FF		; (GPH - 8x: the wave runs left to right)
+	sec
+	adc GPH
+	jsr gwave
+	sta CNT
+	lda gdestl,x		; the zone's top in this player or the missiles
 	sta SPTR
 	lda gdesth,x
 	sta SPTR+1
@@ -231,17 +234,38 @@ gl_cp	lda (PTR),y
 	bpl gl_let
 	rts
 
+; gwave: A = 0-63, a point on the wave -> A = 4 + 4 sin, 0-8. The table is
+; a quarter of it (gqsin, 16 steps); the rest by symmetry: the second
+; quarter backwards, the second half below the middle. Keeps X.
+gwave	pha
+	and #15
+	tay
+	pla
+	pha
+	and #16
+	beq gw_q
+	tya			; the second and fourth quarters: backwards
+	eor #15
+	tay
+gw_q	pla
+	and #32
+	beq gw_up
+	lda gqsin,y		; the second half: 4 - it
+	eor #$FF
+	clc
+	adc #5
+	rts
+gw_up	lda gqsin,y		; the first half: 4 + it
+	clc
+	adc #4
+	rts
+
 gcodes	.byte $21, $34, $21, $32, $29	; A T A R I (screen codes)
 gdestl	.byte <[GPM*$100+$200+GY], <[GPM*$100+$280+GY], <[GPM*$100+$300+GY]
 	.byte <[GPM*$100+$380+GY], <[GPM*$100+$180+GY]
 gdesth	.byte >[GPM*$100+$200+GY], >[GPM*$100+$280+GY], >[GPM*$100+$300+GY]
 	.byte >[GPM*$100+$380+GY], >[GPM*$100+$180+GY]
-	.ifdef ROM
-gsine	.byte 4, 4, 5, 5, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8	; 4 + 4 sin
-	.byte 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 6, 6, 6, 5, 5, 4
-	.byte 4, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, 0
-	.byte 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4
-	.endif
+gqsin	.byte 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4	; 4 sin, a quarter
 
 s_glum	dta d'LUMINANCE: 8 EVEN STEPS, BLACK TO WHITE',$FF
 s_ghue	dta d'HUES: 16 COLORS. BELOW: MOVING ATARI',$FF

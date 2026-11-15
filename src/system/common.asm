@@ -319,10 +319,11 @@ tr_nc	lda NEXTVEC
 	sta CONTVEC
 	lda NEXTVEC+1
 	sta CONTVEC+1
-; nocode: a fail without a code: one low tone, then steady red until a
+; nocode: a fail without a code: the sad trombone, then steady red until a
 ; press goes on to CONTVEC.
 nocode	jsr arm
-	BEEP T_END
+	BEEP T_TR1		; the sad trombone
+	BEEP T_TR2
 nc_w	lda #C_RED
 	sta HOLDC
 	lda #50
@@ -435,8 +436,8 @@ final	lda #8			; tshow, as redraw, shows the results from here
 	lda #>trestart
 	.endif
 	sta CONTVEC+1
-	lda #1			; and the result stays up till then
-	sta ENDING
+	lda #2			; and the result stays up till then (2: a pass
+	sta ENDING		; plays the charge twice)
 	ldx #0
 fi_cnt	lda ttests,x
 	beq fi_n
@@ -934,7 +935,11 @@ s_t2	dta d'2 KEYBOARD',$FF
 s_t3	dta d'3 CONSOLE KEYS',$FF
 s_tjoy	dta d'4 JOYSTICKS',$FF
 s_tpad	dta d'5 PADDLES',$FF
+	.ifdef WANT_SND
+s_tpok	dta d'6 POKEY: HELLO',$FF
+	.else
 s_tpok	dta d'6 POKEY',$FF
+	.endif
 s_t7	dta d'7 GTIA',$FF
 	.ifdef RAM8
 s_t8	dta d'0 RAM, BANKS',$FF

@@ -3,18 +3,20 @@
 src/cart/audio/En-us-hello.ogg, and a preview to listen to on a PC.
 
   src/cart/audio/hello-15k.bin   the cartridge: one sample a scan line
-                                 (15.7 kHz), in a bank of its own
-  src/cart/audio/hello-8k.bin    the disk file: one sample every two scan
-                                 lines (7.85 kHz), half the RAM
+                                 (15.7 kHz), one byte each, 0-30 (two
+                                 voices' levels added), in a bank of its own
+  src/cart/audio/hello-8k.bin    the disk file and the 8k hello tape: one
+                                 sample every two scan lines (7.85 kHz), 4
+                                 bits each, two to a byte (high nibble
+                                 first): a quarter of the bytes, for RAM
   build/hello-preview.wav        what the Atari plays, in the order it plays
                                  it: 4 bits (one voice), 1 bit (the console
                                  speaker), 5 bits (two voices), for both
                                  rates; then the recording itself
 
-One byte a sample, 0-30: the level of two POKEY voices added (one voice
-plays half of it, 0-15). It starts and ends at 0, the level of a voice
-that is off, with a 5 ms ramp to and from the middle (15, silence), so a
-word doesn't start or stop with a click. Whole pages, padded with 0.
+It starts and ends at 0, the level of a voice that is off, with a 5 ms
+ramp to and from the middle (silence), so a word doesn't start or stop
+with a click. Whole pages, padded with 0.
 
 The recording is cleaned up for 4 and 5 bits, the usual steps for speech
 at a low bit depth:
@@ -50,7 +52,7 @@ ROOT = Path(__file__).resolve().parent.parent
 AUDIO = ROOT / 'src' / 'cart' / 'audio'
 SRC = AUDIO / 'En-us-hello.ogg'
 LINE = 15700.0                  # NTSC scan lines a second (PAL: 15557, 1% slower)
-OUTS = [(AUDIO / 'hello-15k.bin', 1), (AUDIO / 'hello-8k.bin', 2)]   # file, lines a sample
+OUTS = [(AUDIO / 'hello-15k.bin', 1, 5), (AUDIO / 'hello-8k.bin', 2, 4)]   # file, lines a sample, bits
 PREVIEW = ROOT / 'build' / 'hello-preview.wav'
 PREV_SR = 44100
 
@@ -104,22 +106,26 @@ def clean(d, sr):
     return y
 
 
-def quantize(y):
+def quantize(y, bits):
+    """0-30 (5 bits: two voices) or 0-15 (4 bits: one voice)."""
+    top = 30 if bits == 5 else 15
     y = y / np.abs(y).max()                          # 6. normalize, soft clip
     y = np.tanh(1.3 * y) / np.tanh(1.3)
-    return np.clip(np.round(y * 15 + 15), 0, 30).astype(int)
+    return np.clip(np.round((y + 1) * top / 2), 0, top).astype(int)
 
 
 def play(q, lines, mode):
     """What POKEY or the speaker puts out, as -1..1 at PREV_SR."""
+    top = q.max() if q.max() > 15 else 15            # (0-30 or 0-15)
     if mode == 4:
-        v = (q >> 1) / 15.0
+        v = ((q >> 1) if top > 15 else q) / 15.0
     elif mode == 5:
         v = q / 30.0
     else:                                            # 1 bit, as hello.asm does
+        mid = (top + 1) // 2                         # 16 of 0-30, 8 of 0-15
         v, on = np.zeros(len(q)), 0
         for i, s in enumerate(q):
-            on = 1 if s >= 16 else 0 if s <= 14 else on
+            on = 1 if s >= mid else 0 if s <= mid - 2 else on
             v[i] = on
     v = v * 2 - 1
     v -= v[:200].mean() if len(v) > 200 else 0      # (no click from the offset)
@@ -134,17 +140,20 @@ def main():
     y = clean(d, sr)
     gap = np.zeros(int(PREV_SR * 0.3))
     preview = []
-    for path, lines in OUTS:
+    for path, lines, bits in OUTS:
         rate = LINE / lines
-        q = quantize(resample(y, sr, rate))
-        ramp = np.round(np.linspace(0, 15, int(rate * 0.005))).astype(int)
+        q = quantize(resample(y, sr, rate), bits)
+        mid = 15 if bits == 5 else 7
+        ramp = np.round(np.linspace(0, mid, int(rate * 0.005))).astype(int)
         q = np.concatenate([ramp, q, ramp[::-1]])
-        q = np.concatenate([q, np.zeros(-len(q) % 256, int)])
-        path.write_bytes(bytes(q.tolist()))
-        used = len(np.unique(q >> 1))
+        per = 256 if bits == 5 else 512                  # samples a page
+        q = np.concatenate([q, np.zeros(-len(q) % per, int)])
+        data = (bytes(q.tolist()) if bits == 5 else
+                bytes((q[i] << 4 | q[i + 1]) for i in range(0, len(q), 2)))
+        path.write_bytes(data)
         print(f'{path.name}: {len(q)} samples at {rate:.0f} Hz, {len(q) / rate:.2f} s, '
-              f'{len(q)} bytes ({len(q) // 256} pages), {used} of 16 levels used at 4 bits')
-        for mode in (4, 1, 5):
+              f'{bits} bits, {len(data)} bytes ({len(data) // 256} pages)')
+        for mode in ((4, 1, 5) if bits == 5 else (4, 1)):
             preview += [play(q, lines, mode), gap]
     orig = resample(d / np.abs(d).max(), sr, PREV_SR) * 0.8
     preview += [gap, orig]
