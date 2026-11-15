@@ -3,61 +3,46 @@
 ; through NCALL, which keeps the return address in a BSS vector; each call
 ; level has its own vector, so levels nest but don't recurse.
 
-; No-stack call: NCALL vector, target. The callee returns with JMP (vector).
-; Clobbers A.
-.macro NCALL
-	lda #<ret
-	sta :1
-	lda #>ret
-	sta :1+1
-	jmp :2
-ret
-.endm
+; (The macros NCALL, WAITMS, BEEP and the tone numbers T_*: defs.asm.)
 
-; WAITMS ms: busy-wait about that many milliseconds. Clobbers A/X/Y.
-; delay counts X + 256*(Y-1) scanlines, so Y is the scanline count
-; rounded up to whole pages.
-.macro WAITMS
-	ldx #<[:1*157/10]
-	ldy #>[:1*157/10+255]
-	NCALL RET2, delay
-.endm
+; SHLIB (lib.asm): one copy of this file serves every part of the image, so
+; what the parts do differently is decided at run time: SYSMODE (the system
+; tests: a code only for the ROMs and the RAM), REDRAWV (the screen OPTION
+; brings back). Otherwise the part's own defines decide.
+	.ifdef SHLIB
+RPSYS	= 1
+RPFOLD	= 1
+RPEND	= 1
+RPRAM	= 1
+	.else
+	.ifdef SYSCODES		; the system tests (system/main.asm)
+RPSYS	= 1
+	.else
+RPRAM	= 1
+	.endif
+	.ifdef LDRFOLD		; stage 2, the memory test
+RPFOLD	= 1
+	.endif
+	.ifdef RESTART		; the end waits for START
+RPEND	= 1
+	.endif
+	.endif
 
-; BEEP n: one flash+beep from the tone table (T_* below), then 200 ms
-; dark and silent.
-.macro BEEP
-	ldx #:1
-	NCALL RET1, tone
-.endm
-
-
-C_FLASH	= C_RED+4	; fail flash: brighter than the steady fail color
-C_GFLASH = C_GREEN+4
-
-; Tone table: frequency, flash color, length.
-T_ALONG	= 0		; group A: long, red
-T_BSHORT = 1		; group B: short, red
-T_END	= 2		; end of list: low, long, red
-T_J1	= 3		; pass jingle, green
-T_J2	= 4
-T_J3	= 5
-T_GLONG	= 6		; pass: one long green flash per bank
-T_RLONG	= 7		; SYSCODES: the ROM test's group A and B, lower than
-T_RSHORT = 8		; the RAM's, so the two can be told apart by ear
+; Tone table: frequency, flash color, length (the numbers: defs.asm).
 tt_frq	.byte F_LONG, F_SHORT, F_END, F_J1, F_J2, F_J3, F_LONG
-	.ifdef SYSCODES
+	.ifdef RPSYS
 	.byte F_RLONG, F_RSHORT
 	.endif
 tt_col	.byte C_FLASH, C_FLASH, C_FLASH, C_GFLASH, C_GFLASH, C_GFLASH, C_GFLASH
-	.ifdef SYSCODES
+	.ifdef RPSYS
 	.byte C_FLASH, C_FLASH
 	.endif
 tt_lx	.byte <[600*157/10], <[200*157/10], <[600*157/10], <[100*157/10], <[100*157/10], <[300*157/10], <[600*157/10]
-	.ifdef SYSCODES
+	.ifdef RPSYS
 	.byte <[600*157/10], <[200*157/10]
 	.endif
 tt_ly	.byte >[600*157/10+255], >[200*157/10+255], >[600*157/10+255], >[100*157/10+255], >[100*157/10+255], >[300*157/10+255], >[600*157/10+255]
-	.ifdef SYSCODES
+	.ifdef RPSYS
 	.byte >[600*157/10+255], >[200*157/10+255]
 	.endif
 
@@ -138,8 +123,10 @@ tn_x	jmp (RET1)
 ; the RAM the loader landed in is suspect but no bit is known.
 report	lda #AUD_OFF
 	sta AUDC1
-	lda #0
-	sta HARMED
+	lda STACKOK		; (before low RAM passed: BSS was just cleared,
+	beq rp_na		; and there is no stack for arm)
+	jsr arm
+rp_na
 	lda #C_RED
 	sta COLBK
 	WAITMS 1000
@@ -154,16 +141,20 @@ rp_top	lda LOADERR
 rp_banks lda #1
 	sta RBANK
 rp_bank	ldx RBANK
-	.ifdef SYSCODES		; the system tests: a code only for the ROMs (1)
-	cpx #2			; and the RAM (8); the other tests' results are
-	bcc rp_sy		; on the screen
+	.ifdef RPSYS		; the system tests: a code only for the ROMs (1)
+	.ifdef SHLIB		; and the RAM (8); the other tests' results are
+	lda SYSMODE		; on the screen
+	beq rp_sy
+	.endif
+	cpx #2
+	bcc rp_sy
 	cpx #8
 	bcs rp_sy
 	jmp rp_next
 rp_sy
 	.endif
 	lda BADMASK,x
-	.if .def LDRFOLD
+	.ifdef RPFOLD
 	cpx #1			; the loader area is part of bank 1
 	bne rp_fold
 	ora BADMASK+LDRIDX
@@ -172,7 +163,11 @@ rp_fold	cmp #0			; the CPX changed Z
 	bne rp_have
 	jmp rp_next
 rp_have	sta RMASK
-	.ifdef SYSCODES		; one long tone, in the ROM's pitch or the RAM's
+	.ifdef RPSYS		; the system tests: one long tone, in the ROM's
+	.ifdef SHLIB		; pitch or the RAM's
+	lda SYSMODE
+	beq rp_ram
+	.endif
 	lda #1
 	sta RCNT
 	lda #T_ALONG
@@ -181,8 +176,12 @@ rp_have	sta RMASK
 	bne rp_tn
 	lda #T_RLONG
 rp_tn	sta RTONE
-	.else
-	lda RBANK
+	.ifdef RPRAM
+	jmp rp_along
+	.endif
+	.endif
+	.ifdef RPRAM		; the RAM: the bank number in long tones
+rp_ram	lda RBANK
 	sta RCNT
 	lda #T_ALONG
 	sta RTONE
@@ -238,8 +237,7 @@ rp_rep	jmp rp_top
 
 ; rpkey: the controls, after a tone (JSR: only once STACKOK is set). A
 ; press of START, a key or fire, after all were seen released, goes on to
-; CONTVEC (if one is set) and doesn't come back. (hold clears HARMED, so
-; after a pause the controls must be seen released again.)
+; CONTVEC (if one is set) and doesn't come back.
 rpkey	jsr inputs
 	ldx HARMED
 	bne rq_in
@@ -267,8 +265,7 @@ rq_x	rts
 ; silent.
 pass	lda #C_GREEN
 	sta COLBK
-	lda #0			; (tone's look at the controls: a key still down
-	sta HARMED		; from the test doesn't count)
+	jsr arm
 	lda #T_J1
 	sta RCNT
 pa_jin	ldx RCNT
@@ -284,7 +281,7 @@ pa_jin	ldx RCNT
 	NCALL RET1, hold
 	lda CONTVEC+1
 	beq pa_top
-	.ifdef RESTART
+	.ifdef RPEND
 	lda ENDING		; the system tapes' end: START goes on (again),
 	bne pa_top		; nothing goes on by itself
 	.endif
@@ -351,6 +348,17 @@ ho_n	dec RCNT
 	bne ho_lp
 	jmp (RET1)
 
+; arm: a fresh result. Controls held now don't count (a key still down from
+; the test), but if none is, the next press does, even one in the first
+; tone.
+arm	lda #0
+	sta HARMED
+	sta SLATCH
+	jsr inputs
+	bne am_x
+	inc HARMED
+am_x	rts
+
 ; inputs: A = bit 0 go on (START, a key, fire 0/1), bit 1 SELECT,
 ; bit 2 OPTION. Zero (Z set) when nothing is pressed.
 inputs	lda CONSOL		; 0 = pressed
@@ -382,5 +390,13 @@ scrtoggle lda SCRON
 	beq tg_on
 	jsr scr_off
 	jmp waitrel
-tg_on	jsr redraw
+tg_on
+	.ifdef SHLIB
+	jsr rdvec
+	.else
+	jsr redraw
+	.endif
 	jmp waitrel
+	.ifdef SHLIB
+rdvec	jmp (REDRAWV)		; (each part sets it: its results screen)
+	.endif

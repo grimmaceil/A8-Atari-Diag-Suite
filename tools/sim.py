@@ -517,9 +517,12 @@ class Auto:
                 else:                         # START: ALL at first, then (walk)
                     self.hw.press(when, 'CON', 1)            # the results
             return
-        if 'START = GO ON' in text or 'START=GO ON' in text or 'START=GO ON  SELECT' in text:    # a failed test's code: go on (a press only
-            ln = self.hw.line        # counts in a pause, so keep pressing)
-            if not any(e > ln for st, e, k, v in self.hw.presses if k == 'CON'):
+        if 'START = GO ON' in text or 'START=GO ON' in text:   # a result that waits: one
+            ln = self.hw.line        # press, as a person would (a tap during a tone
+            lines = text.splitlines()  # counts, and a second could leak into the next test)
+            sig = 'GOON|' + lines[0] + '|' + '|'.join(l for l in lines if 'TEST ' in l or 'PASS' in l)
+            if sig not in self.seen and not any(e > ln for st, e, k, v in self.hw.presses if k == 'CON'):
+                self.seen.add(sig)
                 self.hw.press(ln + 4000, 'CON', 1)
             return
         for p in self.PROMPTS:
@@ -648,6 +651,9 @@ def main():
                     help='.car: the console key pressed at the menu, and when (s): START or SELECT')
     ap.add_argument('--con', default='',
                     help='console keys pressed, e.g. START:52,SELECT:60 (seconds)')
+    ap.add_argument('--bss', type=lambda x: int(x, 0),
+                    help='where the program keeps its BSS page, for the end report (the 32k+ image: its BSS label)')
+    ap.add_argument('--events', help='write every logged register write (line, register, value) to this file')
     ap.add_argument('-v', action='store_true')
     a = ap.parse_args()
 
@@ -846,6 +852,8 @@ def main():
         if steps > 400_000_000:
             sys.exit('runaway: no report produced')
 
+    if a.events:
+        Path(a.events).write_text(''.join(f'{ln} {r:04X} {v:02X}\n' for ln, r, v in hw.events))
     ts = tones(hw.events)
     if a.v:
         for t in ts:
@@ -857,7 +865,9 @@ def main():
     bss = load + len(img)
     if car is not None and hw.caron:     # the tests run from ROM: BSS is at $0800
         bss = 0x0800
-    if 0x2006 in entered:                  # stage 2's BSS follows its image
+    if a.bss is not None:
+        bss = a.bss
+    elif 0x2006 in entered:                # stage 2's BSS follows its image
         bss = 0x2000 + hw.ram[0x2001] * 128
     bad = [hw.ram[bss + 0x40 + b] for b in range(10)]
     print(f'first result at {t_done:.1f} s, {steps} steps, {hw.nmis} VBIs, '
@@ -874,7 +884,8 @@ def main():
             print(f'  bank {b}: first ${r(0x80):02X}{r(0x70):02X} wrote ${r(0x90):02X}'
                   f' read ${r(0xA0):02X} count {r(0x50) | r(0x60) << 8}')
     # Low RAM must come through intact, apart from what the stage itself
-    # uses once low RAM has passed: its zero page pointers and the stack page.
+    # uses once low RAM has passed: zero page $80-$FF (pointers, the system
+    # tests' data) and the stack page.
     # SIO's control block, the cassette buffer and the display shadows are
     # written on purpose for the stage 2 load; burn-in sets VVBLKI and keeps
     # its log in $0500-$06FF.
@@ -884,7 +895,7 @@ def main():
         sio |= {0x2E0, 0x2E1, 0x2E2, 0x2E3, 0x244}
     if car is not None:                  # the cartridge's COLDST, GINTLK, message line, trampoline
         sio |= {0x244, 0x3FA} | set(range(0x600, 0x700))
-    keep = [i for i in range(0x800) if not (0x80 <= i < 0x90 or 0x100 <= i < 0x200
+    keep = [i for i in range(0x800) if not (0x80 <= i < 0x100 or 0x100 <= i < 0x200
                                             or i in sio)]
     changed = [i for i in keep if hw.ram[i] != lowram_before[i]]
     print('low RAM preserved:', not changed,

@@ -23,11 +23,12 @@
 	icl '../common/hw.asm'
 	icl '../common/vars.asm'
 	icl '../common/faults.asm'
+	icl '../common/defs.asm'
 
 LDRFOLD	= 1			; report.asm: fold the loader area into bank 1
 	.ifdef ONE16
 RESTART	= 1			; report.asm: the end waits for START: again
-ENDING	= BSS+$F7		; nonzero: the end (START runs it all again)
+SHLIB	= 1			; one-load image: stage 1's library (lib.asm)
 	.endif
 SROW	= BSS+$DB		; summary: row of the item being printed
 	.ifdef ONE32		; START at the summary goes to the menu
@@ -67,11 +68,23 @@ entry2	sei
 	cld
 	ldx #$FF
 	txs
+	.ifndef ONE16		; (ONE16: the same page)
 	ldx #0			; take over stage 1's results
 tk_lp	lda S1BSS,x
 	sta BSS,x
 	inx
 	bne tk_lp
+	.endif
+	.ifdef SHLIB
+	lda #<summary		; (OPTION's screen: report.asm)
+	sta REDRAWV
+	lda #>summary
+	sta REDRAWV+1
+	.endif
+	.ifdef ROM
+	lda #0			; (S: from here on only at skip2's safe points,
+	sta INRT		; not in the middle of the march)
+	.endif
 	lda #0			; this stage's result is the tape's last
 	sta CONTVEC+1
 	.ifdef ROM		; CTRL+S in stage 1: no RAM test, on to the menu
@@ -202,15 +215,19 @@ no_os	lda DISPOK
 	jsr summary
 fin
 	.ifdef ROM
-	lda #<tomenu		; on to the system tests' bank: a pass by itself
-	sta CONTVEC		; after 2 s, a fail at START
+	lda #<tomenu		; START: on to the system tests' bank
+	sta CONTVEC
 	lda #>tomenu
 	sta CONTVEC+1
+	lda #1			; the summary stays up till then
+	sta ENDING
 	.elseif .def ONE32
-	lda #<[SYS32+6]		; on to the system tests, in this image (they take
-	sta CONTVEC		; the RAM results over as test 0): a pass by
-	lda #>[SYS32+6]		; itself after 2 s, a fail at START
+	lda #<[SYS32+6]		; START: on to the system tests, in this image
+	sta CONTVEC		; (they take the RAM results over as test 0)
+	lda #>[SYS32+6]
 	sta CONTVEC+1
+	lda #1			; the summary stays up till then
+	sta ENDING
 	.elseif .def ONE16
 	lda #<S1AGAIN		; START: the whole test again (stage 1's again)
 	sta CONTVEC
@@ -242,12 +259,9 @@ skip2	lda SKSTAT
 	lda #$40
 	sta IRQEN
 s2_key	lda KBCODE
-	and #$BF
-	cmp #$96		; CTRL + X
-	beq s2_go
-	cmp #$BE		; CTRL + S
+	and #$3F
+	cmp #$3E		; S
 	bne s2_x
-s2_go
 	inc SKIPRAM
 	ldx #$FF
 	txs
@@ -272,12 +286,11 @@ tm_n	dex
 	lda KEEP		; the RAM test again, from the menu: the tests'
 	beq tm_nk		; results back
 	ldx #7
-tm_kp	lda STASH-1,x
+tm_kp	lda STASH-1,x		; (KEEP stays set: trun goes to the menu)
 	sta BADMASK,x
 	dex
 	bne tm_kp
-	stx KEEP
-tm_nk	lda #0			; (XREQ 0: the ROM test, then the menu)
+tm_nk	lda #0			; (XREQ 0: trun)
 	sta XREQ
 	ldx #SYSA
 	jmp XBANK
@@ -525,10 +538,11 @@ puts_st	pha
 	jmp puts
 
 ; ---------------------------------------------------------------------------
-	icl '../common/report.asm'
-	icl '../common/screen.asm'
-	icl '../common/ramtest.asm'
-	icl '../common/info.asm'
+	.ifdef SHLIB
+	icl '../../build/shlib.asm'	; the library's addresses, in stage 1
+	.else
+	icl '../common/lib.asm'
+	.endif
 	icl '../common/bits.asm'
 	icl '../common/detail.asm'
 	icl '../common/xlram.asm'
@@ -538,21 +552,6 @@ puts_st	pha
 	.endif
 	.endif
 
-	.if .def ROM			; the tape's name
-s_hpre	dta d' DIAG-CART  ',$FF
-	.elseif .def ONE32
-	.ifdef XEX			; the disk file (build.py)
-s_hpre	dta d' DIAG-32K-XEX  ',$FF
-	.elseif .def CART		; the cartridge (build.py)
-s_hpre	dta d' DIAG-32K-CART  ',$FF
-	.else
-s_hpre	dta d' DIAG-32K-XL-XE  ',$FF
-	.endif
-	.elseif .def ONE16
-s_hpre	dta d' DIAG-16K-01-RAM  ',$FF
-	.else
-s_hpre	dta d' DIAG-400-01-RAM  ',$FF
-	.endif
 	.ifdef ROM
 s_hrel	dta d'RAM TEST',$FF
 	.else
@@ -579,21 +578,21 @@ s_txe	dta d'TESTING 130XE BANKS',$FF
 s_nfail	dta d'FAILURES: ',$FF
 s_detail dta d'DETAIL:',$FF
 	.ifdef GOMENU
-s_nextok dta d'ALL PASSED. NEXT: THE ROM TEST',$FF
-s_nextbad dta d'FIX THIS FIRST, OR START: GO ON',$FF
+s_nextok dta d'ALL PASSED',$FF
+s_nextbad dta d'FIX THIS FIRST',$FF
 	.elseif .def ONE16
 s_nextok dta d'ALL PASSED. NEXT: DIAG-16K-02-SYSTEM',$FF
-s_nextbad dta d'NEXT: FIX THIS ONE FIRST, THEN RE-RUN',$FF
+s_nextbad dta d'FIX THIS FIRST',$FF
 	.else
 s_nextok dta d'ALL PASSED. NEXT: DIAG-400-02-ROM',$FF
-s_nextbad dta d'NEXT: FIX THIS ONE FIRST, THEN RE-RUN',$FF
+s_nextbad dta d'FIX THIS FIRST',$FF
 	.endif
 	.ifdef GOMENU
 s_toggle2 dta d'START=GO ON  SELECT=RE-BEEP',$FF
 	.elseif .def ONE16
 s_toggle2 dta d'START=AGAIN SELECT=RE-BEEP OPTION=FLASH',$FF
 	.else
-s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FULL-SCREEN FLASH',$FF
+s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FLASH',$FF
 	.endif
 
 	.ifndef ROM		; (in ROM every byte counts: no page alignment)
@@ -605,14 +604,9 @@ PADTO	= [[*+2+$FF]/$100]*$100
 IMGSUM	.word 0			; mkcas.py: sum of every byte before this
 IMGEND
 NREC	= [IMGEND-S2LOAD]/128
-	.if .def ONE32
-BSS	= $0600			; its own page, in low RAM: stage 1's ($4F00
-				; here) is inside $4000-$7FFF, which a 130XE
-				; bank switch takes away from the CPU. (Low RAM
-				; is tested by then; the system tests take the
-				; results over from here, PREVBSS.)
-	.elseif .def ONE16
+	.if .def ONE16
 BSS	= S1BSS			; one image: stage 1's BSS page is this one's
+				; (ONE32: a page in the image, below $4000)
 	.else
 BSS	= IMGEND
 	.endif

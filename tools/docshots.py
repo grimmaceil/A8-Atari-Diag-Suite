@@ -51,10 +51,11 @@ RUNS = {
         ('STICK 4', 1, 'ports-01-joysticks'),
         ('VAL MIN MAX', 2, 'ports-02-paddles')]),
     'av': ('diag-400-05-av', ['--auto', '--until', '120'], [
-        ('PLAYING VOICE 2', 0.4, 'av-01-pokey'),
+        ('VOICE 2:', 0.4, 'av-01-pokey'),
         ('LOOKS RIGHT?', 1, 'av-02-gtia')]),
-    'cart': ('diag-cart.car', ['--ram', '0x4000', '--pick', 'START:9', '--until', '16'], [   # (no --auto: it
-        ('^START=RUN', 1, 'cart-01-menu')]),                      # would run ALL at once)
+    'cart': ('diag-cart.car', ['--ram', '0x4000', '--con', 'START:8:0.4,START:14:0.4',
+                               '--until', '24'], [   # (no --auto: it would run ALL)
+        ('^START=RUN', 1, 'cart-01-menu')]),
     'menu': ('diag-16k-02-system', ['--ram', '0x8000', '--auto', '--until', '400'], [
         ('^START=RUN', 0.5, 'system-01-menu'),
         ('^START = MENU', 1, 'system-02-results')]),
@@ -93,7 +94,7 @@ ANNOT = {
     'ports-01-joysticks': [(7, 10, 1)],
     'ports-02-paddles': [(5, 5, 1), (7, 7, 2), (8, 15, 3)],
     'av-01-pokey': [(5, 5, 1), (7, 7, 2), (8, 8, 3)],
-    'av-02-gtia': [(3, 3, 1), (5, 11, 2), (13, 20, 3), (21, 22, 4), (23, 23, 5)],
+    'av-02-gtia': [(3, 3, 1), (5, 11, 2), (13, 18, 3), (19, 22, 4), (23, 23, 5)],
     'system-01-menu': [(4, 10, 1), (11, 11, 2), (12, 12, 3), (18, 19, 4)],
     'system-02-results': [(4, 10, 1), (12, 16, 2)],
     '16k-01-summary': [(5, 6, 1), (7, 10, 2), (14, 16, 3), (23, 23, 4)],

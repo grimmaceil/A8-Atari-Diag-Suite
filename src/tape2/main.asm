@@ -59,13 +59,13 @@
 	icl '../common/hw.asm'
 	icl '../common/vars.asm'
 	icl '../common/faults.asm'
+	icl '../common/defs.asm'
 
 BURNIN	= 1			; xlram.asm: page $FF stays out, NMI vector in RAM
 LRCALL	= 1			; boot.asm: lowram can be called again
 RPCOLVAR = 1			; report.asm: steady color from RPCOL
 	.ifdef CART		; from the cartridge: START at the end goes back
 RESTART	= 1			; to its menu (report.asm: the end waits)
-ENDING	= BSS+$F7
 	.endif
 	.ifdef BOUNCE
 FONT	= LOAD+$3000		; ROM font copy while the OS is out (moves with
@@ -768,15 +768,6 @@ su_bad	lda NSOLID
 su_end	PRINT 23, 0, s_toggle2
 	rts
 
-; clrrow: blank row A.
-clrrow	ldx #0
-	jsr at
-	ldx #40
-	lda #0
-cr_lp	jsr putc
-	dex
-	bne cr_lp
-	rts
 
 	.ifndef NOXL
 ; Progress hooks for xlram.asm.
@@ -1203,25 +1194,11 @@ pats	.byte $00,$FF,$55,$AA
 	.byte $FE,$FD,$FB,$F7,$EF,$DF,$BF,$7F
 NPAT	= *-pats
 
-	icl '../common/report.asm'
-	icl '../common/screen.asm'
-	icl '../common/ramtest.asm'
-	icl '../common/info.asm'
+	icl '../common/lib.asm'
 	.ifndef NOXL
 	icl '../common/xlram.asm'
 	.endif
 
-	.ifdef NOXL			; the tape's name
-s_hpre	dta d' DIAG-400-MEMTEST  ',$FF
-	.else
-	.ifdef XEX			; the disk file (build.py)
-s_hpre	dta d' DIAG-MEMTEST-XEX  ',$FF
-	.elseif .def CART		; the cartridge (build.py)
-s_hpre	dta d' DIAG-MEMTEST-CART  ',$FF
-	.else
-s_hpre	dta d' DIAG-MEMTEST  ',$FF
-	.endif
-	.endif
 s_hburn	dta d'MEMTEST',$FF
 s_hsum	dta d'SUMMARY',$FF
 s_legend dta d'BANK BIT  FIRST  FAILED/PASSES',$FF
@@ -1249,7 +1226,7 @@ s_nextbad dta d'FIX SOLID ONES FIRST',$FF
 	.ifdef CART
 s_toggle2 dta d'START=MENU  SELECT=RE-BEEP  OPTION=FLASH',$FF
 	.else
-s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FULL-SCREEN FLASH',$FF
+s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FLASH',$FF
 	.endif
 
 	.ifdef BOUNCE

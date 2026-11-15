@@ -14,6 +14,7 @@ optionally deploy.
                                         release tapes there that changed)
 """
 import argparse
+import re
 import os
 import shutil
 import subprocess
@@ -28,11 +29,11 @@ CASSETTES = ROOT / 'cassettes'  # the release tapes (in git): what users load
 DISKS = ROOT / 'disks'          # the release disk files (.xex, in git)
 CARTS = ROOT / 'carts'          # the release cartridge (.car, in git)
 SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTer Atari800 core's folder
-# The version: in every release file's name (diag-...-v0.6.cas) and at the
+# The version: in every release file's name (diag-...-v0.7.cas) and at the
 # right of every screen's title bar, so a file and what it shows can be
 # matched. One digit each side of the point (screen.asm). build/ keeps the
 # plain names.
-VERSION = '0.6'
+VERSION = '0.7'
 VDEFS = dict(zip(('VMAJ', 'VMIN'), VERSION.split('.')))
 
 # Each tape: source dir, name, stages (first = boot), defines. A later stage
@@ -69,7 +70,7 @@ TAPES = [('tape1', 'diag-400-01-ram', ['main.asm', 'stage2.asm'], {}),
 # The disk files (Atari-diag-disk-scope.md): the same programs as these
 # tapes, built with XEX (their own title bar, no NEEDPG: the wrapper's guard
 # checks the RAM before the file loads) and wrapped by mkxex.py.
-XEXES = [('one32', 'diag-32k-xl-xe', {}, 0x88),      # (34K: the 26K image loads at $2000, above DOS)
+XEXES = [('one32', 'diag-32k-xl-xe', {}, 0x88),      # (34K: the image loads at $2000, above DOS)
          ('bounce', 'diag-memtest', dict(BOUNCE=1, BIGSTAGE=1, OWNTEST=1), 0x40)]
 # The cartridge (mkcar.py, src/cart/romsum.asm): the tests run from ROM,
 # one program to an 8K bank (build_car), and need 8K of RAM. Only the long
@@ -94,6 +95,22 @@ def labels(path):
         if len(p) == 3 and len(p[1]) == 4:
             lab[p[2].upper()] = int(p[1], 16)
     return lab
+
+
+def gen_shlib(lab_path):
+    """The library's addresses for the later parts of a one-load image
+    (src/common/lib.asm, SHLIB): every label in stage 1's table between
+    LIBBEG and LIBEND, without the macro-made ones, as build/shlib.asm."""
+    lab = labels(lab_path)
+    lo, hi = lab['LIBBEG'], lab['LIBEND']
+    names = [(n, a) for n, a in sorted(lab.items())   # (a branch label inside a
+             if lo <= a < hi and '.' not in n          # routine, "mu_by", stays
+             and not re.match(r'[A-Z]{2}\d?_', n)      # inside: another part may
+             and n not in ('LIBBEG', 'LIBEND')]         # use the same name)
+    (BUILD / 'shlib.asm').write_text(
+        '; build.py: the library in stage 1 (src/common/lib.asm)\n'
+        + ''.join(f'{n}\t= ${a:04X}\n' for n, a in names))
+    return hi - lo
 
 
 def build(src, name, stages, defines, label):
@@ -174,13 +191,14 @@ def build_one16(name, defines, label):
     mads('tape1', 'main.asm', out, d1)
     s1 = labels(f'{out}.lab')
     for _ in range(4):
+        gen_shlib(f'{out}.lab')
         d2 = dict(defines, ONE16=1, S2AT=f"${s1['PAYAT']:04X}", S1AGAIN=f"${s1['AGAIN']:04X}",
                   S1BSS=f"${s1['BSS']:04X}", S1TSTART=f"${s1['TSTART']:02X}")
         mads('tape1', 'stage2.asm', s2, d2)
         pay.write_bytes(Path(f'{s2}.bin').read_bytes())
         mads('tape1', 'main.asm', out, d1)
         new = labels(f'{out}.lab')
-        if (new['BSS'], new['PAYAT']) == (s1['BSS'], s1['PAYAT']):
+        if all(new[k] == s1[k] for k in ('BSS', 'PAYAT', 'TSTART')):
             break
         s1 = new
     else:
@@ -209,7 +227,8 @@ def build_one32(name, defines, label, xex=None):
     mads('tape1', 'main.asm', out, d1)
     s1 = labels(f'{out}.lab')
     sysat = s1['PAYAT'] + 0x1200
-    for _ in range(5):
+    for _ in range(6):
+        gen_shlib(f'{out}.lab')
         common = dict(S1BSS=f"${s1['BSS']:04X}", S1TSTART=f"${s1['TSTART']:02X}",
                       S1AGAIN=f"${s1['AGAIN']:04X}")
         d2 = dict(d1, S2AT=f"${s1['PAYAT']:04X}", SYS32=f'${sysat:04X}', **common)
@@ -219,10 +238,8 @@ def build_one32(name, defines, label, xex=None):
         d2['SYS32'] = f'${sysat:04X}'
         mads('tape1', 'stage2.asm', s2, d2)
         b2 = Path(f'{s2}.bin').read_bytes()
-        s2bss = labels(f'{s2}.lab')['BSS']   # stage 2's own page (130XE banks)
         dsy = dict(ALL7, SETNO=4, MENU=1, CHAIN=1, SYSAT=f'${sysat:04X}',
-                   SHAREBSS=f"${s1['BSS']:04X}", PREVBSS=f"${s2bss:04X}",
-                   RAMAGAIN=f"${s1['AGAIN']:04X}",
+                   SHAREBSS=f"${s1['BSS']:04X}", RAMAGAIN=f"${s1['AGAIN']:04X}",
                    **{k: 1 for k in ('XEX', 'CART') if k in defines})
         if mem:                     # (its address: the size doesn't depend on it)
             dsy.update(MEMAT='$7000', MEMPG=len(mem) // 256)
@@ -232,7 +249,7 @@ def build_one32(name, defines, label, xex=None):
         pay.write_bytes(b2 + Path(f'{sy}.bin').read_bytes() + mem)
         mads('tape1', 'main.asm', out, d1)
         new = labels(f'{out}.lab')
-        if (new['BSS'], new['PAYAT']) == (s1['BSS'], s1['PAYAT']):
+        if all(new[k] == s1[k] for k in ('BSS', 'PAYAT', 'TSTART')):
             break
         s1 = new
     else:
@@ -257,6 +274,7 @@ def build_car(fast):
     mads('tape1', 'main.asm', out, d1)
     s1 = labels(f'{out}.lab')
     for _ in range(4):
+        gen_shlib(f'{out}.lab')
         d2 = dict(d1, S2AT=f"${s1['PAYAT']:04X}", S1AGAIN=f"${s1['AGAIN']:04X}",
                   S1BSS=f"${s1['BSS']:04X}", S1TSTART=f"${s1['TSTART']:02X}")
         mads('tape1', 'stage2.asm', s2, d2)
@@ -268,8 +286,11 @@ def build_car(fast):
         s1 = new
     else:
         sys.exit('build_car: did not settle')
+    hello = ROOT / 'src' / 'cart' / 'audio' / 'hello-15k.bin'   # (tools/mkhello.py)
+    hellopg = len(hello.read_bytes()) // 256
+    hellobk = CARMEMBK + -(-mempg // CARDATAPG)                  # after the memory test
     common = dict(f, ROM=1, MENU=1, SETNO=0, TAPENO=0, MEMBK=CARMEMBK, MEMPG=mempg,
-                  DATAPG=CARDATAPG)
+                  DATAPG=CARDATAPG, HELLOBK=hellobk, HELLOPG=hellopg)
     mads('system', 'main.asm', BUILD / 'cart-sysa',
          dict(common, WANT_ROM=1, WANT_KB=1, WANT_CON=1, OTHER=2))
     mads('system', 'main.asm', BUILD / 'cart-sysb',
@@ -278,7 +299,8 @@ def build_car(fast):
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkcar.py'), str(car),
                     *[x for b in ('cart-ram', 'cart-sysa', 'cart-sysb')
                       for x in ('--bank', str(BUILD / f'{b}.bin'))],
-                    '--mem', *map(str, me)], check=True)
+                    '--mem', *map(str, me), '--data', str(hello), '--data-at', str(hellobk)],
+                   check=True)
     return car
 
 

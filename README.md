@@ -20,10 +20,10 @@ memory test also come as **disk files** (`.xex`, in `disks/`) that load in
 seconds. All of it is also on one **cartridge** (in `carts/`): plug it in,
 switch on, pick a test.
 
-Version 0.6. Every file has its version in its name
-(`diag-32k-xl-xe-v0.6.xex`) and every screen shows it at the right of the
-title bar (`V0.6`), so you can tell which one you are running. The names
-below leave the `-v0.6` out.
+Version 0.7. Every file has its version in its name
+(`diag-32k-xl-xe-v0.7.xex`) and every screen shows it at the right of the
+title bar (`V0.7`), so you can tell which one you are running. The names
+below leave the `-v0.7` out.
 
 ![The menu](docs/img/system-01-menu.png)
 
@@ -56,6 +56,26 @@ and beeps, loading from a PC, and what to do when something fails.
 
 ## Versions
 
+- **0.7** (2026-11-14)
+  - The ROM test runs by itself only at power on; the RAM test run from
+    the menu comes back to the menu. The RAM summary waits for START.
+  - S skips the RAM test (cartridge), X skips the ROM test (cartridge,
+    disk file, 32k+ tape) and the console key test. A tap counts any time,
+    from switching on.
+  - "hello" plays with the screen off, at a steady rate: a sample every
+    scan line on the cartridge (15.7 kHz, in a bank of its own), every
+    other line on the disk. 0.5 and 0.6 played it with the screen on,
+    which made the samples late and uneven. The recording is prepared
+    properly now (`tools/mkhello.py`, with a preview to listen to on a PC).
+  - GTIA test: on the cartridge the ATARI sprites bounce as well as scroll.
+  - A tap of START right as a result appeared could be missed; fixed.
+  - Smaller: the code every part shares (the beep reporter, the screen,
+    the machine line, the RAM test engine) is now in the one-load images
+    once instead of two or three times. The 32k+ program is 13.5K (was
+    16.5K) and fits below $4000; the 16k RAM tape is 6K (was 8K); the
+    cartridge's RAM bank has 2K more room. Screen rows and the GTIA rainbow
+    are worked out instead of looked up, and the system tests keep their
+    data in zero page.
 - **0.6** (2026-11-14)
   - After the RAM test the ROM test runs by itself, then the menu. On the
     cartridge CTRL+X during the RAM test goes straight to the menu.

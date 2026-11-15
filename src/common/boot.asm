@@ -16,6 +16,11 @@ entry	sei
 	lda #0
 	sta NMIEN
 	sta IRQEN
+	.ifdef SKIPKEY		; the keyboard latch (IRQST; the CPU masks the
+	lda #$40		; IRQ): S for "skip the RAM test" counts from now
+	sta IRQEN
+	lda #0
+	.endif
 	sta DMACTL		; ANTIC off: GTIA shows COLBK on the whole screen
 	sta AUDCTL
 	sta SKCTL		; reset POKEY's serial state from the tape load
@@ -106,6 +111,13 @@ ck_nc	inx
 	bne ck_lp
 	inc ck_op+2
 	lda ck_op+2
+	.ifdef ONE32		; the BSS page in the image: in use by now, not
+	cmp #>BSS		; summed (its bytes in the image are 0, and
+	bne ck_nb		; mkcas.py sums them as 0)
+	inc ck_op+2
+	lda ck_op+2
+ck_nb
+	.endif
 	cmp #>IMGEND
 	bne ck_lp
 	; take the two stored-sum bytes back out
@@ -375,11 +387,6 @@ rk_xe	pla			; extended RAM: put its byte back
 	and #$E2
 	sta PORTB
 	stx $4000
-	.ifdef ONE32		; the 32k+ image: RAMK ($4Fxx) is in the bank
-	pla			; window, so main RAM back first
-	pha
-	sta PORTB
-	.endif
 	lda RAMK		; 128K
 	clc
 	adc #64

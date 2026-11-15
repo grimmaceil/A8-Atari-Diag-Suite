@@ -10,9 +10,8 @@ RET2	= BSS+$02	; delay level
 
 SUM	= BSS+$04	; 2: image checksum accumulator
 RTONE	= BSS+$06	; report: the long tone of the group being played
-TCOL	= BSS+$07	; tone: COLBK during the flash
-TLX	= BSS+$08	; tone: length, delay X/Y form
-TLY	= BSS+$09
+SYSMODE	= BSS+$07	; nonzero: the system tests run (report.asm, SHLIB)
+REDRAWV	= BSS+$08	; 2: the screen OPTION brings back (report.asm, SHLIB)
 SPKMASK	= BSS+$0A	; $08 while a beep plays: delay toggles the console speaker
 SPKPH	= BSS+$0B	; current CONSOL speaker value
 RCNT	= BSS+$0C	; reporter: tones left in this group
@@ -75,8 +74,10 @@ PBSAVE	= BSS+$DC	; PORTB as the OS left it (xlram.asm)
 OSRAM	= BSS+$DD	; 0 = not an XL/XE, 1 = no RAM under the OS, 2 = tested
 XERAM	= BSS+$DE	; nonzero: 130XE extended banks found
 XEBANK	= BSS+$DF	; extended bank being tested (0-3)
+ENDING	= BSS+$F7	; nonzero: the end of a program: START goes on, nothing by itself
 RAMK	= BSS+$F9	; all the RAM found, in K (boot.asm: for the machine line)
 HSEL	= BSS+$FA	; hold: it ended on SELECT (report: play the code again)
+INRT	= BSS+$FF	; nonzero: the RAM test proper runs (SKIPKEY: its march looks for S)
 SKIPRAM	= BSS+$FE	; nonzero: CTRL+S skipped the first RAM test (SKIPKEY builds)
 SLATCH	= BSS+$FD	; START was seen down during a delay (a tap in mid-tone counts)
 QUIET	= BSS+$FB	; the picture is confirmed (VIDEOOK) and the text is on: the

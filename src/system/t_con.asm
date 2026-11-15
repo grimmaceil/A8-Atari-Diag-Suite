@@ -38,12 +38,12 @@ co_3	lda CONSEEN
 co_t	lda CONSEEN
 	cmp #7
 	beq co_spk
-	lda SKSTAT		; a keyboard key: one of them is dead; CTRL+X:
-	and #4			; skip the test (no result)
+	lda SKSTAT		; a keyboard key: one of them is dead; X: skip
+	and #4			; the test (no result)
 	bne co_lp
 	lda KBCODE
-	and #$BF
-	cmp #$96
+	and #$3F
+	cmp #$16		; X
 	bne co_spk
 	jmp tskip
 co_spk	lda CONSEEN		; the keys never seen are items 1-3
@@ -80,6 +80,6 @@ lc_lp	lda (CUR),y
 lc_x	rts
 
 s_con1	dta d'PRESS START, SELECT AND OPTION.',$FF
-s_con2	dta d'(ONE DEAD? A KEY GOES ON. CTRL+X SKIPS)',$FF
+s_con2	dta d'ONE DEAD? ANY KEY GOES ON. X = SKIP',$FF
 s_cons	dta d'START  SELECT  OPTION',$FF
 s_spk	dta d'LISTEN: A TONE FROM THE CONSOLE SPEAKER',$FF

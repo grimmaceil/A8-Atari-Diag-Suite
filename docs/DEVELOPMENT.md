@@ -113,17 +113,37 @@ cartridge header. Each code bank starts `jmp cold` / `jmp warm`.
 Code that only one format can use is left out of the others with `.ifdef
 ROM`, `XEX`, `ONE16`, `ONE32` and the `WANT_*` defines.
 
+### The shared library (lib.asm) and one-load images
+
+`src/common/lib.asm` is the code every program shares: the reporter
+(`report.asm`), the text screen (`screen.asm`, with the title-bar name from
+`name.asm`), the machine line (`info.asm`) and the RAM test engine
+(`ramtest.asm`). The macros and constants they define are in `defs.asm`,
+which every assembly includes.
+
+A one-load image (the 16k RAM tape, the 32k+ tape and disk file, the
+cartridge's RAM bank) has the library once, in stage 1 (`SHLIB`). Its
+later parts (stage 2, the system tests) are separate assemblies: build.py
+writes `build/shlib.asm` from stage 1's label table, every label between
+`LIBBEG` and `LIBEND` except the branch labels inside routines (`xx_yy`),
+and those parts include it instead of the modules. What the parts do
+differently, the reporter decides at run time: `SYSMODE` (the system tests:
+a beep code only for the ROMs and the RAM) and `REDRAWV` (the screen OPTION
+brings back), which each part sets as it starts. The standalone programs
+(the 400 tapes, the 16k system tape, the controls tape, the memory test,
+the cartridge's system banks) include `lib.asm` itself, with the same
+defines as before.
+
 ### 130XE banks and the 32k+ image
 
-The 32k+ image runs from $0800 to $4EFF and stage 1's BSS page is the one
-after it, $4F00. That is inside $4000-$7FFF, the window a 130XE bank switch
-gives to an extended bank, so stage 2 (which tests the banks) can't use it.
-With ONE32, stage 2 has its own BSS at $0600 (low RAM, tested by stage 1
-by then): its start copies stage 1's results there, and the system tests
-take them over from there (`PREVBSS`, from stage 2's label table). The
-code needs no change: all of stage 2 sits below $4000. Stage 1's RAM size
-probe (`boot.asm`) had the same fault: it added the 64K to RAMK with bank 0
-still in; with ONE32 it switches main RAM back first.
+Stage 2 tests a 130XE's extended banks by switching them in at
+$4000-$7FFF, so the code it runs and the BSS page it uses must be below
+$4000. The 32k+ image keeps its BSS page inside the image, right after
+stage 1 and the library (about $1500), shared by all three parts: the page
+is zeros in the image, boot.asm's checksum skips it (it is in use by then;
+mkcas.py sums its zeros), and stage 2's page test covers it with the rest
+of the image, $0800 up to `TSTART`, which for ONE32 is the image's end.
+The system tests' data (`T3D`, 96 bytes) is in zero page, $A0-$FF.
 
 `sim.py --xejunk` fills the extended RAM with random bytes, as real RAM is
 at power-on. Without it the banks start as zeros, and the old fault read

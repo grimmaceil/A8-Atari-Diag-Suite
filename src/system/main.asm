@@ -37,6 +37,10 @@
 	icl '../common/hw.asm'
 	icl '../common/vars.asm'
 	icl '../common/faults.asm'
+	icl '../common/defs.asm'
+	.ifdef CHAIN		; part of a one-load image: tape 1's library
+SHLIB	= 1			; (lib.asm)
+	.endif
 
 QUICKSCR = 1			; display.asm: quick screen-block test
 RESTART	= 1			; report.asm: the end waits for START (see final)
@@ -188,11 +192,11 @@ xt7	lda #7
 	cld
 	ldx #$FF
 	txs
-	ldx #0			; take over stage 2's results
-ch_tk	lda PREVBSS,x
-	sta BSS,x
-	inx
-	bne ch_tk
+	lda #<tshow		; (report.asm: OPTION's screen; and SYSMODE,
+	sta REDRAWV		; a code only for the ROMs and the RAM)
+	lda #>tshow
+	sta REDRAWV+1
+	sta SYSMODE		; (nonzero)
 	lda #0			; RAM faults (banks 1-8; the loader area is
 	sta MTMP		; bank 1) into test 8, item = bank
 	ldx #8
@@ -217,11 +221,10 @@ ch_r9	lda MTMP
 	lda KEEP		; the RAM test again, from the menu: the tests'
 	beq ch_nk		; results back (common.asm's ramagain)
 	ldx #7
-ch_kp	lda STASH-1,x
+ch_kp	lda STASH-1,x		; (KEEP stays set: trun goes to the menu)
 	sta BADMASK,x
 	dex
 	bne ch_kp
-	stx KEEP
 ch_nk
 	lda DISPOK		; START at the summary: someone sees the picture
 	sta VIDEOOK
@@ -357,45 +360,18 @@ pats	.byte $00,$FF,$55,$AA
 NPAT	= *-pats
 	.endif
 
-	icl '../common/report.asm'
-	icl '../common/screen.asm'
-	icl '../common/info.asm'
+	.ifdef SHLIB
+	icl '../../build/shlib.asm'	; the library's addresses (tape 1's part)
+	.else
+NORAMT	= 1			; (no RAM test here)
+	icl '../common/lib.asm'
+	.endif
 	icl 'common.asm'
 	.ifdef SAMPLED
 	icl '../cart/hello.asm'
 	.endif
 	.ifdef XEX
 	icl '../cart/ldmem.asm'
-	.endif
-
-; The header bar names the tape, as its file is named (SETNO 0 = the 400
-; set, 1 = 16K, 3 = controls, 4 = 32k+), so it can't
-; be taken for the machine found: that is the FOUND line below it.
-	.if .def ROM
-s_hpre	dta d' DIAG-CART  ',$FF
-	.elseif SETNO=4
-	.ifdef XEX			; the disk file (build.py)
-s_hpre	dta d' DIAG-32K-XEX  ',$FF
-	.elseif .def CART		; the cartridge (build.py)
-s_hpre	dta d' DIAG-32K-CART  ',$FF
-	.else
-s_hpre	dta d' DIAG-32K-XL-XE  ',$FF
-	.endif
-	.elseif SETNO=3
-s_hpre	dta d' DIAG-CONTROLS  ',$FF
-	.elseif SETNO=1
-s_hpre	dta d' DIAG-16K-02-SYSTEM  ',$FF
-	.else
-s_hpre	dta d' DIAG-400-0',[TAPENO+$10]
-	.if TAPENO=2
-	dta d'-ROM  ',$FF
-	.elseif TAPENO=3
-	dta d'-INPUT  ',$FF
-	.elseif TAPENO=4
-	dta d'-PORTS  ',$FF
-	.else
-	dta d'-AV  ',$FF
-	.endif
 	.endif
 
 	.ifdef ROM

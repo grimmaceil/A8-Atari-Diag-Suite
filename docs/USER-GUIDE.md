@@ -1,11 +1,11 @@
 # A8 Cassette Diagnostics: User Guide
 
-Version 0.6
+Version 0.7
 
-Every file has its version in its name (`diag-32k-xl-xe-v0.6.cas`), and
-every screen shows it at the right of the title bar (`V0.6`). If the two
+Every file has its version in its name (`diag-32k-xl-xe-v0.7.cas`), and
+every screen shows it at the right of the title bar (`V0.7`). If the two
 don't match, or a screen shows no version, you are running an older file.
-This guide leaves the `-v0.6` out of the names.
+This guide leaves the `-v0.7` out of the names.
 
 These tapes test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
 800XL, 65XE, 800XE, 130XE and XE Game System. You load them like any
@@ -241,19 +241,19 @@ Atari, an 8K 400 included, and on a machine whose RAM is too sick to load
 a tape into. Switch on with the cartridge in:
 
 1. The RAM test starts at once (green border and a chirp, then yellow
-   while it tests), and ends on the RAM summary. A pass goes on by itself
-   after 2 seconds; a fail flashes and beeps its code until you press
-   START.
+   while it tests), and ends on the RAM summary, which waits for START.
 2. The ROM test runs next and waits on its result. START goes to the menu.
 
-**CTRL+X goes straight to the menu** (the cartridge only). Press CTRL and
-X any time during the RAM test: a tap is enough. The menu comes up at
-once, with line 0 showing `SKIPPED`.
+**S skips the RAM test, X skips the ROM test.** A tap is enough, any time
+from switching on: S goes on to the ROM test (line 0 shows `SKIPPED`), X
+goes on to the menu (the ROM line shows `-`). S then X gets you to the
+menu in a second or two. X also works on the disk file and the 32k+ tape,
+where the ROM test runs by itself after the RAM test too.
 
 ![Cartridge menu](img/cart-01-menu.png)
 
-1. `0 RAM`: the RAM test again (then the ROM test, as at power on). The
-   other tests keep their results.
+1. `0 RAM`: the RAM test again; START at its summary comes back to the
+   menu. The other tests keep their results.
 2. Tests 1 to 7.
 3. All of them in order, and `8`, the results.
 4. `9 LONG RAM TEST`: the long memory test, pass after pass until a key
@@ -337,7 +337,7 @@ machine with no picture can still tell you about.
 - **The RAM test** runs first, before anyone has said they can see the
   screen. A fail flashes the border with every beep, holds red for 3 s
   and plays again, over and over, until you press START. A pass plays the
-  jingle and goes on by itself after 2 seconds.
+  jingle, then one long green flash per bank every 5 s, until START.
 - **From the ROM test on** the border stays steady and nothing repeats.
 - **The ROM test** (test 1) plays its code once: one long beep in a lower
   pitch than the RAM's (330 Hz), then one short beep (660 Hz) per failed
@@ -574,9 +574,20 @@ word "hello", a short recording, played seven times. The first four use
 each voice's volume control as a 4-bit sample player. The fifth uses the
 console speaker, which is only on or off, so it sounds rougher. The last
 two play on two voices at once (1+2, then 3+4), which doubles the number
-of levels and sounds clearer. Answer whether you heard all seven. (The
-recording is a public-domain one from Wikimedia Commons,
-`En-us-hello.ogg` by Dvortygirl.)
+of levels and sounds clearer. Answer whether you heard all seven.
+
+The screen goes dark while it plays: the video chip borrows the processor
+on every line it draws, which would make the samples come late and
+unevenly, and sound rough. The cartridge plays a sample every scan line
+(15.7 kHz); the disk file every other line (7.85 kHz), which needs half
+the RAM.
+
+The recording is a public-domain one from Wikimedia Commons,
+`En-us-hello.ogg` by Dvortygirl, prepared for 4 bits by
+`tools/mkhello.py`: low rumble out, the silence trimmed, the consonants
+lifted, the quiet parts raised towards the loud ones, filtered and
+resampled to the playback rate. It also writes `build/hello-preview.wav`,
+what the Atari plays, to listen to on a PC.
 
 ![POKEY voices](img/av-01-pokey.png)
 
@@ -586,16 +597,17 @@ recording is a public-domain one from Wikimedia Commons,
 
 **GTIA.** One screen: eight brightness steps, sixteen colours, and under
 them the sprites: the word ATARI, made of the four players and the four
-missiles, scrolling across in rainbow colours that move down the letters.
-Answer whether it all looks right (item 1). Without a working screen the
-test is skipped.
+missiles, with the letters taken from the character ROM, scrolling across
+in rainbow colours that move down the letters. On the cartridge it also
+bounces up and down. Answer whether it all looks right (item 1). Without
+a working screen the test is skipped.
 
 ![GTIA](img/av-02-gtia.png)
 
 1. PAL or NTSC, as the machine reports it.
 2. Eight even steps from black to white.
 3. Sixteen different colours.
-4. ATARI, scrolling.
+4. ATARI, moving.
 5. The question: does it look right?
 
 ### The menu (`diag-16k-02-system` and `diag-32k-xl-xe`)
@@ -637,7 +649,7 @@ One tape, one load, for any machine with 32K or more:
 2. Every bank, the area the tape ran in, and here (an XL) the RAM under the
    OS as bank 4.
 3. The result and what's next.
-4. START goes on to the menu.
+4. START goes on: the ROM test, then the menu.
 
 5. The seven tests, with the menu:
 

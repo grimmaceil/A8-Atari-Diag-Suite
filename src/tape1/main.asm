@@ -27,8 +27,13 @@
 	icl '../common/hw.asm'
 	icl '../common/vars.asm'
 	icl '../common/faults.asm'
+	icl '../common/defs.asm'
+	.ifdef ONE16		; a one-load image: its later parts use this
+SHLIB	= 1			; part's library (lib.asm)
+	.endif
 
-	.ifdef ROM		; CTRL+S skips the RAM test, on the cartridge
+KEEP	= BSS+$EB		; (system/common.asm)
+	.ifdef ROM		; S skips the RAM test, on the cartridge
 SKIPKEY	= 1			; (ramtest.asm looks at it every page)
 	.endif
 	opt h-
@@ -51,9 +56,7 @@ LOAD	= $0800
 
 	icl '../common/boot.asm'
 	jsr dprereq
-	.ifdef SKIPKEY
-	lda #$40		; the keyboard latch (IRQST; the CPU masks the
-	sta IRQEN		; IRQ): a tap between two looks counts too
+	.ifdef SKIPKEY		; (the keyboard latch is on: boot.asm)
 	lda $07FE		; back from the long memory test (tape2's
 	cmp #$5A		; backcart): no RAM test, the menu
 	bne rt_nb
@@ -62,8 +65,10 @@ LOAD	= $0800
 	bne rt_nb
 	sta $07FE		; (once)
 	inc SKIPRAM
+	inc KEEP		; (the menu, not the ROM test: system/common.asm)
 	jmp PAYAT+6
-rt_nb	jsr skipchk
+rt_nb	inc INRT		; (not before: the screen block's march, in
+	jsr skipchk		; dprereq, must run to the end)
 	.endif
 	.ifdef ROM
 	jsr undercart		; the 8K under the cartridge (cart/undercart.asm)
@@ -91,10 +96,8 @@ res_lp	lda BADMASK,x
 res_bad	jmp report
 	.endif
 
-	.ifdef ONE16		; (no results here: stage 2's summary has them)
-redraw	= ramscreen
-	.else
-redraw	= results		; scrtoggle's text screen
+	.ifndef ONE16		; (ONE16: no results here, stage 2's summary
+redraw	= results		; has them; scrtoggle's text screen)
 	.endif
 
 	.if .not .def ONE16
@@ -106,6 +109,10 @@ redraw	= results		; scrtoggle's text screen
 ; START at the end). The image is intact (the page test put every page
 ; back), so no reload and no image checksum: fresh results, then as at boot.
 again	sei
+	.ifdef SKIPKEY		; the keyboard latch: S counts from now
+	lda #$40
+	sta IRQEN
+	.endif
 	lda #0
 	sta NMIEN
 	sta DMACTL
@@ -123,18 +130,6 @@ ag_n	inx
 	sta COLBK
 	jmp lowram
 	.endif
-	.ifndef ONE16		; (the loader's, and the results')
-; clrrow: blank row A.
-clrrow	ldx #0
-	jsr at
-	ldx #40
-	lda #0
-cr_lp	jsr putc
-	dex
-	bne cr_lp
-	rts
-	.endif
-
 	icl '../common/display.asm'
 
 ; ---------------------------------------------------------------------------
@@ -205,10 +200,13 @@ br_e	sta RBE
 ; ---------------------------------------------------------------------------
 ; Text screens for the RAM test.
 	.ifdef SKIPKEY
-; skipchk: CTRL+S held: no RAM test (or no more of it). Stage 2 sees
-; SKIPRAM and goes straight on to the menu, which shows the RAM as SKIPPED.
+; skipchk: S pressed: no RAM test (or no more of it). Stage 2 sees SKIPRAM
+; and goes straight on (at power on: the ROM test; from the menu: the menu),
+; and the menu shows the RAM as SKIPPED.
 ; A key held now, or pressed since the last look (the latch). Only A is used.
-skipchk	lda SKSTAT
+skipchk	lda INRT
+	beq sk_x
+	lda SKSTAT
 	and #4
 	beq sk_key
 	lda IRQST
@@ -219,12 +217,9 @@ skipchk	lda SKSTAT
 	lda #$40
 	sta IRQEN
 sk_key	lda KBCODE
-	and #$BF		; (with or without SHIFT)
-	cmp #$96		; CTRL + X
-	beq sk_go
-	cmp #$BE		; CTRL + S (as before 0.6)
+	and #$3F		; (with or without SHIFT, CONTROL)
+	cmp #$3E		; S
 	bne sk_x
-sk_go
 	inc SKIPRAM
 	jmp PAYAT+6		; (stage 2 sets the stack up again)
 sk_x	rts
@@ -369,24 +364,9 @@ rs_bad	lda #<s_somefail
 
 ; ---------------------------------------------------------------------------
 ; Strings, in screen codes ($FF ends).
-	.if .def ROM			; header prefix: the tape's name
-s_hpre	dta d' DIAG-CART  ',$FF
-	.elseif .def ONE32
-	.ifdef XEX			; the disk file (build.py)
-s_hpre	dta d' DIAG-32K-XEX  ',$FF
-	.elseif .def CART		; the cartridge (build.py)
-s_hpre	dta d' DIAG-32K-CART  ',$FF
-	.else
-s_hpre	dta d' DIAG-32K-XL-XE  ',$FF
-	.endif
-	.elseif .def ONE16
-s_hpre	dta d' DIAG-16K-01-RAM  ',$FF
-	.else
-s_hpre	dta d' DIAG-400-01-RAM  ',$FF
-	.endif
 s_hram	dta d'RAM TEST',$FF
 	.ifdef SKIPKEY
-s_skip	dta d'CTRL+X = STRAIGHT TO THE MENU',$FF
+s_skip	dta d'S = SKIP',$FF
 	.endif
 s_testing dta d'TESTING BANK ',$FF
 	.ifndef ONE16
@@ -401,7 +381,7 @@ s_fail	dta d'FAIL'*,$FF
 s_bank4	dta d'BANK 4 $C000-$FFFF  IN STAGE 2',$FF
 s_result dta d'RESULT: ',$FF
 s_toggle dta d'START=GO ON SELECT=RE-BEEP OPTION=FLASH',$FF
-s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FULL-SCREEN FLASH',$FF
+s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FLASH',$FF
 s_l2load dta d'LOADING STAGE 2...',$FF
 s_l2pre	dta d'STAGE 2: ',$FF
 s_l2_8k	dta d'16K ONLY. NEXT: DIAG-400-02-ROM',$FF
@@ -422,10 +402,7 @@ pats	.byte $00,$FF,$55,$AA
 	.byte $FE,$FD,$FB,$F7,$EF,$DF,$BF,$7F
 NPAT	= *-pats
 
-	icl '../common/report.asm'
-	icl '../common/screen.asm'
-	icl '../common/ramtest.asm'
-	icl '../common/info.asm'
+	icl '../common/lib.asm'
 	.ifndef ONE16
 	icl '../common/bits.asm'
 	.endif
@@ -434,6 +411,22 @@ NPAT	= *-pats
 	icl '../cart/undercart.asm'
 	.endif
 
+
+	.ifdef ONE32
+; The BSS page, in the image: below $4000, so stage 2 can use it while a
+; 130XE bank is in at $4000-$7FFF, and stage 2 and the system tests share it
+; with this part and its library. Zeros in the image; boot.asm's checksum
+; skips it (it is in use by then); stage 2 page-tests it with the rest.
+BSSPAD	= [[*+$FF]/$100]*$100
+	.if BSSPAD-*>0
+	:[BSSPAD-*] .byte 0
+	.endif
+BSS
+	:256 .byte 0
+	.if BSS>=$4000
+	.error "the BSS page must be below $4000 (130XE banks)"
+	.endif
+	.endif
 
 	.ifdef ONE16
 ; Stage 2, as built to run here (build.py's build_one16).
@@ -462,6 +455,10 @@ PADTO	= [[*+2+$FF]/$100]*$100
 CKSUM	.word 0
 IMGEND
 NREC	= [IMGEND-LOAD]/128
+	.ifdef ONE32
+TSTART	= >IMGEND		; (BSS is the page in the image, above)
+	.else
 BSS	= IMGEND
 TSTART	= [>BSS]+1
+	.endif
 	.endif

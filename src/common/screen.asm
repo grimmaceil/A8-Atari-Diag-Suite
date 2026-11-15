@@ -3,9 +3,7 @@
 ; so the block holds both and nothing crosses a 1K or 4K boundary. The font
 ; is the OS ROM's ($E000). Needs the stack and zero page.
 
-C_TEXTBG = $00		; text area background (COLPF2); the border keeps the status color
-C_TEXTLUM = $0C		; text luminance (COLPF1)
-SCRDL	= $3C0		; display list offset in the block
+; (C_TEXTBG, C_TEXTLUM, SCRDL and the PRINT macro: defs.asm.)
 
 ; scr_on: clear the block, build the display list, start ANTIC. Also used
 ; to clear the screen.
@@ -88,13 +86,26 @@ scr_off	lda #0
 	sta QUIET
 	rts
 
-; at: cursor to row A, column X.
-at	tay
+; at: cursor to row A, column X: SCRPG*256 + A*40 + X, the row times 40
+; worked out (A*5, then *8), not looked up. Keeps X; Y = 0.
+at	sta CUR+1
+	asl
+	asl
+	adc CUR+1		; A*5 (the ASLs left C clear: A < 24)
+	ldy #0
+	sty CUR+1
+	asl
+	rol CUR+1
+	asl
+	rol CUR+1
+	asl
+	rol CUR+1		; CUR+1, A = A*40
+	sta CUR
 	txa
 	clc
-	adc rowlo,y
+	adc CUR
 	sta CUR
-	lda rowhi,y
+	lda CUR+1
 	adc SCRPG
 	sta CUR+1
 	rts
@@ -178,12 +189,6 @@ pd_next	inx
 pow10lo	.byte <10000,<1000,<100,<10,<1
 pow10hi	.byte >10000,>1000,>100,>10,>1
 
-rowlo	.rept 24
-	.byte <[#*40]
-	.endr
-rowhi	.rept 24
-	.byte >[#*40]
-	.endr
 
 ; header: the inverse title bar on row 0: s_hpre (the tape's prefix), the
 ; title at A/Y, inverse spaces to the end of the row, where the version
@@ -228,12 +233,14 @@ hd_x	lda #0
 s_ver	dta d'V',[VMAJ+$10],d'.',[VMIN+$10],d' ',$FF
 VERLEN	= 5
 
-; PRINT row, col, string
-.macro PRINT
-	lda #:1
-	ldx #:2
+; clrrow: blank row A.
+clrrow	ldx #0
 	jsr at
-	lda #<:3
-	ldy #>:3
-	jsr puts
-.endm
+	ldx #40
+	lda #0
+cr_lp	jsr putc
+	dex
+	bne cr_lp
+	rts
+
+	icl '../common/name.asm'	; s_hpre: the program's name

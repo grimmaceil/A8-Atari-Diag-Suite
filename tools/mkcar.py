@@ -7,6 +7,8 @@ $A000-$BFFF. The tests run from ROM (src/cart/romsum.asm has the layout):
   the next banks    the long memory test's boot image (the same kind
                     mkcas.py wraps as a tape), DATAPG pages to a bank; the
                     menu's loader copies it to RAM (src/cart/ldmem.asm)
+  then              data banks (--data): one file each, from $A000, read
+                    while that bank is switched in (src/cart/hello.asm)
   every bank        the same 32-byte tail at $BFE0: the power-on jump to
                     bank 0, the bank's sum, the bank switch (XBANK) and
                     the cartridge header
@@ -46,6 +48,9 @@ def main():
     ap.add_argument('--bank', action='append', required=True, metavar='BIN',
                     help='a code bank, assembled at $A000 (in bank order)')
     ap.add_argument('--mem', nargs=2, metavar=('BIN', 'LAB'), required=True)
+    ap.add_argument('--data', action='append', default=[], metavar='BIN',
+                    help='a data bank, after the memory test')
+    ap.add_argument('--data-at', type=int, help='the bank the first --data must land in')
     a = ap.parse_args()
 
     banks = []
@@ -62,6 +67,13 @@ def main():
     for i in range(0, len(img), DATAPG * 256):
         part = img[i:i + DATAPG * 256]
         banks.append(bytearray(part + b'\xff' * (TAILAT - len(part))))
+    if a.data and a.data_at is not None and a.data_at != len(banks):
+        sys.exit(f'the first data bank is {len(banks)}, the code was built for {a.data_at}')
+    for path in a.data:
+        d = Path(path).read_bytes()
+        if len(d) > TAILAT:
+            sys.exit(f'{path}: {len(d)} bytes, a bank holds {TAILAT}')
+        banks.append(bytearray(d + b'\xff' * (TAILAT - len(d))))
     if len(banks) > NBANKS:
         sys.exit('the programs do not fit in the cartridge')
     while len(banks) < NBANKS:
@@ -76,7 +88,9 @@ def main():
     open(a.car, 'wb').write(head + rom)
     print(f'{a.car}: AtariMax 128K, code banks 0-{membk - 1} ('
           + ', '.join(f'{len(Path(p).read_bytes())} bytes' for p in a.bank)
-          + f' of {TAILAT}), memtest {len(img) // 256} pages from bank {membk}')
+          + f' of {TAILAT}), memtest {len(img) // 256} pages from bank {membk}'
+          + ''.join(f', {Path(p).name} in bank {membk + -(-len(img) // 256 // DATAPG) + i}'
+                    for i, p in enumerate(a.data)))
 
 
 if __name__ == '__main__':

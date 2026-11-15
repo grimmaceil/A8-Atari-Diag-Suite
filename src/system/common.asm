@@ -13,8 +13,9 @@ NEXTVEC	= BSS+$E1		; 2: where the test flow goes on to
 STASH	= BSS+$E3		; 8: BADMASK 1-8 while one test's code plays
 KEEP	= BSS+$EB		; nonzero: STASH holds the tests' results (ramagain)
 TIDX	= BSS+$ED		; next tlist entry, times 2
-ENDING	= BSS+$F7		; nonzero: the tape's results; START runs it again
-T3D	= BSS+$70		; 96 bytes of test data:
+T3D	= $A0			; 96 bytes of test data, in zero page ($A0-$FF:
+				; nothing else uses it once the boot is over, and
+				; each instruction that uses it is a byte shorter):
 NPORT	= T3D+$02		; joystick ports on this machine (paddles: twice)
 				; $03-$1F: test 1's results (kept for the summary)
 TSCR	= T3D+$20		; $20-$5F: scratch, each test its own use
@@ -27,15 +28,13 @@ trun	jsr tinit
 	sta MMODE
 	lda DISPOK		; no picture: no menu, all of them in order
 	beq tst_all
-	.ifdef RAM8		; straight from the RAM test: the ROM test, then
-	.ifdef SKIPKEY		; the menu (unless the RAM test was skipped)
-	lda SKIPRAM
-	bne tst_mn
-	.endif
-	lda #0
-	sta MSEL
+	.ifdef RAM8		; at power on, after the RAM test: the ROM test,
+	lda KEEP		; then the menu. The RAM test run from the menu
+	bne tst_mn		; (KEEP): back to the menu
+	sta MSEL		; (0: the ROM test's line)
 	jmp mgo
-tst_mn
+tst_mn	lda #0
+	sta KEEP
 	.endif
 	ldx MNT
 	stx MSEL		; the ALL line first
@@ -98,9 +97,14 @@ te_x
 	.endif
 	jmp tresult
 
-; tskip: leave test TEST without a result (CTRL+X): on to the next test
+; tskip: leave test TEST without a result (X): on to the next test
 ; when running them all (or without a menu), else back to the menu.
-tskip	jsr waitrel
+tskip
+	.ifdef RAM8
+	lda #0			; (the keyboard latch off: t_rom's xkey)
+	sta IRQEN
+	.endif
+	jsr waitrel
 	jsr tnextv
 	.ifdef MENU
 	lda MMODE
@@ -317,8 +321,7 @@ tr_nc	lda NEXTVEC
 	sta CONTVEC+1
 ; nocode: a fail without a code: one low tone, then steady red until a
 ; press goes on to CONTVEC.
-nocode	lda #0			; (a key still down from the test doesn't count)
-	sta HARMED
+nocode	jsr arm
 	BEEP T_END
 nc_w	lda #C_RED
 	sta HOLDC
@@ -923,16 +926,6 @@ rz_rd	inc CNT
 	.endif
 	rts
 
-; clrrow: blank row A.
-clrrow	ldx #0
-	jsr at
-	ldx #40
-	lda #0
-cr_lp	jsr putc
-	dex
-	bne cr_lp
-	rts
-
 bitn	.byte 1, 2, 4, 8, 16, 32, 64, 128
 
 tnames	.word s_t1, s_t2, s_t3, s_tjoy, s_tpad, s_tpok, s_t7
@@ -956,7 +949,7 @@ s_items	dta d', ITEMS',$FF
 s_tpass	dta d'NEXT TEST IN 2 S.  OPTION = FLASH',$FF
 s_goon	dta d'START = GO ON',$FF
 s_toggle4 dta d'START = AGAIN',$FF
-s_items2 dta d'NUMBERS AFTER FAIL = ITEMS THAT FAILED',$FF
+s_items2 dta d'NUMBERS AFTER FAIL = FAILED ITEMS',$FF
 	.ifdef NEEDYN
 s_heard	dta d'HEARD IT? Y/START = YES, N/SELECT = NO',$FF
 	.endif
