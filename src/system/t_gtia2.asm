@@ -2,30 +2,47 @@
 ; on the 8K sound and video tape the tape's part two (gpart2.asm), which
 ; uses part one's library and its gwave and gans (common.asm).
 ; ---------------------------------------------------------------------------
-; Page 2, item 2: the display modes, a band of each on one screen, with its
-; own display list in the screen block:
-;   ANTIC 6, 7: big color text (6 white, 7 green)
-;   ANTIC 8, A, B, D, F: bitmaps, each with the sine wave drawn in it a byte
-;     wide (gwaves), so a mode that fetches or shows its bytes wrong breaks
-;     the wave
-;   GTIA 9, 10, 11: one line of 16 values (5 pixels each) shown 8 times in
-;     each, PRIOR set as the beam reaches the band: 16 luminances, 9 colors,
-;     16 hues
-;   ANTIC fine scroll: a text line moved sideways by HSCROL, and the question
-;     moved up and down by VSCROL, both along the wave
-GM8	= $078			; the bands' bytes in the screen block (rows 0-2
-GMA	= GM8+2*10		; are text at their usual place)
-GMB	= GMA+2*20
-GMD	= GMB+4*20
-GMF	= GMD+4*40
-GMG	= GMF+8*40		; the GTIA line
+; Page 2, item 2: the display modes, one screen, each with a line of text
+; above it saying what it is:
+;   ANTIC 6, 7: big color text (6 wide and white, 7 tall and green)
+;   ANTIC 8, A, B, D, F: bitmaps, each filled with even bars of its colors
+;     (4-color modes: black, red, white, blue; 2-color: two-pixel stripes),
+;     so each shows its pixel size and colors, coarse to fine
+;   GTIA 9, 10, 11: one line of 16 values (5 pixels each), 8 times in each
+;     band: 16 shades of blue, 9 colors, 16 hues. PRIOR and COLBK are set as
+;     the beam reaches the blank line before each band.
+;   ANTIC fine scroll: a text line sliding sideways (HSCROL) and one moving
+;     up and down (VSCROL, in the middle of a 3-line region, so it is never
+;     cut off), along the wave. The question stays still at the bottom.
+; The text and bitmaps are in the screen block; the display list (gdlist,
+; from gdl_t) is at GMDL, in the P/M block's unused bytes (sprites are off).
+GM6	= $028			; ANTIC 6's 20 bytes, then ANTIC 7's
+GL8	= $050			; each bitmap: its label line, then one row of its
+GD8	= GL8+40		; bytes (the display list shows that row again for
+GLA	= GD8+10		; each of the band's rows)
+GDA	= GLA+40
+GLB	= GDA+20
+GDB	= GLB+40
+GLD	= GDB+20
+GDD	= GLD+40
+GLF	= GDD+40
+GDF	= GLF+40
+GMC	= GDF+40		; the GTIA caption
+GMG	= GMC+40		; the GTIA line
 GMH	= GMG+40		; the HSCROL line: 48 bytes (a wide fetch)
-GMV	= GMH+48		; the VSCROL region: the question, a blank line
-GMDL	= GMV+80		; the display list (107 bytes)
-GLINE	= 120			; the scan line of the first GTIA band
-GM_C	= TSCR+$03		; gwaves: the column
-GM_P	= TSCR+$04		; gwaves: the wave's phase
-GM_X	= TSCR+$05		; gwaves: the band
+GMV0	= GMH+48		; a blank line (the VSCROL region's first and last)
+GMV	= GMV0+40		; the VSCROL line
+GMQ	= GMV+40		; the question
+	.if GMQ+40>SCRDL
+	.error "the modes page runs into the screen block's display list"
+	.endif
+GMDL	= $0480			; the display list (P/M block $0400: $0480-$057F)
+GLINE	= 160			; the scan line of the blank line before GTIA 9
+GLAST	= 222			; the scan line after the question
+GM_C	= TSCR+$03		; gdlist: the last LMS line (op, address)
+GM_P	= TSCR+$04
+GM_X	= TSCR+$05
+GM_N	= TSCR+$06		; gdlist: repeats left; gmodes: the text index
 
 gmodes	jsr scr_on		; a clean block, then ANTIC off while it fills
 	lda #0
@@ -33,11 +50,24 @@ gmodes	jsr scr_on		; a clean block, then ANTIC off while it fills
 	lda #<s_t7m
 	ldy #>s_t7m
 	jsr header
-	PRINT 1, 0, s_gml
-	PRINT 2, 0, s_gm6	; ANTIC 6's 20 bytes, then ANTIC 7's
-	PRINT 2, 20, s_gm7
-	lda #<$050		; their colors: bits 6-7 of each character
-	sta PTR
+	ldx #0			; the text: each line at its place
+gm_tx	stx GM_N
+	lda gm_txt,x
+	ldy gm_txt+1,x
+	jsr gat
+	ldx GM_N
+	lda gm_txt+2,x
+	ldy gm_txt+3,x
+	jsr puts
+	ldx GM_N
+	inx
+	inx
+	inx
+	inx
+	cpx #GMTXT_N
+	bne gm_tx
+	lda #<GM6		; ANTIC 6 and 7's colors: bits 6-7 of each
+	sta PTR			; character
 	lda SCRPG
 	sta PTR+1
 	ldy #39
@@ -49,58 +79,59 @@ gm_col	lda (PTR),y
 gm_c6	sta (PTR),y
 	dey
 	bpl gm_col
-	jsr gwaves		; the bitmaps' waves
-	lda #<GMG		; the GTIA line
+	ldx #4			; the bitmaps' rows
+gm_fb	lda gm_bl,x
 	sta PTR
-	lda SCRPG
+	lda gm_bh,x
 	clc
-	adc #>GMG
+	adc SCRPG
 	sta PTR+1
+	ldy gm_bn,x
+	dey
+	lda gm_bp,x
+gm_fl	sta (PTR),y
+	dey
+	bpl gm_fl
+	dex
+	bpl gm_fb
+	lda #<GMG		; the GTIA line
+	ldy #>GMG
+	jsr gat
 	ldy #39
 gm_g	lda gmramp,y
-	sta (PTR),y
+	sta (CUR),y
 	dey
 	bpl gm_g
-	lda #<[GMH+6]		; the HSCROL line's text, and the question
-	ldx #>[GMH+6]
-	jsr gat
-	lda #<s_ghs
-	ldy #>s_ghs
-	jsr puts
-	lda #<GMV
-	ldx #>GMV
-	jsr gat
-	lda #<s_gq
-	ldy #>s_gq
-	jsr puts
 	ldx #7			; the colors: COLPM0-3 (GTIA 10), COLPF0-3
 gm_cl	lda gmcols,x
 	sta COLPM0,x
 	dex
 	bpl gm_cl
-	lda #$86		; COLBK: GTIA 9's hue, GTIA 11's luminance
+	lda #0
 	sta COLBK
 	jsr gdlist		; the display list, and ANTIC on
 	lda #0
 	sta GPX
 	jsr waitrel
-gm_lp	lda VCOUNT		; GTIA 9, 10, 11: PRIOR as the beam reaches each
-	cmp #GLINE/2-1		; band, 8 lines each (VCOUNT counts line pairs:
-	bne gm_lp		; from the pair before the band, one WSYNC more)
-	sta WSYNC
+gm_lp	lda VCOUNT		; GTIA 9, 10, 11: PRIOR and COLBK on the blank
+	cmp #GLINE/2-1		; line before each band, then off on the one
+	bne gm_lp		; after (VCOUNT counts line pairs: from the pair
+	sta WSYNC		; before, one WSYNC more)
 	ldx #0
 gm_pr	lda gmprior,x
+	ldy gmbk,x
 	sta WSYNC
 	sta PRIOR
-	ldy #7
+	sty COLBK
+	ldy #8
 gm_pw	sta WSYNC
 	dey
 	bne gm_pw
 	inx
 	cpx #4
 	bne gm_pr
-gm_w	lda VCOUNT		; past the VSCROL region: the scroll registers
-	cmp #82			; for the next frame, along the wave
+gm_w	lda VCOUNT		; past the question: the scroll registers for the
+	cmp #GLAST/2		; next frame, along the wave
 	bcc gm_w
 	inc GPX
 	lda GPX
@@ -129,138 +160,110 @@ gm_end	lda #0
 	jsr tpage		; the test's page again, for the result
 	jmp tend
 
-; gat: CUR = the screen block + X:A, for puts.
+; gat: CUR = the screen block + Y:A, for puts.
 gat	sta CUR
-	txa
+	tya
 	clc
 	adc SCRPG
 	sta CUR+1
 	rts
 
-; gwaves: in each bitmap band the wave, a byte (gm_pat) a column, in the
-; line the wave reaches there (gwave, shifted to the band's height).
-gwaves	ldx #4
-gw_bd	stx GM_X
-	lda #0
-	sta GM_C
-	sta GM_P
-gw_col	ldx GM_X
-	lda GM_P
-	jsr gwave		; 0-8
-	ldy gm_s,x
-	beq gw_ns
-gw_sh	lsr
-	dey
-	bne gw_sh
-gw_ns	cmp gm_h,x		; at most the band's last line
-	bcc gw_ok
-	lda gm_h,x
-	sbc #1
-gw_ok	tay			; Y = the line
-	lda gm_lo,x		; PTR = the band + the column
-	clc
-	adc GM_C
-	sta PTR
-	lda gm_hi,x
-	adc SCRPG
-	sta PTR+1
-gw_ln	dey			; + a line's bytes, Y times
-	bmi gw_put
-	lda PTR
-	clc
-	adc gm_bpl,x
-	sta PTR
-	bcc gw_ln
-	inc PTR+1
-	bcs gw_ln
-gw_put	ldy #0
-	lda gm_pat,x
-	sta (PTR),y
-	lda GM_P
-	clc
-	adc gm_k,x
-	sta GM_P
-	inc GM_C
-	lda GM_C
-	cmp gm_bpl,x
-	bne gw_col
-	ldx GM_X
-	dex
-	bpl gw_bd
-	rts
-
-; gdlist: the display list at GMDL, then ANTIC on it.
+; gdlist: the display list at GMDL from gdl_t, then ANTIC on it. In gdl_t an
+; LMS line ($40 set) is followed by its address in the screen block (the
+; block's page is added here); $80+n is the last LMS line n times more.
 gdlist	lda #<GMDL
 	sta PTR
-	lda SCRPG
-	clc
-	adc #>GMDL
+	lda #>GMDL
 	sta PTR+1
+	ldx #0
 	ldy #0
-gd_t	lda gdl_t,y
-	sta (PTR),y
-	iny
-	cpy #GDLT_N
-	bne gd_t
-	ldx #24			; the GTIA bands: the GTIA line, 24 times
-gd_g	lda #$4F		; (mode F, LMS)
+gd_lp	lda gdl_t,x
+	inx
+	cmp #$80
+	bcs gd_rep
 	jsr gdput
-	lda #<GMG
+	sta GM_C
+	and #$40
+	beq gd_nx
+	lda gdl_t,x
+	sta GM_P
 	jsr gdput
-	lda SCRPG
+	lda gdl_t+1,x
 	clc
-	adc #>GMG
+	adc SCRPG
+	sta GM_X
 	jsr gdput
-	dex
-	bne gd_g
-	lda #$12		; the HSCROL line (mode 2, bit 4)
-	jsr gdput
-	lda #$22		; the VSCROL region (bit 5): the question, and
-	jsr gdput
-	lda #$02		; the region's last line
-	jsr gdput
+	inx
+	inx
+gd_nx	cpx #GDLT_N
+	bne gd_lp
 	lda #$41		; back to the top
 	jsr gdput
-	lda PTR
+	lda #<GMDL
 	jsr gdput
-	lda PTR+1
+	lda #>GMDL
 	jsr gdput
-	ldy #5			; the header's LMS: the block
-	lda SCRPG
-	sta (PTR),y
-	lda PTR
+	lda #<GMDL
 	sta DLISTL
-	lda PTR+1
+	lda #>GMDL
 	sta DLISTH
 	lda #$22
 	sta DMACTL
 	rts
+gd_rep	and #$3F
+	sta GM_N
+gd_r1	lda GM_C
+	jsr gdput
+	lda GM_P
+	jsr gdput
+	lda GM_X
+	jsr gdput
+	dec GM_N
+	bne gd_r1
+	beq gd_nx
 gdput	sta (PTR),y
 	iny
 	rts
 
-gdl_t	.byte $70, $70, $70, $42, 0, 0	; 24 blank lines; the header (LMS)
-	.byte $02, $06, $07, $08, $08, $0A, $0A	; the legend; 6; 7; 8 x2; A x2
-	.byte $0B, $0B, $0B, $0B, $0D, $0D, $0D, $0D	; B x4; D x4
-	.byte $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F	; F x8
-GDLT_N	= *-gdl_t
-	.if GMDL+GDLT_N+72+9>$400
-	.error "the modes page's display list runs out of the screen block"
-	.endif
-gm_lo	.byte <GM8, <GMA, <GMB, <GMD, <GMF
-gm_hi	.byte >GM8, >GMA, >GMB, >GMD, >GMF
-gm_bpl	.byte 10, 20, 20, 40, 40		; bytes a line
-gm_s	.byte 2, 2, 1, 1, 0			; the wave (0-8) shifted right
-gm_h	.byte 2, 2, 4, 4, 8			; to the band's lines
-gm_k	.byte 6, 3, 3, 2, 2			; the phase a byte: a wave across
-gm_pat	.byte $55, $AA, $FF, $55, $FF		; 8, A, D: color 1/2; B, F: 1 bit
-gmcols	.byte $28, $58, $88, $B8, $36, C_TEXTLUM, C_TEXTBG, $C8
+gdl_t	.byte $70, $70, $70
+	.byte $42, <0, >0		; the title
+	.byte $06, $07			; ANTIC 6, 7 (the bytes after the title)
+	.byte $02, $08, $48, <GD8, >GD8	; 8: its label, 2 rows
+	.byte $02, $0A, $4A, <GDA, >GDA	; A: 2 rows
+	.byte $02, $0B, $4B, <GDB, >GDB, $82	; B: 4 rows
+	.byte $02, $0D, $4D, <GDD, >GDD, $82	; D: 4 rows
+	.byte $02, $0F, $4F, <GDF, >GDF, $86	; F: 8 rows
+	.byte $02			; the GTIA caption
+	.byte $00, $4F, <GMG, >GMG, $87	; GTIA 9: a blank line, 8 rows
+	.byte $00, $4F, <GMG, >GMG, $87	; GTIA 10
+	.byte $00, $4F, <GMG, >GMG, $87	; GTIA 11
+	.byte $00, $12			; the HSCROL line
+	.byte $62, <GMV0, >GMV0, $22	; the VSCROL region: blank, the line,
+	.byte $42, <GMV0, >GMV0		; blank (the last: no VSCROL bit)
+	.byte $42, <GMQ, >GMQ		; the question
+GDLT_N	= *-gdl_t			; (it makes 166 bytes: $0480-$0525)
+gm_txt	.word GM6, s_gm6, GM6+20, s_gm7, GL8+1, s_gl8, GLA+1, s_gla
+	.word GLB+1, s_glb, GLD+1, s_gld, GLF+1, s_glf, GMC+2, s_gmc
+	.word GMH+8, s_ghs, GMV+2, s_gvs, GMQ+1, s_gq
+GMTXT_N	= *-gm_txt
+gm_bl	.byte <GD8, <GDA, <GDB, <GDD, <GDF
+gm_bh	.byte >GD8, >GDA, >GDB, >GDD, >GDF
+gm_bn	.byte 10, 20, 20, 40, 40		; bytes a row
+gm_bp	.byte $1B, $1B, $33, $1B, $33		; 4 colors: 0 1 2 3; 2 colors: stripes
+gmcols	.byte $28, $58, $88, $B8, $36, C_TEXTLUM, $84, $C8
 gmprior	.byte $40, $80, $C0, $00		; GTIA 9, 10, 11, then off
-gmramp	.rept 40				; 16 values, 5 pixels each
+gmbk	.byte $80, $00, $06, $00		; COLBK: 9's hue, 10's color 8, 11's
+gmramp	.rept 40				; luminance; 16 values, 5 pixels each
 	.byte [[[#*2]/5]<<4]|[[#*2+1]/5]
 	.endr
 s_t7m	dta d'7 VIDEO MODES',$FF
-s_gml	dta d'ANTIC 6 7 8 A B D F  GTIA 9 10 11',$FF
-s_gm6	dta d' ANTIC 6',$FF
-s_gm7	dta d' ANTIC 7',$FF
-s_ghs	dta d'ANTIC HSCROL: THIS LINE MOVES',$FF
+s_gm6	dta d' ANTIC 6: WIDE TEXT',$FF
+s_gm7	dta d' ANTIC 7: TALL TEXT',$FF
+s_gl8	dta d'ANTIC 8: 40 WIDE, 4 COLORS',$FF
+s_gla	dta d'ANTIC A: 80 WIDE, 4 COLORS',$FF
+s_glb	dta d'ANTIC B: 160 WIDE, 2 COLORS',$FF
+s_gld	dta d'ANTIC D: 160 WIDE, 4 COLORS',$FF
+s_glf	dta d'ANTIC F: 320 WIDE, 1 COLOR',$FF
+s_gmc	dta d'GTIA 9: SHADES  10: COLORS  11: HUES',$FF
+s_ghs	dta d'THIS LINE SLIDES SIDEWAYS: HSCROL',$FF
+s_gvs	dta d'THIS LINE MOVES UP AND DOWN: VSCROL',$FF

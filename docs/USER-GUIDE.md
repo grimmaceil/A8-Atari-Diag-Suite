@@ -335,6 +335,7 @@ Every flash comes with a beep, so you can read the code by eye or by ear.
 |---|---|---|
 | the charge: four rising notes, da-da-da-DAH (twice for the final pass) | bright green | a pass |
 | impending doom: three notes, dun dun DUNNN (C, C, then the F-sharp below: the tritone) | bright red | a fail; any beep code follows |
+| one rising chirp (the start-up one) | steady yellow | the final result when nothing failed but not every test ran (skipped with X or S, or not run from the menu): no pass yet |
 | long beep (about 0.6 s, 440 Hz) | bright red | group A: **where**, counted. The RAM bank (1-4; the 130XE's extra banks are 5-8), or the test number |
 | short beep (about 0.2 s, 880 Hz) | bright red | group B: **what**, counted. For RAM, the data bit, D0 = 1 up to D7 = 8; for a test, the item |
 | low beep (about 0.6 s, 220 Hz) | bright red | the end of the list |
@@ -680,12 +681,13 @@ what the Atari plays, to listen to on a PC.
 2. The voice playing now.
 3. The question: Y or START = yes, N or SELECT = no.
 
-**GTIA.** One screen: eight brightness steps, sixteen colours (in bands
-bigger than the gray steps), and under them the sprites: the word ATARI,
-made of the four players and the four missiles, with the letters taken
-from the character ROM, scrolling across in rainbow colours that move down
-the letters. A wave runs through the letters from left to right, twice as
-fast as the word moves, so the word snakes along. Answer whether it all looks right (item 1).
+**GTIA/ANTIC.** One screen: eight brightness steps, sixteen colours (in
+bands bigger than the gray steps), and under them, in the middle of the
+space left, the sprites: the word ATARI, made of the four players and the
+four missiles, with the letters taken from the character ROM, scrolling
+from right to left in rainbow colours that move down the letters. Each
+letter rides a wave up and down, a little behind the one before, so the
+word snakes as it goes. Answer whether it all looks right (item 1).
 Without a working screen the test is skipped.
 
 ![GTIA](img/av-02-gtia.png)
@@ -696,15 +698,22 @@ Without a working screen the test is skipped.
 4. ATARI, moving.
 5. The question: does it look right?
 
-**GTIA, page 2: the display modes.** One screen with a band of each mode:
-ANTIC 6 and 7 (big colour text), the bitmaps 8, A, B, D and F, each with
-a wave drawn across it (a mode that fetches or shows its bytes wrong
-breaks the wave), and GTIA's own modes 9, 10 and 11 (16 shades, 9
-colours, 16 hues). A line of text slides from side to side (ANTIC's fine
-horizontal scroll) and the question bobs up and down (fine vertical
-scroll). Answer whether it all looks right (item 2). On `diag-8k-05-av`
-this page is the tape's part 2: after page 1 the tape plays on and loads
-it (`LOADING PART 2...`, about 20 s).
+**Page 2: the video modes** (`7 VIDEO MODES`). Each mode has a line of
+text above it saying what it is:
+- `ANTIC 6` and `ANTIC 7`: big text, wide and white, then tall and green.
+- The bitmaps `ANTIC 8`, `A`, `B`, `D` and `F`, from coarse to fine: each
+  is filled with even bars of its colours (the 4-colour modes: black, red,
+  white, blue; the 2-colour ones: stripes). Each band should be even all
+  the way across, the bars getting finer from one band to the next.
+- `GTIA 9, 10, 11`: three bands of the same line of 16 values: 16 shades
+  of blue, then 9 colours, then 16 hues.
+- A line that slides from side to side (ANTIC's fine horizontal scroll)
+  and one that moves up and down (fine vertical scroll).
+- The question, which stays still.
+
+Answer whether it all looks right (item 2). On `diag-8k-05-av` this page
+is the tape's part 2: after page 1 the tape plays on and loads it
+(`LOADING PART 2`, about 20 s).
 
 ### The menu (`diag-16k-02-system` and `diag-32k-xl-xe`)
 

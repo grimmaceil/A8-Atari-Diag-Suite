@@ -77,8 +77,16 @@ and beeps, loading from a PC, and what to do when something fails.
     a line wiggling sideways (HSCROL) and the question bobbing (VSCROL);
     item 2. On `diag-8k-05-av` it doesn't fit, so it is the tape's part
     two, loaded after page 1 (`diag-8k-05-av-part2.cas` for AspeQt).
-  - The ATARI letters: the wave runs left to right through them, twice as
-    fast as the word moves, so each rise and fall goes A, T, A, R, I.
+  - The ATARI word scrolls right to left; each letter rides the wave on its
+    own counter, as in 0.8. The hue bands are 4 lines (from 5), and the
+    word sits in the middle of the space that leaves.
+  - Page 2 of test 7 (`7 VIDEO MODES`) is clearer: a label line above
+    each mode, even colour bars in the bitmaps (no waves), the GTIA bands
+    apart, a line that slides and one that moves up and down, and the
+    question still.
+  - The final result when nothing failed but not every test ran (skipped,
+    or not run from the menu): steady yellow and the start-up chirp, not
+    the green double charge.
   - Test 7 is named GTIA/ANTIC (its page 2 is mostly ANTIC's modes).
   - Prompts say ANY KEY where any key goes on (`ANY KEY = GO ON`,
     `ANY KEY = MENU`), so a dead START or key isn't a dead end. The

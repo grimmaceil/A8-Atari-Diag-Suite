@@ -1,7 +1,8 @@
 ; The 8K sound and video tape (diag-8k-05-av), part two: test 7's page 2,
 ; the display modes (t_gtia2.asm), with no room for it in part one. Part one
 ; reads it from the tape (common/loader.asm, as tape 1 reads its stage 2)
-; over the tests it has run, at P2AT, and enters it at P2AT+6. It uses part
+; over its boot code and the tests it has run, at P2AT (its LOAD), and
+; enters it at P2AT+6. It uses part
 ; one's library, test 7's gwave and gans, and its end (tend): their
 ; addresses are in build/part1.asm (build.py, from part one's labels).
 

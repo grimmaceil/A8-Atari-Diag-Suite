@@ -465,9 +465,11 @@ redraw	= tshow			; scrtoggle's text screen
 ; ---------------------------------------------------------------------------
 	.ifndef XFINAL
 ; final: past the last test: the results. A failed test: the doom, and a
-; ROM or RAM fault's code; all passed: the charge, twice, and green. With a
-; menu: the results page, START back to the menu. Without: the tape's lines
-; on the last test's screen, and it stays: nothing to press.
+; ROM or RAM fault's code; all passed: the charge, twice, and green; none
+; failed but not all ran (left with X or S, or not run from the menu):
+; partial, yellow and one chirp. With a menu: the results page, a press
+; back to the menu. Without: the tape's lines on the last test's screen,
+; and it stays: nothing to press.
 final
 	.ifdef MENU
 	lda #8			; tshow, as redraw, shows the results from here
@@ -489,12 +491,50 @@ fi_cnt	lda ttests,x
 fi_n	stx NBANKS
 	jsr tshow
 fi_chk	ldx #8			; any failed test: the doom, and the codes of the
-fi_lp	lda BADMASK,x		; ROMs and the RAM (report.asm); all passed: the
-	bne fi_bad		; charge, twice
+fi_lp	lda BADMASK,x		; ROMs and the RAM (report.asm)
+	bne fi_bad
 	dex
 	bne fi_lp
-	jmp pass
+	ldx #0			; none failed: did every one run?
+fi_rn	ldy ttests,x
+	beq fi_all
+	lda bitn-1,y
+	and MRUN
+	beq partial
+	inx
+	bne fi_rn
+fi_all
+	.ifdef SKIPKEY
+	lda SKIPRAM		; (the RAM test, skipped with S)
+	bne partial
+	.endif
+	jmp pass		; all passed: the charge, twice
 fi_bad	jmp report
+
+; partial: none failed, but not every test ran: steady yellow and one chirp
+; (the start-up one: boot.asm), then it waits (a press: CONTVEC).
+partial	jsr arm
+	lda #C_YELLOW
+	sta COLBK
+	lda #AUD_ON
+	sta AUDC1
+	ldx #80
+pc_step	stx AUDF1
+	ldy #40
+pc_line	sta WSYNC
+	dey
+	bne pc_line
+	dex
+	cpx #20
+	bne pc_step
+	lda #AUD_OFF
+	sta AUDC1
+pt_lp	lda #50
+	sta RCNT
+	lda #C_YELLOW
+	sta HOLDC
+	NCALL RET1, hold
+	jmp pt_lp
 	.endif
 
 	.ifdef MENU
@@ -1021,14 +1061,10 @@ s_gq	dta d'LOOKS RIGHT? Y/START=YES, N/SELECT=NO',$FF
 ; p2fail: the tape's part two didn't load (common/loader.asm; L2MSG says
 ; why). Any key (or START, or fire) tries again, SELECT ends test 7
 ; without its page 2.
-p2fail	lda #22
-	jsr clrrow
-	PRINT 22, 0, s_l2pre
+p2fail	PRINT 22, 0, s_l2pre	; (rows 22-23: cleared by load2's message)
 	lda L2MSG
 	ldy L2MSG+1
 	jsr puts
-	lda #23
-	jsr clrrow
 	PRINT 23, 0, s_l2key
 	jsr waitrel
 pf_lp	jsr inputs
@@ -1040,13 +1076,13 @@ pf_lp	jsr inputs
 	jmp tend
 pf_go	jsr waitrel
 	jmp load2
-s_l2load dta d'LOADING PART 2...',$FF
+s_l2load dta d'LOADING PART 2',$FF
 s_l2pre	dta d'PART 2: ',$FF
-s_l2key	dta d'ANY KEY=AGAIN  SELECT=SKIP IT',$FF
-s_l2_big dta d'TOO BIG',$FF
-s_l2_sio dta d'READ ERROR',$FF
-s_l2_hdr dta d'NOT ON TAPE',$FF
-s_l2_sum dta d'BAD CHECKSUM',$FF
+s_l2key	dta d'ANY KEY=AGAIN SELECT=SKIP',$FF
+s_l2_big			; (one message for every way it fails)
+s_l2_sio
+s_l2_hdr
+s_l2_sum dta d'DID NOT LOAD',$FF
 	.endif
 
 tnames	.word s_t1, s_t2, s_t3, s_tjoy, s_tpad, s_tpok, s_t7
@@ -1073,7 +1109,7 @@ s_test	dta d'TEST ',$FF
 s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_items	dta d', ITEMS',$FF
-s_tpass	dta d'NEXT TEST IN 2 S.  OPTION = FLASH',$FF
+s_tpass	dta d'NEXT TEST IN 2 S. OPTION=FLASH',$FF
 s_goon	dta d'ANY KEY = GO ON',$FF
 	.ifdef NEEDYN
 s_heard	dta d'HEARD IT? Y/START = YES, N/SELECT = NO',$FF
@@ -1082,7 +1118,7 @@ s_heard	dta d'HEARD IT? Y/START = YES, N/SELECT = NO',$FF
 ; s_next: the end of a tape without a menu: what to load next.
 	.if SETNO=0
 	.if TAPENO=5
-s_next	dta d'TEST COMPLETE: LAST TAPE OF THE 8K SET',$FF
+s_next	dta d'TEST COMPLETE: LAST 8K TAPE',$FF
 	.else
 s_next	dta d'TEST COMPLETE. NEXT: DIAG-8K-0',[TAPENO+$11]
 	.if TAPENO=2
@@ -1094,7 +1130,7 @@ s_next	dta d'TEST COMPLETE. NEXT: DIAG-8K-0',[TAPENO+$11]
 	.endif
 	.endif
 	.elseif SETNO=1
-s_next	dta d'TEST COMPLETE: LAST TAPE OF THE 16K SET',$FF
+s_next	dta d'TEST COMPLETE: LAST 16K TAPE',$FF
 	.else
 s_next	dta d'TEST COMPLETE',$FF
 	.endif

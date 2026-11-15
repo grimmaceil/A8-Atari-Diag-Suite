@@ -144,10 +144,11 @@ doesn't fit the 8K sound and video tape, so that tape (`GPART2`) has it as
 a part two: `src/system/gpart2.asm`, the next file on the tape. After page
 1, part one reads it with `common/loader.asm` (as tape 1 reads its stage 2;
 `SYSPART`: no RAM size check, a failure goes to `p2fail`, START tries
-again, SELECT ends test 7 without it) into its own RAM at `P2AT`, the
-first page of its tests, which are done with by then, and enters it at
-`P2AT+6`. Part two may reach `TESTEND` (past the boot's display code, also
-done with); it checks that itself. It uses part one's library, test 7's
+again, SELECT ends test 7 without it) into its own RAM at `P2AT`, which
+is its `LOAD`: the boot code and the tests are done with by then, and the
+test list (`tlist.asm`) is moved after the library for this tape. It
+enters it at `P2AT+6`. Part two may reach `TESTEND` (past the boot's
+display code, also done with); it checks that itself. It uses part one's library, test 7's
 `gwave` and `gans` (kept in `common.asm`, outside the overwritten tests),
 and `tend`: build.py writes their addresses to `build/part1.asm` from part
 one's label table (the `PART1` list).

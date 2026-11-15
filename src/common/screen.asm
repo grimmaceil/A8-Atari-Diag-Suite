@@ -38,9 +38,7 @@ so_clr	sta (CUR),y
 	iny
 	lda #$42		; mode 2 + LMS
 	sta (CUR),y
-	iny
-	lda #0
-	sta (CUR),y
+	iny			; (its low byte: 0, the block just cleared)
 	iny
 	lda SCRPG
 	sta (CUR),y
@@ -211,19 +209,13 @@ header	pha
 hd_pad	lda CUR			; the block is page aligned: CUR lo = column on row 0
 	cmp #40-VERLEN
 	beq hd_ver
-	bcs hd_fill
+	bcs hd_x		; (no title is that long: the version always fits)
 	lda #0
 	jsr putc
 	jmp hd_pad
 hd_ver	lda #<s_ver
 	ldy #>s_ver
 	jsr puts
-hd_fill	lda CUR
-	cmp #40
-	bcs hd_x
-	lda #0
-	jsr putc
-	jmp hd_fill
 hd_x	lda #0
 	sta INV
 	rts

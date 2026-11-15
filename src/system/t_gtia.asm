@@ -4,13 +4,13 @@
 ;     the screen with WSYNC (no interrupts);
 ;     the sprites: the word ATARI from the ROM font, players 0-3 as A T A R
 ;     and the four missiles side by side as the I (PRIOR bit 4: they take
-;     COLPF3's color), all double width, scrolling across one color clock a
-;     frame under the ramps, a new color on every scan line and the rainbow
-;     moving a step each frame. And a snake: a sine wave (8 scan lines up
-;     and down, 128 color clocks long) runs left to right through the
-;     letters at twice the word's speed, so each rise and fall goes A, T, A,
-;     R, I, the way the word moves; they are written again at their new
-;     heights every frame.
+;     COLPF3's color), all double width, scrolling right to left one color
+;     clock a frame (DEC of the horizontal positions) under the ramps, a
+;     new color on every scan line and the rainbow moving a step each
+;     frame. And a snake: each letter rides a sine wave, 8 scan lines up
+;     and down, on its own counter (GPH, nothing to do with the horizontal
+;     position), an eighth of a wave behind the letter before it; they are
+;     written again at their new heights every frame.
 ;   item 2 (page 2, t_gtia2.asm): the display modes look wrong. On the 8K
 ;     sound and video tape it is the tape's part two (GPART2), loaded now
 ;     over the tests already run (common/loader.asm).
@@ -21,11 +21,13 @@ GPAGE2	= 1
 	.endif
 GL_ROW	= 5			; first text row of the luminance ramp: 8 steps of
 				; 3 lines, rows 5-7
-GH_ROW	= 9			; first text row of the hue ramp: 16 steps of 5
-				; lines, rows 9-18 (bigger than the gray steps)
-GROW	= 19			; the letters' zone: rows 19-22
+GH_ROW	= 9			; first text row of the hue ramp: 16 steps of 4
+				; lines, rows 9-16 (bigger than the gray steps)
+GROW	= 18			; the letters' zone: rows 18-21, in the middle of
+				; rows 17-22 (between the hues and the question)
 GPX	= TSCR+$00		; the word's left edge, color clocks
 GBASE	= TSCR+$01		; the rainbow's first color, 0-15
+GPH	= TSCR+$02		; the snake's wave, 0-63
 GPM	= $04			; P/M block: missiles $0580, players $0600-$07FF
 GY	= 16+GROW*4		; P/M byte of row GROW (double-line): the zone's top
 
@@ -66,6 +68,7 @@ gs_pm	sta GPM*$100+$100,y	; the P/M block clear
 	bne gs_pm
 	sta GPX
 	sta GBASE
+	sta GPH
 	jsr gletters
 	ldx #3
 gs_sz	lda #1			; players double width
@@ -99,7 +102,7 @@ gt_l	txa
 	bne gt_l
 	lda #C_TEXTBG		; (in the horizontal blank after the last WSYNC)
 	sta COLPF2
-gt_w	lda VCOUNT		; hue: 16 steps of 5 lines, rows 9-18
+gt_w	lda VCOUNT		; hue: 16 steps of 4 lines, rows 9-16
 	cmp #[32+GH_ROW*8]/2-1
 	bne gt_w
 	ldx #0
@@ -111,7 +114,7 @@ gt_h	txa
 	ora #8
 	sta WSYNC
 	sta COLPF2
-	ldy #4
+	ldy #3
 gt_h1	sta WSYNC
 	dey
 	bne gt_h1
@@ -120,7 +123,10 @@ gt_h1	sta WSYNC
 	bne gt_h
 	lda #C_TEXTBG
 	sta COLPF2
-	ldx GBASE		; the letters' zone, rows 19-22: a color a line,
+gt_z	lda VCOUNT		; the letters' zone, rows 18-21: a color a line,
+	cmp #[32+GROW*8]/2-1	; (row 17 between)
+	bne gt_z
+	ldx GBASE
 	ldy #32			; the hue the line number plus GBASE (worked out:
 gt_r	txa			; hue in the high nibble, luminance 8)
 	asl
@@ -138,7 +144,7 @@ gt_r	txa			; hue in the high nibble, luminance 8)
 	dey
 	bne gt_r
 
-	inc GPX			; each frame: one step across, one rainbow step
+	dec GPX			; each frame: one step left, one rainbow step
 	lda GPX
 	ldx #0
 gs_hp	sta HPOSP0,x		; P0-P3, 20 color clocks apart
@@ -160,8 +166,8 @@ gs_hp	sta HPOSP0,x		; P0-P3, 20 color clocks apart
 	adc #1
 	and #15
 	sta GBASE
-	jsr gletters		; the snake: the letters at their new heights
-				; (now: ANTIC is past them, below row 22)
+	inc GPH			; the snake: the letters at their next heights
+	jsr gletters		; (now: ANTIC is past them, below row 21)
 
 	jsr gans		; the answer, polled once a frame
 	bne gt_ans
@@ -190,21 +196,17 @@ gs_off	sta HPOSP0,x
 	icl 't_gtia2.asm'	; page 2
 	.endif
 
-; gletters: the five letters, from the ROM font, each where the wave is at
-; its place: 20 color clocks a letter less GPX (the wave moves 2 a frame,
-; the word 1), halved (a wave is 128 color clocks): 0-8 bytes into the
-; zone, their top at row 19 to row 21. The rest of the zone clear.
+; gletters: the five letters, from the ROM font, each at its point on the
+; wave (gwave of GPH less 8 a letter: 0-8 bytes into the zone, their top
+; at row 18 to row 20), the rest of the zone clear.
 gletters ldx #4
-gl_let	txa			; this letter's place on the wave: 20x - GPX
+gl_let	txa			; this letter's point on the wave
 	asl
 	asl
-	sta CNT			; (4x)
 	asl
-	asl
-	adc CNT			; 20x (C clear: at most 80)
+	eor #$FF		; (GPH - 8x)
 	sec
-	sbc GPX
-	lsr			; halved: 0-63 is a wave
+	adc GPH
 	jsr gwave
 	sta CNT
 	lda gdestl,x		; the zone's top in this player or the missiles
@@ -248,7 +250,7 @@ gdestl	.byte <[GPM*$100+$200+GY], <[GPM*$100+$280+GY], <[GPM*$100+$300+GY]
 gdesth	.byte >[GPM*$100+$200+GY], >[GPM*$100+$280+GY], >[GPM*$100+$300+GY]
 	.byte >[GPM*$100+$380+GY], >[GPM*$100+$180+GY]
 
-s_glum	dta d'LUMINANCE: 8 EVEN STEPS, BLACK TO WHITE',$FF
-s_ghue	dta d'HUES: 16 COLORS. BELOW: MOVING ATARI',$FF
+s_glum	dta d'LUMINANCE: 8 STEPS, BLACK TO WHITE',$FF
+s_ghue	dta d'HUES: 16 COLORS. BELOW: ATARI',$FF
 s_vpal	dta d'VIDEO: PAL ',$FF
 s_vntsc	dta d'VIDEO: NTSC',$FF
