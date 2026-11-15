@@ -490,7 +490,7 @@ WALK = [0x1F, 0x1E, 0x1A, 0x18, 0x1D, 0x1B, 0x33]   # keys 1-7: the menu order
 class Auto:
     """Answers tape 3's prompts as a person would, from the screen text.
     deny: prompt words to answer No to; skip: keys to leave unpressed."""
-    PROMPTS = ['HEARD ALL 5?', 'PRESS EVERY KEY', 'PRESS START, SELECT AND OPTION', 'HEARD IT?',
+    PROMPTS = ['HEARD ALL 7?', 'PRESS EVERY KEY', 'PRESS START, SELECT AND OPTION', 'HEARD IT?',
                'MOVE EACH STICK', 'UNPLUG ALL PADDLES', 'TURN EACH', 'LOOKS RIGHT?',
                'LOOKS RIGHT?']
 
@@ -517,7 +517,7 @@ class Auto:
                 else:                         # START: ALL at first, then (walk)
                     self.hw.press(when, 'CON', 1)            # the results
             return
-        if 'START = GO ON' in text or 'START=GO ON' in text or 'START=MENU  SELECT' in text:    # a failed test's code: go on (a press only
+        if 'START = GO ON' in text or 'START=GO ON' in text or 'START=GO ON  SELECT' in text:    # a failed test's code: go on (a press only
             ln = self.hw.line        # counts in a pause, so keep pressing)
             if not any(e > ln for st, e, k, v in self.hw.presses if k == 'CON'):
                 self.hw.press(ln + 4000, 'CON', 1)
@@ -552,7 +552,7 @@ class Auto:
         else:
             yes = not any(d in text for d in self.deny)
             when = t + int(2.5 * 1000 * LINES_PER_MS)
-            if p in ('HEARD IT?', 'LOOKS RIGHT?', 'HEARD ALL 5?'):
+            if p in ('HEARD IT?', 'LOOKS RIGHT?', 'HEARD ALL 7?'):
                 hw.press(when, 'KB', 0x2B if yes else 0x23)
             else:
                 hw.press(when, 'CON', 1)        # START
@@ -771,8 +771,9 @@ def main():
     else:
         hw.ram[load:load + len(img)] = img
     for kv in (x for x in a.con.split(',') if x):
-        key, at = kv.split(':')
-        hw.press(to_line(at), 'CON', {'START': 1, 'SELECT': 2, 'OPTION': 4}[key.upper()])
+        key, at, *h = kv.split(':')        # KEY:SECS[:HOLD]
+        hw.press(to_line(at), 'CON', {'START': 1, 'SELECT': 2, 'OPTION': 4}[key.upper()],
+                 float(h[0]) if h else 0.25)
     limit = None
     steps = 0
     entered = set()

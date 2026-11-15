@@ -311,9 +311,11 @@ pa_hold	lda #50
 ;   SELECT                 end the pause: replay the code now
 ;   OPTION                 text <-> full-screen flashes (if the display
 ;                          checks passed); holding it holds the result
+; (HARMED, "seen released", is cleared by whoever starts a result: pass,
+; report, nocode. Not here: a pause is entered over and over, and a tap
+; that began just then was lost.)
 ; Before low RAM passes STACKOK is 0 and no JSR runs. Returns via RET1.
-hold	lda #0
-	sta HARMED
+hold
 ho_lp	lda HOLDC
 	sta COLBK
 	WAITMS 100

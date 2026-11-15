@@ -11,6 +11,7 @@
 TEST	= BSS+$E0		; current test, 1-7
 NEXTVEC	= BSS+$E1		; 2: where the test flow goes on to
 STASH	= BSS+$E3		; 8: BADMASK 1-8 while one test's code plays
+KEEP	= BSS+$EB		; nonzero: STASH holds the tests' results (ramagain)
 TIDX	= BSS+$ED		; next tlist entry, times 2
 ENDING	= BSS+$F7		; nonzero: the tape's results; START runs it again
 T3D	= BSS+$70		; 96 bytes of test data:
@@ -23,12 +24,21 @@ trun	jsr tinit
 	lda #0
 	sta TIDX
 	.ifdef MENU
-	sta MRUN
 	sta MMODE
-	ldx MNT
-	stx MSEL		; the ALL line first
 	lda DISPOK		; no picture: no menu, all of them in order
 	beq tst_all
+	.ifdef RAM8		; straight from the RAM test: the ROM test, then
+	.ifdef SKIPKEY		; the menu (unless the RAM test was skipped)
+	lda SKIPRAM
+	bne tst_mn
+	.endif
+	lda #0
+	sta MSEL
+	jmp mgo
+tst_mn
+	.endif
+	ldx MNT
+	stx MSEL		; the ALL line first
 	jmp menu
 tst_all	inc MMODE
 	.endif
@@ -87,6 +97,18 @@ te_m	lda #<menu
 te_x
 	.endif
 	jmp tresult
+
+; tskip: leave test TEST without a result (CTRL+X): on to the next test
+; when running them all (or without a menu), else back to the menu.
+tskip	jsr waitrel
+	jsr tnextv
+	.ifdef MENU
+	lda MMODE
+	bne tk_go
+	jmp menu
+tk_go
+	.endif
+	jmp (NEXTVEC)
 
 ; tnextv: NEXTVEC = the next tlist entry.
 tnextv	ldx TIDX
@@ -295,7 +317,9 @@ tr_nc	lda NEXTVEC
 	sta CONTVEC+1
 ; nocode: a fail without a code: one low tone, then steady red until a
 ; press goes on to CONTVEC.
-nocode	BEEP T_END
+nocode	lda #0			; (a key still down from the test doesn't count)
+	sta HARMED
+	BEEP T_END
 nc_w	lda #C_RED
 	sta HOLDC
 	lda #50
@@ -472,15 +496,22 @@ mn_lp	jsr vsync
 	cmp #$32		; 0: the RAM test again (the 32k+ tape: tape 1's
 	bne mn_n0		; code is still here, intact; it comes back here)
 	jsr waitrel
-	jmp RAMAGAIN
+	jmp ramrun
 mn_n0
 	.endif
-	.ifdef ROM
-	cmp #$35		; 8: the long memory test
+	cmp #$35		; 8: the results
 	bne mn_n8
+	ldx MNT
+	inx
+	stx MSEL
+	jmp mgo
+mn_n8
+	.ifdef LONGT
+	cmp #$30		; 9: the long memory test
+	bne mn_n9
 	jsr waitrel
 	jmp golong
-mn_n8
+mn_n9
 	.endif
 	ldx #6
 mn_dig	cmp kdigit,x
@@ -506,7 +537,7 @@ mn_con	lsr
 	.ifdef RAMAGAIN		; test, where the tape has them), round to the top
 	inx
 	.endif
-	.ifdef ROM
+	.ifdef LONGT
 	inx
 	.endif
 	stx MTMP
@@ -524,7 +555,7 @@ mn_up	ldx MSEL		; OPTION: up, round to the bottom
 	.ifdef RAMAGAIN
 	inx
 	.endif
-	.ifdef ROM
+	.ifdef LONGT
 	inx
 	.endif
 mn_set	stx MSEL
@@ -541,7 +572,7 @@ mgo	jsr waitrel
 	beq mr_all
 	.ifdef RAMAGAIN
 	sbc MNT			; (carry set) 1: the results, then (the
-	.ifdef ROM		; cartridge) 2: the long memory test; last:
+	.ifdef LONGT		; cartridge) 2: the long memory test; last:
 	cmp #2			; the RAM test
 	bne mg_r
 	jmp golong
@@ -550,7 +581,7 @@ mg_r	cmp #3
 	cmp #2
 	.endif
 	bne mg_fin
-	jmp RAMAGAIN
+	jmp ramrun
 mg_fin
 	.endif
 	jmp final
@@ -572,7 +603,20 @@ mr_go	asl
 	jsr tnextv
 	jmp (NEXTVEC)
 
-	.ifdef ROM
+	.ifdef RAMAGAIN
+; ramrun: the RAM test again. It uses BADMASK 1-8 for its banks, so the
+; tests' results (BADMASK 1-7) wait in STASH: the RAM stages leave BSS
+; $E0-$F3 alone, and put them back on the way to the menu (KEEP).
+ramrun	ldx #7
+ra_st	lda BADMASK,x
+	sta STASH-1,x
+	dex
+	bne ra_st
+	inc KEEP
+	jmp RAMAGAIN
+	.endif
+
+	.ifdef LONGT
 ; golong: the long memory test (it copies itself to RAM: 16K or more).
 golong	lda RAMTOP
 	cmp #$40
@@ -663,7 +707,7 @@ md_r	txa
 	lda #<s_mres
 	ldy #>s_mres
 	jsr puts
-	.ifdef ROM		; the cartridge: the long memory test, as key 8
+	.ifdef LONGT		; the cartridge: the long memory test, as key 8
 	lda #0
 	sta INV
 	ldx MNT
@@ -704,7 +748,7 @@ md_lx
 	ldx MNT
 	inx
 	inx
-	.ifdef ROM
+	.ifdef LONGT
 	inx
 	.endif
 	cpx MSEL
@@ -755,18 +799,18 @@ kdigit	.byte $1F, $1E, $1A, $18, $1D, $1B, $33	; KBCODEs of 1-7
 s_hmenu	dta d'MENU',$FF
 s_notrun dta d'-',$FF
 s_mall	dta d'ALL OF THEM, IN ORDER',$FF
-s_mres	dta d'RESULTS AND THE FINAL CODE',$FF
+s_mres	dta d'8 RESULTS AND THE FINAL CODE',$FF
 s_m1	dta d'START=RUN  SELECT=DOWN  OPTION=UP',$FF
-	.ifdef ROM
-s_m2	dta d'OR PRESS 0-8 TO RUN THAT TEST',$FF
+	.ifdef LONGT
+s_m2	dta d'OR PRESS 0-9 FOR THAT LINE',$FF
 s_mram	dta d'0 RAM',$FF
-s_mlong	dta d'8 LONG RAM TEST',$FF
+s_mlong	dta d'9 LONG RAM TEST',$FF
 s_m16	dta d'NEEDS 16K',$FF
 	.elseif .def RAMAGAIN
-s_m2	dta d'OR PRESS 0-7 TO RUN THAT TEST',$FF
+s_m2	dta d'OR PRESS 0-8 FOR THAT LINE',$FF
 s_mram	dta d'0 RAM',$FF
 	.else
-s_m2	dta d'OR PRESS 1-7 TO RUN THAT TEST',$FF
+s_m2	dta d'OR PRESS 1-8 FOR THAT LINE',$FF
 	.endif
 s_toggle3 dta d'START = MENU',$FF
 	.endif
@@ -912,7 +956,7 @@ s_items	dta d', ITEMS',$FF
 s_tpass	dta d'NEXT TEST IN 2 S.  OPTION = FLASH',$FF
 s_goon	dta d'START = GO ON',$FF
 s_toggle4 dta d'START = AGAIN',$FF
-s_items2 dta d'FAIL N: ITEM N OF THAT TEST',$FF
+s_items2 dta d'NUMBERS AFTER FAIL = ITEMS THAT FAILED',$FF
 	.ifdef NEEDYN
 s_heard	dta d'HEARD IT? Y/START = YES, N/SELECT = NO',$FF
 	.endif

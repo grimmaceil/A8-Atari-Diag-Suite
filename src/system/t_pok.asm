@@ -1,4 +1,4 @@
-; Test 4: POKEY.
+; Test 6: POKEY.
 ;   item 1: timer 1's interrupt doesn't come (read in IRQST; the CPU masks it)
 ;   item 2: RANDOM doesn't change
 ;   items 3-6: voice 1-4 not heard: a rising scale of pure tones, then
@@ -87,7 +87,7 @@ pk_heard inc VOICE
 	beq pk_end
 	jmp pk_vl
 pk_end
-	.ifdef ROM		; the cartridge: and sampled sound (cart/hello.asm)
+	.ifdef SAMPLED		; and sampled sound (cart/hello.asm)
 	jsr hello
 	.endif
 	jmp tend

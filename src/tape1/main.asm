@@ -54,7 +54,16 @@ LOAD	= $0800
 	.ifdef SKIPKEY
 	lda #$40		; the keyboard latch (IRQST; the CPU masks the
 	sta IRQEN		; IRQ): a tap between two looks counts too
-	jsr skipchk
+	lda $07FE		; back from the long memory test (tape2's
+	cmp #$5A		; backcart): no RAM test, the menu
+	bne rt_nb
+	lda $07FF
+	cmp #$A5
+	bne rt_nb
+	sta $07FE		; (once)
+	inc SKIPRAM
+	jmp PAYAT+6
+rt_nb	jsr skipchk
 	.endif
 	.ifdef ROM
 	jsr undercart		; the 8K under the cartridge (cart/undercart.asm)
@@ -101,8 +110,12 @@ again	sei
 	sta NMIEN
 	sta DMACTL
 	tax
-ag_cl	sta BSS,x
-	inx
+ag_cl	cpx #$E0		; (not $E0-$F3: the system tests' state and their
+	bcc ag_c		; results, which wait there while this runs)
+	cpx #$F4
+	bcc ag_n
+ag_c	sta BSS,x
+ag_n	inx
 	bne ag_cl
 	lda #$08
 	sta SPKPH
@@ -207,8 +220,11 @@ skipchk	lda SKSTAT
 	sta IRQEN
 sk_key	lda KBCODE
 	and #$BF		; (with or without SHIFT)
-	cmp #$BE		; CTRL + S
+	cmp #$96		; CTRL + X
+	beq sk_go
+	cmp #$BE		; CTRL + S (as before 0.6)
 	bne sk_x
+sk_go
 	inc SKIPRAM
 	jmp PAYAT+6		; (stage 2 sets the stack up again)
 sk_x	rts
@@ -370,7 +386,7 @@ s_hpre	dta d' DIAG-400-01-RAM  ',$FF
 	.endif
 s_hram	dta d'RAM TEST',$FF
 	.ifdef SKIPKEY
-s_skip	dta d'CTRL+S = SKIP THE RAM TEST',$FF
+s_skip	dta d'CTRL+X = STRAIGHT TO THE MENU',$FF
 	.endif
 s_testing dta d'TESTING BANK ',$FF
 	.ifndef ONE16
@@ -421,9 +437,11 @@ NPAT	= *-pats
 
 	.ifdef ONE16
 ; Stage 2, as built to run here (build.py's build_one16).
+	.ifndef ROM		; (in ROM every byte counts: no page alignment)
 PAYPAD	= [[*+$FF]/$100]*$100
 	.if PAYPAD-*>0
 	:[PAYPAD-*] .byte 0
+	.endif
 	.endif
 PAYAT	ins '../../build/payload16.bin'
 	.endif

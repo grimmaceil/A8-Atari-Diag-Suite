@@ -51,6 +51,19 @@ RAMAGAIN = xram			; and the RAM test again is in bank 0
 	.ifdef ROM		; common.asm: the RAM test can be skipped (CTRL+S,
 SKIPKEY	= 1			; tape1/main.asm): its line says so
 	.endif
+	.ifdef ROM		; common.asm: the long memory test on the menu (9):
+LONGT	= 1			; the cartridge, and the disk file, which carries
+	.elseif .def XEX	; its image behind the system tests (MEMAT)
+LONGT	= 1
+xmem	= ldmem
+	.endif
+	.ifdef WANT_POK		; cart/hello.asm: sampled sound, where there is
+	.ifdef ROM		; room: the cartridge and the disk file
+SAMPLED	= 1
+	.elseif .def XEX
+SAMPLED	= 1
+	.endif
+	.endif
 	.ifdef WANT_CON		; common.asm: the tests that ask Y/N
 NEEDYN	= 1
 	.elseif .def WANT_POK
@@ -201,6 +214,15 @@ ch_rn	dex
 	sta BADMASK+LDRIDX
 ch_r9	lda MTMP
 	sta BADMASK+8
+	lda KEEP		; the RAM test again, from the menu: the tests'
+	beq ch_nk		; results back (common.asm's ramagain)
+	ldx #7
+ch_kp	lda STASH-1,x
+	sta BADMASK,x
+	dex
+	bne ch_kp
+	stx KEEP
+ch_nk
 	lda DISPOK		; START at the summary: someone sees the picture
 	sta VIDEOOK
 	jmp trun
@@ -323,9 +345,6 @@ ttests
 	.ifdef HASLDR
 	icl '../cart/ldmem.asm'
 	.endif
-	.ifdef WANT_POK
-	icl '../cart/hello.asm'
-	.endif
 	.elseif .not .def CHAIN
 	icl '../common/display.asm'
 
@@ -342,6 +361,12 @@ NPAT	= *-pats
 	icl '../common/screen.asm'
 	icl '../common/info.asm'
 	icl 'common.asm'
+	.ifdef SAMPLED
+	icl '../cart/hello.asm'
+	.endif
+	.ifdef XEX
+	icl '../cart/ldmem.asm'
+	.endif
 
 ; The header bar names the tape, as its file is named (SETNO 0 = the 400
 ; set, 1 = 16K, 3 = controls, 4 = 32k+), so it can't

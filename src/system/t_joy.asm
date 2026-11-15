@@ -1,4 +1,4 @@
-; Test 5: joysticks and triggers, live: a direction or fire shows inverse
+; Test 4: joysticks and triggers, live: a direction or fire shows inverse
 ; while it is active. One already active at the start is stuck: item = port.
 ; START ends it, or a keyboard key (in case START is dead).
 JX	= TSCR+$00		; jshow: label being printed

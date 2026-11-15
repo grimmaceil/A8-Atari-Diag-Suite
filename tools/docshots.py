@@ -62,7 +62,7 @@ RUNS = {
         ('^START=AGAIN', 2, '16k-01-summary')]),
     '32k-sum': ('build/t32-fast', ['--xl', '--basic', '@BASIC', '--key', '10',
                                    '--until', '600'], [        # (no --auto: it waits)
-        ('^START=MENU  SELECT', 2, '32k-01-summary')]),
+        ('^START=GO ON  SELECT', 1, '32k-01-summary')]),
     '32k': ('build/t32-fast', ['--xl', '--auto', '--basic', '@BASIC', '--key', '10',
                                '--until', '1200'], [
         ('^START=RUN', 0.5, '32k-02-menu'),

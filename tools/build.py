@@ -14,23 +14,25 @@ optionally deploy.
                                         release tapes there that changed)
 """
 import argparse
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'tools'))
 MADS = ROOT / 'tools' / 'bin' / 'mads.exe'
 BUILD = ROOT / 'build'          # everything the assembler makes (not in git)
 CASSETTES = ROOT / 'cassettes'  # the release tapes (in git): what users load
 DISKS = ROOT / 'disks'          # the release disk files (.xex, in git)
 CARTS = ROOT / 'carts'          # the release cartridge (.car, in git)
 SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTer Atari800 core's folder
-# The version: in every release file's name (diag-...-v0.5.cas) and at the
+# The version: in every release file's name (diag-...-v0.6.cas) and at the
 # right of every screen's title bar, so a file and what it shows can be
 # matched. One digit each side of the point (screen.asm). build/ keeps the
 # plain names.
-VERSION = '0.5'
+VERSION = '0.6'
 VDEFS = dict(zip(('VMAJ', 'VMIN'), VERSION.split('.')))
 
 # Each tape: source dir, name, stages (first = boot), defines. A later stage
@@ -67,7 +69,7 @@ TAPES = [('tape1', 'diag-400-01-ram', ['main.asm', 'stage2.asm'], {}),
 # The disk files (Atari-diag-disk-scope.md): the same programs as these
 # tapes, built with XEX (their own title bar, no NEEDPG: the wrapper's guard
 # checks the RAM before the file loads) and wrapped by mkxex.py.
-XEXES = [('one32', 'diag-32k-xl-xe', {}, 0x80),
+XEXES = [('one32', 'diag-32k-xl-xe', {}, 0x88),      # (34K: the 26K image loads at $2000, above DOS)
          ('bounce', 'diag-memtest', dict(BOUNCE=1, BIGSTAGE=1, OWNTEST=1), 0x40)]
 # The cartridge (mkcar.py, src/cart/romsum.asm): the tests run from ROM,
 # one program to an 8K bank (build_car), and need 8K of RAM. Only the long
@@ -195,6 +197,13 @@ def build_one32(name, defines, label, xex=None):
     the addresses."""
     out = BUILD / name
     s2, sy, pay = Path(f'{out}.s2'), Path(f'{out}.sys'), BUILD / 'payload16.bin'
+    mem = b''                       # the disk file: the long memory test's image
+    if xex and xex != 'img':        # too, behind the system tests (menu line 9)
+        from mkcas import patch_boot
+        fast = {'FAST': 1} if 'FAST' in defines else {}
+        me = build_bounce(f'{name}-mem', dict(XEXES[1][2], XEX=1, **fast), '', 'img')
+        mem = bytes(patch_boot(*map(str, me))[0])
+        mem += bytes(-len(mem) % 256)
     pay.write_bytes(bytes(0x4000))
     d1 = dict(defines, ONE16=1, ONE32=1)
     mads('tape1', 'main.asm', out, d1)
@@ -215,8 +224,12 @@ def build_one32(name, defines, label, xex=None):
                    SHAREBSS=f"${s1['BSS']:04X}", PREVBSS=f"${s2bss:04X}",
                    RAMAGAIN=f"${s1['AGAIN']:04X}",
                    **{k: 1 for k in ('XEX', 'CART') if k in defines})
+        if mem:                     # (its address: the size doesn't depend on it)
+            dsy.update(MEMAT='$7000', MEMPG=len(mem) // 256)
+            mads('system', 'main.asm', sy, dsy)
+            dsy['MEMAT'] = f"${sysat + len(Path(f'{sy}.bin').read_bytes()):04X}"
         mads('system', 'main.asm', sy, dsy)
-        pay.write_bytes(b2 + Path(f'{sy}.bin').read_bytes())
+        pay.write_bytes(b2 + Path(f'{sy}.bin').read_bytes() + mem)
         mads('tape1', 'main.asm', out, d1)
         new = labels(f'{out}.lab')
         if (new['BSS'], new['PAYAT']) == (s1['BSS'], s1['PAYAT']):

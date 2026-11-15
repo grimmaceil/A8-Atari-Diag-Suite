@@ -1,4 +1,4 @@
-; Test 6: paddles. POTGO starts a scan; each POTn counts scanlines until its
+; Test 5: paddles. POTGO starts a scan; each POTn counts scanlines until its
 ; RC charge crosses the threshold, 228 at most.
 ;   open-input check: with nothing plugged in every input must read 228,
 ;   which proves the scan works. One that doesn't fails item = paddle.

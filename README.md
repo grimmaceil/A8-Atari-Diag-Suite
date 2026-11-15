@@ -20,10 +20,10 @@ memory test also come as **disk files** (`.xex`, in `disks/`) that load in
 seconds. All of it is also on one **cartridge** (in `carts/`): plug it in,
 switch on, pick a test.
 
-Version 0.5. Every file has its version in its name
-(`diag-32k-xl-xe-v0.5.xex`) and every screen shows it at the right of the
-title bar (`V0.5`), so you can tell which one you are running. The names
-below leave the `-v0.5` out.
+Version 0.6. Every file has its version in its name
+(`diag-32k-xl-xe-v0.6.xex`) and every screen shows it at the right of the
+title bar (`V0.6`), so you can tell which one you are running. The names
+below leave the `-v0.6` out.
 
 ![The menu](docs/img/system-01-menu.png)
 
@@ -37,7 +37,7 @@ below leave the `-v0.5` out.
    | 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, about 3.5 min each; long test `diag-memtest` |
    | 32K or more (an 800 with 32K-48K, any 64K or 128K XL/XE) | the 32k+ tape: `diag-32k-xl-xe`, one tape, about 6 min; long test `diag-memtest` |
    | keyboard, joysticks, paddles only (16K or more) | `diag-controls`: no test harness needed; goes with Atari's SALT disks |
-   | with a disk drive or a MiSTer: 32K or more | `disks/diag-32k-xl-xe.xex` (the 32k+ tape); long test `disks/diag-memtest.xex` (16K) |
+   | with a disk drive or a MiSTer: 48K or 64K | `disks/diag-32k-xl-xe.xex`: everything in one file, the long test as menu line 9 (needs 34K); the long test alone: `disks/diag-memtest.xex` (16K) |
    | a MiSTer, or an AtariMax 128K flash cartridge: any machine, 8K or more | `carts/diag-cart.car`: every test, run from ROM, with the menu; the long test from its line 8 (16K) |
 
    A machine that won't get through its own set: use the 400 set. A tape
@@ -56,6 +56,20 @@ and beeps, loading from a PC, and what to do when something fails.
 
 ## Versions
 
+- **0.6** (2026-11-14)
+  - After the RAM test the ROM test runs by itself, then the menu. On the
+    cartridge CTRL+X during the RAM test goes straight to the menu.
+  - Menu: 8 is the results, 9 the long memory test. Re-running the RAM
+    test (0) keeps the other tests' results.
+  - The long memory test returns to the cartridge's menu (START at its
+    summary).
+  - The disk file `diag-32k-xl-xe.xex` now holds the long memory test too
+    (menu line 9) and the sampled "hello"; it needs 34K.
+  - "hello" also plays on two voices at once, for twice the levels.
+  - CTRL+X skips the console key test. A tap of START is no longer missed
+    now and then at a result screen.
+  - The results screen explains the numbers after FAIL; the guide lists
+    every test's items.
 - **0.5** (2026-11-14)
   - The cartridge runs from ROM: it needs 8K of RAM, not 32K, and works on
     a machine whose RAM can't hold a program. Power on goes straight into

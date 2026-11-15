@@ -63,6 +63,10 @@
 BURNIN	= 1			; xlram.asm: page $FF stays out, NMI vector in RAM
 LRCALL	= 1			; boot.asm: lowram can be called again
 RPCOLVAR = 1			; report.asm: steady color from RPCOL
+	.ifdef CART		; from the cartridge: START at the end goes back
+RESTART	= 1			; to its menu (report.asm: the end waits)
+ENDING	= BSS+$F7
+	.endif
 	.ifdef BOUNCE
 FONT	= LOAD+$3000		; ROM font copy while the OS is out (moves with
 				; the copy; BOFF is a whole number of 1K blocks)
@@ -362,8 +366,18 @@ st_m	lda EVER,x
 	lda DISPOK
 	beq st_code
 	jsr summary
-st_code	lda #0
+st_code
+	.ifdef CART
+	lda #<backcart
+	sta CONTVEC
+	lda #>backcart
 	sta CONTVEC+1
+	lda #1
+	sta ENDING
+	.else
+	lda #0
+	sta CONTVEC+1
+	.endif
 	ldx #9
 st_any	lda BADMASK,x
 	bne st_bad
@@ -375,6 +389,19 @@ st_bad	lda BCOL		; yellow if every error was intermittent
 	jmp report
 
 redraw	= summary		; scrtoggle's text screen
+
+	.ifdef CART
+; backcart: the cartridge back in (a bank select switches it on again) and
+; its power-on entry. Two bytes at the top of low RAM tell it to skip the
+; RAM test and go to the menu: its low RAM test puts every byte back, and
+; its own working storage (which this program has overwritten) is cleared.
+backcart lda #$5A
+	sta $07FE
+	lda #$A5
+	sta $07FF
+	sta $D500		; bank 0
+	jmp $A000
+	.endif
 
 ; ---------------------------------------------------------------------------
 ; The clock. vbios is the OS immediate VBI (VVBLKI); nmiraw is the NMI
@@ -1219,7 +1246,11 @@ s_noerr	dta d'NO ERRORS',$FF
 s_nsol	dta d' SOLID, ',$FF
 s_nextok dta d'ALL PASSED',$FF
 s_nextbad dta d'FIX SOLID ONES FIRST',$FF
+	.ifdef CART
+s_toggle2 dta d'START=MENU  SELECT=RE-BEEP  OPTION=FLASH',$FF
+	.else
 s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FULL-SCREEN FLASH',$FF
+	.endif
 
 	.ifdef BOUNCE
 ; The relocation bitmap: one bit per image byte before BMAP, LSB first; set

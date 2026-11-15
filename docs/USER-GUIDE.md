@@ -1,11 +1,11 @@
 # A8 Cassette Diagnostics: User Guide
 
-Version 0.5
+Version 0.6
 
-Every file has its version in its name (`diag-32k-xl-xe-v0.5.cas`), and
-every screen shows it at the right of the title bar (`V0.5`). If the two
+Every file has its version in its name (`diag-32k-xl-xe-v0.6.cas`), and
+every screen shows it at the right of the title bar (`V0.6`). If the two
 don't match, or a screen shows no version, you are running an older file.
-This guide leaves the `-v0.5` out of the names.
+This guide leaves the `-v0.6` out of the names.
 
 These tapes test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
 800XL, 65XE, 800XE, 130XE and XE Game System. You load them like any
@@ -194,7 +194,7 @@ folder. They load in seconds, not minutes:
 
 | File | Same tests as | Needs |
 |---|---|---|
-| `diag-32k-xl-xe.xex` | the `diag-32k-xl-xe` tape: everything, with the menu | 32K |
+| `diag-32k-xl-xe.xex` | everything in one file: the RAM test, tests 1-7 with the menu, and the long memory test as menu line 9 | 34K (a 48K or 64K machine) |
 | `diag-memtest.xex` | the `diag-memtest` tape | 16K |
 
 To load one:
@@ -241,17 +241,25 @@ Atari, an 8K 400 included, and on a machine whose RAM is too sick to load
 a tape into. Switch on with the cartridge in:
 
 1. The RAM test starts at once (green border and a chirp, then yellow
-   while it tests), and ends on the RAM summary.
-2. START goes to the menu: lines 0 to 8.
+   while it tests), and ends on the RAM summary. A pass goes on by itself
+   after 2 seconds; a fail flashes and beeps its code until you press
+   START.
+2. The ROM test runs next and waits on its result. START goes to the menu.
+
+**CTRL+X goes straight to the menu** (the cartridge only). Press CTRL and
+X any time during the RAM test: a tap is enough. The menu comes up at
+once, with line 0 showing `SKIPPED`.
 
 ![Cartridge menu](img/cart-01-menu.png)
 
-1. `0 RAM`: the RAM test again, with its result so far.
+1. `0 RAM`: the RAM test again (then the ROM test, as at power on). The
+   other tests keep their results.
 2. Tests 1 to 7.
-3. All of them in order, and the results.
-4. `8 LONG RAM TEST`: the long memory test, pass after pass until a key
+3. All of them in order, and `8`, the results.
+4. `9 LONG RAM TEST`: the long memory test, pass after pass until a key
    is pressed. It needs 16K (the line says so on a smaller machine).
-5. The keys.
+5. The keys: START runs the highlighted line, SELECT and OPTION move it,
+   and 0-9 pick a line directly.
 
 A cartridge switches off the 8K of RAM it sits over ($A000-$BFFF), which
 is why a 48K machine with a BASIC cartridge shows 40K. This cartridge
@@ -259,14 +267,11 @@ switches itself off for a moment during the RAM test, tests that 8K too,
 and switches back on, so the machine shows its real size (48K, or 64K on
 an XL/XE) and a fault there is reported in bank 3.
 
-**CTRL+S skips the RAM test** (the cartridge only). Press CTRL and S any
-time from switching on until the RAM summary: a tap is enough, the key is
-looked at all through the test. The menu comes up at once, with line 0
-showing `SKIPPED`.
-
-The long test, line 8, copies itself into RAM and switches the cartridge
-off for good. After it, RESET starts the machine from cold without the
-cartridge; to get back to the menu, switch off and on again.
+The long test, line 9, copies itself into RAM and switches the cartridge
+off while it runs, so it tests all of the RAM. When you stop it (any key,
+at the end of the pass) it shows its summary; START there switches the
+cartridge back on and returns to the menu. The earlier results are gone
+by then (the test used that RAM), and line 0 shows `SKIPPED`.
 
 In the ROM test the cartridge line shows `DIAG` and its CRC. On an XL/XE
 the built-in BASIC is checked as well: the cartridge switches itself off
@@ -330,11 +335,10 @@ Only two things have a beep code: the RAM and the ROMs. They are what a
 machine with no picture can still tell you about.
 
 - **The RAM test** runs first, before anyone has said they can see the
-  screen. Its result flashes the border with every beep, holds red for 3 s
-  and plays again, over and over, until you press START. A pass repeats
-  its long green flashes every 5 s.
-- **Pressing START there** tells the program the picture can be read.
-  From then on the border stays steady and nothing repeats.
+  screen. A fail flashes the border with every beep, holds red for 3 s
+  and plays again, over and over, until you press START. A pass plays the
+  jingle and goes on by itself after 2 seconds.
+- **From the ROM test on** the border stays steady and nothing repeats.
 - **The ROM test** (test 1) plays its code once: one long beep in a lower
   pitch than the RAM's (330 Hz), then one short beep (660 Hz) per failed
   item number, then the low beep. SELECT plays it again.
@@ -359,6 +363,22 @@ The test numbers are the same on every tape, disk file and the cartridge:
 0 RAM, 1 ROMs, 2 keyboard, 3 console keys, 4 joysticks, 5 paddles, 6 POKEY,
 7 GTIA. (Before version 0.5, 4 was POKEY, 5 joysticks, 6 paddles, and the
 RAM was 8.)
+
+### Failed item numbers
+
+A failed test shows `FAIL` and numbers: the items of that test that
+failed. The results screen says `NUMBERS AFTER FAIL = ITEMS THAT FAILED`.
+
+| Test | Items |
+|---|---|
+| 0 RAM | the 16K bank: 1-3 main RAM, 4 the RAM under an XL/XE's OS, 5-8 a 130XE's extra banks |
+| 1 ROMs | 1 the OS reads differently twice; 2 BASIC or the cartridge reads differently twice; 3 an OS ROM matches no known revision; 4 the character set reads differently twice; 5 OS chips from different revisions |
+| 2 Keyboard | 1 a key was already down at the start (stuck); 2 keys never pressed |
+| 3 Console keys | 1 START, 2 SELECT, 3 OPTION never seen; 4 the speaker tone not heard |
+| 4 Joysticks | the port, 1-4: a line was already active at the start (stuck) |
+| 5 Paddles | the paddle, 1-8: it didn't read as unplugged in the open-input check |
+| 6 POKEY | 1 timer interrupt; 2 random numbers; 3-6 voice 1-4 (scale and hiss); 7 the sampled "hello" (cartridge and disk file) |
+| 7 GTIA | 1 the ramps or the sprites look wrong |
 
 ### Keys during a result
 
@@ -549,12 +569,14 @@ rising scale, eight notes from C to C, then noise, a steady hiss. The
 noise comes from a part of the chip the pure tones don't use. A voice that
 plays some notes wrong, or no hiss, counts as not heard.
 
-On the cartridge one more check follows (item 7): the word "hello", a
-short recording, played five times. The first four use each voice's
-volume control as a 4-bit sample player; the fifth uses the console
-speaker, which is only on or off, so it sounds rougher. Answer whether you
-heard all five. (The recording is a public-domain one from Wikimedia
-Commons, `En-us-hello.ogg` by Dvortygirl.)
+On the cartridge and the disk file one more check follows (item 7): the
+word "hello", a short recording, played seven times. The first four use
+each voice's volume control as a 4-bit sample player. The fifth uses the
+console speaker, which is only on or off, so it sounds rougher. The last
+two play on two voices at once (1+2, then 3+4), which doubles the number
+of levels and sounds clearer. Answer whether you heard all seven. (The
+recording is a public-domain one from Wikimedia Commons,
+`En-us-hello.ogg` by Dvortygirl.)
 
 ![POKEY voices](img/av-01-pokey.png)
 

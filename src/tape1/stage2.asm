@@ -36,6 +36,8 @@ GOMENU	= 1
 GOMENU	= 1
 XBANK	= $BFF0
 XREQ	= BSS+$FC
+STASH	= BSS+$E3		; (system/common.asm: the tests' results, kept
+KEEP	= BSS+$EB		; while the RAM test ran again)
 	.endif
 	.if .def ONE32
 FONT	= $7800			; ROM font copy while the OS is out (above the
@@ -200,19 +202,15 @@ no_os	lda DISPOK
 	jsr summary
 fin
 	.ifdef ROM
-	lda #<tomenu		; START: the menu, in its bank
-	sta CONTVEC
+	lda #<tomenu		; on to the system tests' bank: a pass by itself
+	sta CONTVEC		; after 2 s, a fail at START
 	lda #>tomenu
 	sta CONTVEC+1
-	lda #1			; the summary stays up till then
-	sta ENDING
 	.elseif .def ONE32
-	lda #<[SYS32+6]		; START: the system tests, in this image (they
-	sta CONTVEC		; take the RAM results over as test 8)
-	lda #>[SYS32+6]
+	lda #<[SYS32+6]		; on to the system tests, in this image (they take
+	sta CONTVEC		; the RAM results over as test 0): a pass by
+	lda #>[SYS32+6]		; itself after 2 s, a fail at START
 	sta CONTVEC+1
-	lda #1			; the summary stays up till then
-	sta ENDING
 	.elseif .def ONE16
 	lda #<S1AGAIN		; START: the whole test again (stage 1's again)
 	sta CONTVEC
@@ -245,8 +243,11 @@ skip2	lda SKSTAT
 	sta IRQEN
 s2_key	lda KBCODE
 	and #$BF
-	cmp #$BE
+	cmp #$96		; CTRL + X
+	beq s2_go
+	cmp #$BE		; CTRL + S
 	bne s2_x
+s2_go
 	inc SKIPRAM
 	ldx #$FF
 	txs
@@ -268,7 +269,15 @@ tm_n	dex
 	bne tm_lp
 	lda MTMP
 	sta BADMASK+8
-	lda #0			; (XREQ 0: the menu)
+	lda KEEP		; the RAM test again, from the menu: the tests'
+	beq tm_nk		; results back
+	ldx #7
+tm_kp	lda STASH-1,x
+	sta BADMASK,x
+	dex
+	bne tm_kp
+	stx KEEP
+tm_nk	lda #0			; (XREQ 0: the ROM test, then the menu)
 	sta XREQ
 	ldx #SYSA
 	jmp XBANK
@@ -570,8 +579,8 @@ s_txe	dta d'TESTING 130XE BANKS',$FF
 s_nfail	dta d'FAILURES: ',$FF
 s_detail dta d'DETAIL:',$FF
 	.ifdef GOMENU
-s_nextok dta d'ALL PASSED. START: THE MENU',$FF
-s_nextbad dta d'FIX THIS FIRST, OR START: THE MENU',$FF
+s_nextok dta d'ALL PASSED. NEXT: THE ROM TEST',$FF
+s_nextbad dta d'FIX THIS FIRST, OR START: GO ON',$FF
 	.elseif .def ONE16
 s_nextok dta d'ALL PASSED. NEXT: DIAG-16K-02-SYSTEM',$FF
 s_nextbad dta d'NEXT: FIX THIS ONE FIRST, THEN RE-RUN',$FF
@@ -580,16 +589,18 @@ s_nextok dta d'ALL PASSED. NEXT: DIAG-400-02-ROM',$FF
 s_nextbad dta d'NEXT: FIX THIS ONE FIRST, THEN RE-RUN',$FF
 	.endif
 	.ifdef GOMENU
-s_toggle2 dta d'START=MENU  SELECT=RE-BEEP',$FF
+s_toggle2 dta d'START=GO ON  SELECT=RE-BEEP',$FF
 	.elseif .def ONE16
 s_toggle2 dta d'START=AGAIN SELECT=RE-BEEP OPTION=FLASH',$FF
 	.else
 s_toggle2 dta d'SELECT=RE-BEEP  OPTION=FULL-SCREEN FLASH',$FF
 	.endif
 
+	.ifndef ROM		; (in ROM every byte counts: no page alignment)
 PADTO	= [[*+2+$FF]/$100]*$100
 	.if PADTO-*-2>0
 	:[PADTO-*-2] .byte 0
+	.endif
 	.endif
 IMGSUM	.word 0			; mkcas.py: sum of every byte before this
 IMGEND
