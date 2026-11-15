@@ -24,10 +24,10 @@ memory test also come as **disk files** (`.xex`, in `disks/`) that load in
 seconds. All of it is also on one **cartridge** (in `carts/`): plug it in,
 switch on, pick a test.
 
-Version 0.8. Every file has its version in its name
-(`diag-32k-xl-xe-v0.8.xex`) and every screen shows it at the right of the
-title bar (`V0.8`), so you can tell which one you are running. The names
-below leave the `-v0.8` out.
+Version 0.9. Every file has its version in its name
+(`diag-32k-xl-xe-v0.9.xex`) and every screen shows it at the right of the
+title bar (`V0.9`), so you can tell which one you are running. The names
+below leave the `-v0.9` out.
 
 ![The menu](docs/img/system-01-menu.png)
 
@@ -43,6 +43,7 @@ below leave the `-v0.8` out.
    | keyboard, joysticks, paddles only (16K or more) | `diag-controls`: no test harness needed; goes with Atari's SALT disks |
    | with a disk drive or a MiSTer: 32K or more | `disks/diag-32k-xl-xe.xex`: everything in one file, the long test as menu line 9; the long test alone: `disks/diag-memtest.xex` (16K) |
    | a MiSTer, or an AtariMax 128K flash cartridge: any machine, 8K or more | `carts/diag-cart.car`: every test, run from ROM, with the menu; the long test from its line 8 (16K) |
+   | a BASIC cartridge (400/800, 1200XL) | BASCRC, a BASIC program: `cassettes/diag-bascrc.cas` (`ENTER "C:"`) or `disks/bascrc.lst` (`ENTER "D:"`); see the user guide |
 
    A machine that won't get through its own set: use the 8k set. A tape
    that needs more RAM than the machine has stops at once: red border, a
@@ -85,6 +86,12 @@ and beeps, loading from a PC, and what to do when something fails.
     count.
   - The menu's results say `MENU IN 2 S` and `START = MENU` when one test
     was run from the menu, not `NEXT TEST`.
+  - ROM test: a self-check line. The tape or disk file checks its own copy
+    in RAM by CRC32, and the cartridge checks each of its program banks
+    against a CRC32 stored in it (item 6). The 400/800 cartridge reading
+    is gone: a BASIC cartridge is checked by BASCRC, a short BASIC program
+    (`diag-bascrc` tape, `bascrc.lst`). The XL/XE's built-in BASIC is
+    still checked, and one that matches no revision is now a fault.
 - **0.8** (2026-11-15)
   - The 400 set is now the 8k set: `diag-8k-01-ram` to `diag-8k-05-av` and
     `diag-8k-memtest`. It runs on any Atari, tells a 400/800 from an XL/XE

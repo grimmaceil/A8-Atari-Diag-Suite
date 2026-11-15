@@ -455,12 +455,24 @@ IMGEND
 BSS	= $0800			; in RAM: the page above low RAM
 TSTART	= [>BSS]+1
 	.else
-; Pad to a whole page; the last two bytes hold the image sum (mkcas.py).
-PADTO	= [[*+2+$FF]/$100]*$100
-	.if PADTO-*-2>0
-	:[PADTO-*-2] .byte 0
+; Pad to a whole page; the last two bytes hold the image sum (mkcas.py),
+; or (ONE32) the last six: the sum, then CRCFIX, for the ROM test's check
+; of the image from PAYAT on (stage 2, the system tests, the long test's
+; copy: all as loaded when it runs; t_rom.asm's selfchk).
+	.ifdef ONE32
+TAILN	= 6
+CRCAT	= PAYAT
+	.else
+TAILN	= 2
+	.endif
+PADTO	= [[*+TAILN+$FF]/$100]*$100
+	.if PADTO-*-TAILN>0
+	:[PADTO-*-TAILN] .byte 0
 	.endif
 CKSUM	.word 0
+	.ifdef ONE32
+CRCFIX	.dword 0
+	.endif
 IMGEND
 NREC	= [IMGEND-LOAD]/128
 	.ifdef ONE32

@@ -3,19 +3,23 @@
 ; machine's ROMs: a repaired board can carry chips of mixed revisions, so on
 ; the 400/800 each OS chip is named on its own.
 ;   item 1: the OS reads differently twice (flaky ROM, socket, data bus)
-;   item 2: BASIC or the cartridge reads differently twice
+;   item 2: the XL/XE's built-in BASIC matches no revision (A, B, C):
+;           failing, or reading differently
 ;   item 3: an OS ROM matches no known revision (patched, replacement,
 ;           failing or mis-socketed)
 ;   item 4: the character set read differently twice (dprereq's sums)
 ;   item 5: OS chips from different revisions
+;   item 6: this program's own copy fails its CRC32 (selfchk): the tape or
+;           disk file as it sits in RAM, or the cartridge's code banks
 ; A ROM that matches is read once: a bad read would not match. One that
 ; doesn't is read again, to tell flaky from merely unknown.
 ;
 ; The 400/800 OS is three chips: $D800-$DFFF, $E000-$EFFF, $F000-$FFFF. The
 ; XL/XE OS is one 16K image, $C000-$CFFF, then $D000-$D7FF (the self-test,
 ; which the CPU sees at $5000-$57FF with PORTB bit 7 = 0), then $D800-$FFFF;
-; the 1200XL's two 8K chips are its halves. BASIC (XL/XE: PORTB bit 1 = 0) or
-; a 400/800 cartridge: $A000-$BFFF.
+; the 1200XL's two 8K chips are its halves. BASIC: the XL/XE's built-in ROM
+; (PORTB bit 1 = 0), $A000-$BFFF. A BASIC cartridge (400/800, 1200XL) isn't
+; read: BASCRC, a BASIC program, checks it (the user guide).
 
 CRC	= $86			; 4: CRC32 being built (zero page: the inner loop)
 OSCRC	= T3D+$03		; 3 x 4: 400/800 chips $D800, $E000, $F000;
@@ -23,11 +27,9 @@ OSCRC	= T3D+$03		; 3 x 4: 400/800 chips $D800, $E000, $F000;
 BASCRC	= T3D+$0F		; 4
 OSID	= T3D+$13		; 3: name number of each OSCRC ($FF: unknown)
 BASID	= T3D+$16
-ROMHAVE	= T3D+$17		; bit 1: BASIC/cartridge read, bit 2: halves read,
-				; bit 3: it is a cartridge
-SELFCRC	= T3D+$18		; 4: ROM (the cartridge build): this bank's CRC
-BWAT	= $0600			; and its BASIC reader, in low RAM
-BWHAVE	= $8B			; nonzero: BASIC was there
+ROMHAVE	= T3D+$17		; bit 1: BASIC read, bit 2: halves read
+BWAT	= $0600			; the cartridge: its BASIC and bank readers, in
+BWHAVE	= $8B			; low RAM; nonzero: BASIC was there / a bank failed
 CRCSV	= TSCR+$00		; 16: the first read, for the re-read to match
 PGLEFT	= $8A			; crcpg: pages to go (zero page: see osread)
 RTAB	= TSCR+$11		; crcid: the table's entries left
@@ -76,37 +78,24 @@ tr_osok	jsr mixed
 	.ifdef RAM8
 	jsr xkey
 	.endif
-	.ifdef ROM		; the cartridge build: this cartridge (the bank
-	jsr br_crc		; this runs in), for its own line
-	ldx #3
-tr_self	lda BASCRC,x
-	sta SELFCRC,x
-	dex
-	bpl tr_self
+	jsr selfchk		; this program's own copy
+	bcc tr_bas
+	lda #32			; item 6
+	ora BADMASK+1
+	sta BADMASK+1
+tr_bas
+	.ifdef RAM8
+	jsr xkey
 	.endif
-
-	jsr basread		; BASIC or the cartridge
+	jsr basread		; the XL/XE's built-in BASIC
 	bcc tr_font
 	lda #2
 	ora ROMHAVE
 	sta ROMHAVE
 	jsr basname
-	cmp #$FF
-	bne tr_font
-	ldx #3
-tr_bsv	lda BASCRC,x
-	sta CRCSV,x
-	dex
-	bpl tr_bsv
-	jsr basread
-	ldx #3
-tr_bcm	lda BASCRC,x
-	cmp CRCSV,x
-	bne tr_bfl
-	dex
-	bpl tr_bcm
-	bmi tr_font
-tr_bfl	lda #2
+	cmp #$FF		; not revision A, B or C: item 2 (the built-in
+	bne tr_font		; ROM is always one of them)
+	lda #2
 	ora BADMASK+1
 	sta BADMASK+1
 
@@ -323,11 +312,7 @@ basread	lda MACHINE
 	bne bx_xl
 	clc
 	rts
-bx_xl	ldx #crcend-bw_src-1
-bx_cp	lda bw_src,x
-	sta BWAT,x
-	dex
-	bpl bx_cp
+bx_xl	jsr bwcopy
 	jsr crcnew
 	jsr BWAT
 	lda BWHAVE
@@ -340,11 +325,56 @@ bx_put	lda CRC,x
 	dex
 	bpl bx_put
 bx_x	rts
+
+; bwcopy: the low-RAM readers (bw_src, bk_src, crcpg) to BWAT.
+bwcopy	ldx #0
+bc_lp	lda bw_src,x
+	sta BWAT,x
+	inx
+	cpx #crcend-bw_src
+	bne bc_lp
+	rts
+
+; selfchk, on the cartridge: each code bank's CRC32 of $A000-$BEFF against
+; the one mkcar.py put in its tail ($BFF6, RCRCAT), by bk_src in low RAM,
+; which switches the bank in. C set: one fails.
+selfchk	jsr bwcopy
+	lda #0
+	sta BWHAVE
+	ldx #CODEBK-1
+sk_bk	stx MTMP
+	jsr BWAT+bk_src-bw_src
+	ldx MTMP
+	dex
+	bpl sk_bk
+	lda BWHAVE
+	cmp #1
+	rts
 	.else
-; basread: BASIC (XL/XE) or a cartridge (400/800) into BASCRC. C clear: no
-; ROM there.
+; selfchk: this program's own copy in RAM, by CRC32. The build puts the CRC
+; of the image from CRCAT (SELFAT here) up to the last 4 bytes in those 4
+; bytes (CRCFIX, mkcas.py), so the CRC of all of it ends at the CRC32
+; residue, the same for every program. C set: it doesn't.
+selfchk	jsr crcnew
+	lda #>SELFAT
+	ldx #SELFPG
+	jsr crcpg
+	ldx #3
+sk_cmp	lda CRC,x
+	cmp sk_res,x
+	bne sk_bad
+	dex
+	bpl sk_cmp
+	clc
+	rts
+sk_bad	sec
+	rts
+sk_res	.byte $E3, $20, $BB, $DE	; (before CRC32's final inversion)
+
+; basread: the XL/XE's built-in BASIC into BASCRC. C clear: none to see (a
+; 400/800, a 1200XL, or a cartridge covering it).
 basread	lda MACHINE
-	beq br_cart
+	beq br_no
 	lda PORTB
 	sta PBSAVE
 	ora #2			; BASIC out: RAM at $A000
@@ -363,41 +393,15 @@ br_cmp	lda $A000,x
 	bne br_rom
 	dex
 	bpl br_cmp
-	lda $A000		; the same both ways: RAM (a 1200XL), or a
-	sta MTMP		; cartridge, which holds $A000-$BFFF either way.
-	eor #$FF		; A write changes RAM, even RAM with bad bits,
-	sta $A000		; and never changes a ROM
-	lda $A000
-	cmp MTMP
-	php
-	lda MTMP
-	sta $A000		; (RAM: put it back)
-	plp
-	clc
-	bne br_out
-	lda #8
-	ora ROMHAVE
-	sta ROMHAVE
+	clc			; the same both ways: RAM (a 1200XL) or a cartridge
+	bcc br_out
 br_rom	jsr br_crc
 	sec
 br_out	lda PBSAVE		; (keeps C)
 	sta PORTB
 	rts
-br_cart	lda RAMTOP		; RAM up to $BFFF: no cartridge
-	cmp #$A1
-	bcs br_no
-	lda #$A0		; and the bus floats if nothing is plugged in
-	jsr varied
-	bcc br_no
-	lda #8
-	ora ROMHAVE
-	sta ROMHAVE
-	jsr br_crc
-	sec
-	rts
 br_no	clc
 	rts
-	.endif
 br_crc	jsr crcnew
 	lda #$A0
 	ldx #32
@@ -409,6 +413,7 @@ br_put	lda CRC,x
 	dex
 	bpl br_put
 	rts
+	.endif
 
 ; basname: name BASCRC into BASID (A too).
 basname	ldx #BASCRC-OSCRC	; crcid's X counts from OSCRC
@@ -439,8 +444,8 @@ cu_lp	lda CRC,x
 	rts
 
 	.ifdef ROM
-	.if crcend-bw_src>128
-	.error "the BASIC reader is too long for its copy loop"
+	.if crcend-bw_src>255
+	.error "the low-RAM readers are too long for bwcopy"
 	.endif
 ; bw_src: runs at BWAT, with crcpg right behind it (copied along).
 bw_src	sta $D510		; the cartridge off
@@ -464,9 +469,30 @@ bw_rom	inc BWHAVE
 	jsr BWAT+crcpg-bw_src
 bw_out	pla
 	sta PORTB
-	ldx #3-OTHER		; this bank back in
+bk_back	ldx #3-OTHER		; this bank back in
 	sta $D500,x
 	rts
+; bk_src: runs at BWAT too: code bank X's CRC32 of $A000-$BEFF against its
+; tail's (RCRCAT); BWHAVE counts the banks that don't match.
+bk_src	sta $D500,x		; bank X in
+	lda #$FF		; a new CRC
+	sta CRC
+	sta CRC+1
+	sta CRC+2
+	sta CRC+3
+	lda #$A0
+	ldx #$1F
+	jsr BWAT+crcpg-bw_src
+	ldx #3
+bk_cmp	lda CRC,x
+	eor #$FF
+	cmp RCRCAT,x
+	bne bk_bad
+	dex
+	bpl bk_cmp
+	bmi bk_back
+bk_bad	inc BWHAVE
+	bne bk_back		; (always)
 	.endif
 
 ; crcpg: add X pages from page A to the CRC. Reflected CRC32, polynomial
@@ -549,23 +575,6 @@ ci_no	lda CIENT
 	lda #$FF
 	rts
 
-; varied: C set if page A reads like a ROM (32 or more byte-to-byte changes)
-; rather than an empty bus (the same byte over and over).
-varied	sta PTR+1
-	lda #0
-	sta PTR
-	tax			; changes
-	tay
-	lda (PTR),y
-va_lp	cmp (PTR),y
-	beq va_same
-	inx
-	lda (PTR),y
-va_same	iny
-	bne va_lp
-	cpx #32
-	rts
-
 ; rominfo: the ROM lines from row A: each OS chip (or the XL/XE image, and
 ; its halves if it is unknown), BASIC or the cartridge, the font.
 rominfo	sta CNT
@@ -599,74 +608,48 @@ ri_xl	ldx #0
 	lda #<s_re0
 	ldy #>s_re0
 	jsr romline
-ri_bas
-	.ifdef ROM		; the cartridge: itself, then (XL/XE) BASIC
-	lda CNT
-	ldx #0
-	jsr at
-	lda #<s_rcart
-	ldy #>s_rcart
-	jsr puts
-	lda CNT
-	ldx #11
-	jsr at
-	lda #<s_diag
-	ldy #>s_diag
-	jsr puts
-	lda CNT
-	ldx #29
-	jsr at
-	lda #4			; '$'
-	jsr putc
-	ldx #3
-ri_sc	lda SELFCRC,x
-	jsr puthex
-	dex
-	bpl ri_sc
+ri_bas	lda #<s_rself		; this program's own copy
+	ldy #>s_rself
+	jsr ri_lbl
+	lda BADMASK+1
+	and #32
+	beq ri_sk
+	lda #<s_skbad
+	ldy #>s_skbad
+	bne ri_put
+ri_sk	lda #<s_skok
+	ldy #>s_skok
+ri_put	jsr puts
 	inc CNT
-	lda MACHINE
+	lda MACHINE		; BASIC: the 400/800 has none built in
 	bne ri_xb
-	jmp ri_ch
-ri_xb
-	.endif
-	lda ROMHAVE
-	and #2
-	bne ri_have
-	lda CNT			; none: say so (not a fault: a 400/800 without a
-	ldx #0			; cartridge, a 1200XL, BASIC switched off)
-	jsr at
-	lda #<s_rcart
-	ldy #>s_rcart
-	ldx MACHINE
-	beq ri_n
 	lda #<s_rbas
 	ldy #>s_rbas
-ri_n	jsr puts
-	lda CNT
-	ldx #11
-	jsr at
+	jsr ri_lbl
+	lda #<s_bcart
+	ldy #>s_bcart
+	jsr puts
+	jmp ri_nx
+ri_xb	lda ROMHAVE
+	and #2
+	bne ri_have
+	lda #<s_rbas		; none: a 1200XL, or a cartridge over it
+	ldy #>s_rbas
+	jsr ri_lbl
 	lda #<s_none
 	ldy #>s_none
 	jsr puts
-	inc CNT
+ri_nx	inc CNT
 	jmp ri_ch
 ri_have	ldx #3			; BASCRC is OSCRC+12 and BASID is OSID+3: slot 3
-	lda ROMHAVE
-	and #8
-	beq ri_b
-	lda #<s_rcart
-	ldy #>s_rcart
-	bne ri_bp
-ri_b	lda #<s_rbas
+	lda #<s_rbas
 	ldy #>s_rbas
-ri_bp	jsr romline
+	jsr romline
 ri_ch	lda CNT
 	jmp chinfo
 
-; romline: row CNT (then CNT+1): label A/Y, then the name of slot X (0-2:
-; the OS, 3: BASIC) and its CRC32.
-romline	stx MTMP
-	pha
+; ri_lbl: label A/Y at column 0 of row CNT, then the cursor at column 11.
+ri_lbl	pha
 	tya
 	pha
 	lda CNT
@@ -678,17 +661,18 @@ romline	stx MTMP
 	jsr puts
 	lda CNT
 	ldx #11
-	jsr at
+	jmp at
+
+; romline: row CNT (then CNT+1): label A/Y, then the name of slot X (0-2:
+; the OS, 3: BASIC) and its CRC32.
+romline	stx MTMP
+	jsr ri_lbl
 	ldx MTMP
 	lda OSID,x
 	cmp #$FF
 	bne rl_k
-	lda #<s_unk		; an unknown OS is a fault (inverse); an unknown
-	ldy #>s_unk		; BASIC or cartridge isn't (any cartridge will do)
-	cpx #3
-	bne rl_p
-	lda #<s_unkb
-	ldy #>s_unkb
+	lda #<s_unk		; unknown: a fault (inverse)
+	ldy #>s_unk
 	bne rl_p
 rl_k	cmp #18			; an OS or BASIC rev (0-17): "REV " first
 	bcs rl_nr
@@ -792,8 +776,8 @@ tab_e0h	.byte 6
 	.byte 8
 	.dword $ACCF9678
 	.byte 11
-tab_bas	.byte 3			; BASIC revisions A, B, C: the 400/800's cartridge
-	.dword $4BEC4DE2	; and the XL/XE's built-in ROM
+tab_bas	.byte 3			; BASIC revisions A, B, C (the XL/XE's built-in
+	.dword $4BEC4DE2	; ROM is B or C)
 	.byte 15
 	.dword $F0202FB3
 	.byte 16
@@ -822,11 +806,17 @@ n_basa	dta d'A',$FF
 n_basb	dta d'B',$FF
 n_basc	dta d'C',$FF
 	.ifdef ROM
-s_diag	dta d'DIAG',$FF
+s_rself	dta d'DIAG CART',$FF
+	.elseif .def XEX
+s_rself	dta d'DIAG DISK',$FF
+	.else
+s_rself	dta d'DIAG TAPE',$FF
 	.endif
+s_skok	dta d'SELF-CHECK OK',$FF
+s_skbad	dta d'SELF-CHECK FAILED'*,$FF
+s_bcart	dta d'A CARTRIDGE: USE BASCRC',$FF
 s_rev	dta d'REV ',$FF
 s_unk	dta d'UNKNOWN'*,$FF
-s_unkb	dta d'NOT IN THE TABLE',$FF
 s_none	dta d'NONE',$FF
 s_rd8	dta d'OS $D800',$FF
 s_re0	dta d'OS $E000',$FF
@@ -834,4 +824,3 @@ s_rf0	dta d'OS $F000',$FF
 s_rc0	dta d'OS $C000',$FF
 s_rxl	dta d'OS XL/XE',$FF
 s_rbas	dta d'BASIC',$FF
-s_rcart	dta d'CARTRIDGE',$FF

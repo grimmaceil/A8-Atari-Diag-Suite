@@ -152,6 +152,31 @@ done with); it checks that itself. It uses part one's library, test 7's
 and `tend`: build.py writes their addresses to `build/part1.asm` from part
 one's label table (the `PART1` list).
 
+### The ROM test's self-check
+
+The ROM test also checks the program it is part of (`selfchk`, item 6).
+A tape or disk file with the ROM test (`SELFCRC`: the 8k ROM tape, the 16k
+system tape; and the 32k+ image, from tape 1's `ONE32`) ends in the image
+sum and then 4 more bytes, `CRCFIX`. `mkcas.py`'s `patch_boot` puts there
+the CRC32 of the image from `CRCAT` up to them, as it is in RAM once the
+boot has run (the page operands boot.asm changes as it runs, its sum loop
+and low RAM test, at their final values), so at run time the CRC of
+`CRCAT` to the end leaves the register at the CRC32 residue, $DEBB20E3,
+whatever the program: there is no per-build constant in the code.
+`CRCAT` is `LOAD` for a tape on its own, and `PAYAT` for the 32k+ image
+(stage 1 below it holds the live BSS page; stage 2, the system tests and
+the long test's copy above it don't change). The boot sum loop leaves out
+everything from `CKSUM` on. On the cartridge `mkcar.py` stores each code
+bank's CRC32 of $A000-$BEFF at $BFF6 (spare tail bytes; a code bank's code
+must stay below $BF00), and the ROM test switches each bank in from a
+routine in low RAM (`bk_src`) to compare.
+
+BASCRC (`src/basic/bascrc.bas`) is the check for a BASIC cartridge, which
+the programs don't read: `tools/mkbasic.py` makes it an ATASCII listing
+(`disks/bascrc.lst`) and a tape for `ENTER "C:"` (`cassettes/diag-bascrc`:
+the cassette handler's $FC/$FA/$FE records with 3 s gaps, as the handler
+stops the motor between records when BASIC reads that way).
+
 ### 130XE banks and the 32k+ image
 
 Stage 2 tests a 130XE's extended banks by switching them in at

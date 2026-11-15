@@ -873,6 +873,10 @@ def main():
     print(f'first result at {t_done:.1f} s, {steps} steps, {hw.nmis} VBIs, '
           f'ended at {hw.line / LINES_PER_MS / 1000:.0f} s, PC ${mpu.pc:04X}, PORTB ${hw.regs.get(0xD301, 0xFF):02X}')
     print('--- final screen'); print(hw.screen())
+    if os.environ.get('SIM_IMGDIFF') and car is None:   # the image's bytes changed in RAM
+        diff = [load + i for i in range(len(img)) if hw.ram[load + i] != img[i]]
+        print(f'image bytes changed in RAM: {len(diff)}',
+              ' '.join(f'${x:04X}:{img[x - load]:02X}>{hw.ram[x]:02X}' for x in diff[:24]))
     if a.peek:                           # BSS offsets, e.g. E0-F3
         lo, hi = (int(x, 16) for x in a.peek.split('-'))
         print(f'BSS ${bss:04X} +{lo:02X}:', ' '.join(f'{hw.ram[bss + i]:02X}' for i in range(lo, hi + 1)))

@@ -95,7 +95,8 @@ ch_line	sta WSYNC
 ; ---------------------------------------------------------------------------
 ; Image checksum. The OS checks each record in the cassette buffer, but not
 ; the copy to LOAD, so the copy is verified here. 16-bit sum of every image
-; byte except the stored sum. The page operand of ck_op changes as the loop
+; byte except the stored sum and what follows it (SELFCRC: CRCFIX, the
+; ROM test's self-check). The page operand of ck_op changes as the loop
 ; runs; mkcas.py allows for that.
 	lda #>LOAD
 	sta ck_op+2
@@ -120,20 +121,16 @@ ck_nb
 	.endif
 	cmp #>IMGEND
 	bne ck_lp
-	; take the two stored-sum bytes back out
-	sec
+	ldx #IMGEND-CKSUM-1	; take the stored sum (and CRCFIX) back out
+ck_out	sec
 	lda SUM
-	sbc CKSUM
+	sbc CKSUM,x
 	sta SUM
 	bcs ck_s1
 	dec SUM+1
-ck_s1	sec
+ck_s1	dex
+	bpl ck_out
 	lda SUM
-	sbc CKSUM+1
-	sta SUM
-	bcs ck_s2
-	dec SUM+1
-ck_s2	lda SUM
 	cmp CKSUM
 	bne ck_bad
 	lda SUM+1

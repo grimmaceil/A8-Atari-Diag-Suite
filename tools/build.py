@@ -251,6 +251,8 @@ def build_one32(name, defines, label, xex=None):
         b2 = Path(f'{s2}.bin').read_bytes()
         dsy = dict(ALL7, SETNO=4, MENU=1, CHAIN=1, SYSAT=f'${sysat:04X}',
                    SHAREBSS=f"${s1['BSS']:04X}", RAMAGAIN=f"${s1['AGAIN']:04X}",
+                   SELFAT=f"${s1['PAYAT']:04X}",       # the ROM test's self-check:
+                   SELFPG=(s1['IMGEND'] - s1['PAYAT']) // 256,  # stage 1's CRCAT on
                    **{k: 1 for k in ('XEX', 'CART') if k in defines})
         if mem:                     # (its address: the size doesn't depend on it)
             dsy.update(MEMAT='$7000', MEMPG=len(mem) // 256)
@@ -260,7 +262,7 @@ def build_one32(name, defines, label, xex=None):
         pay.write_bytes(b2 + Path(f'{sy}.bin').read_bytes() + mem)
         mads('tape1', 'main.asm', out, d1)
         new = labels(f'{out}.lab')
-        if all(new[k] == s1[k] for k in ('BSS', 'PAYAT', 'TSTART')):
+        if all(new[k] == s1[k] for k in ('BSS', 'PAYAT', 'TSTART', 'IMGEND')):
             break
         s1 = new
     else:
@@ -301,7 +303,8 @@ def build_car(fast):
     hellopg = len(hello.read_bytes()) // 256
     hellobk = CARMEMBK + -(-mempg // CARDATAPG)                  # after the memory test
     common = dict(f, ROM=1, MENU=1, SETNO=0, TAPENO=0, MEMBK=CARMEMBK, MEMPG=mempg,
-                  DATAPG=CARDATAPG, HELLOBK=hellobk, HELLOPG=hellopg)
+                  DATAPG=CARDATAPG, HELLOBK=hellobk, HELLOPG=hellopg,
+                  CODEBK=3)                  # (the ROM test's self-check: banks 0-2)
     mads('system', 'main.asm', BUILD / 'cart-sysa',
          dict(common, WANT_ROM=1, WANT_KB=1, WANT_CON=1, OTHER=2))
     mads('system', 'main.asm', BUILD / 'cart-sysb',
@@ -370,6 +373,13 @@ def main():
             f = f.replace(f.with_name(f'{name}.xex'))
             xexes.append(f)
     car = build_car(a.fast)
+    # BASCRC, the BASIC cartridge check (a BASIC program): a tape for
+    # ENTER "C:" with the tapes, the listing for ENTER "D:" with the disks
+    bas, lst = BUILD / 'diag-bascrc.cas', BUILD / 'bascrc.lst'
+    subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkbasic.py'),
+                    str(ROOT / 'src' / 'basic' / 'bascrc.bas'), str(lst), str(bas)], check=True)
+    cas.append(bas)
+    xexes.append(lst)
     if a.fast:                      # FAST builds skip test patterns: not for use,
         return                      # so they stay in build/
     rel = []                        # the release files, named with the version

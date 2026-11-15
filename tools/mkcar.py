@@ -10,12 +10,14 @@ $A000-$BFFF. The tests run from ROM (src/cart/romsum.asm has the layout):
   then              data banks (--data): one file each, from $A000, read
                     while that bank is switched in (src/cart/hello.asm)
   every bank        the same 32-byte tail at $BFE0: the power-on jump to
-                    bank 0, the bank's sum, the bank switch (XBANK) and
-                    the cartridge header
+                    bank 0, the bank's sum, the bank switch (XBANK), a
+                    code bank's CRC32 ($A000-$BEFF, for the ROM test's
+                    self-check) and the cartridge header
 """
 import argparse
 import struct
 import sys
+import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -24,6 +26,8 @@ from mkcas import patch_boot   # noqa: E402
 BANK = 0x2000
 NBANKS = 16
 TAILAT = 0x1FE0                # $BFE0
+CODEMAX = 0x1F00               # a code bank's code: $A000-$BEFF, which its
+CRCAT = 0x1FF6                 # CRC32 at $BFF6 covers (t_rom.asm's selfchk)
 DATAPG = 0x1F                  # image pages in a data bank ($A000-$BEFF)
 CARTYPE = 41                   # AtariMax 128K
 TAIL = bytes([0xA2, 0x00,              # $BFE0  ldx #0
@@ -34,7 +38,7 @@ TAIL = bytes([0xA2, 0x00,              # $BFE0  ldx #0
               0x00, 0x00,              # $BFEE  the bank's sum
               0x9D, 0x00, 0xD5,        # $BFF0  sta $D500,x   XBANK
               0x4C, 0x03, 0xA0,        #        jmp $A003     the warm entry
-              0xFF, 0xFF, 0xFF, 0xFF,
+              0xFF, 0xFF, 0xFF, 0xFF,  # $BFF6  a code bank: the CRC32 of $A000-$BEFF
               0xE0, 0xBF,              # $BFFA  run address
               0x00,                    # $BFFC  a cartridge is in
               0x04,                    # $BFFD  start it, no disk boot
@@ -56,9 +60,10 @@ def main():
     banks = []
     for path in a.bank:
         code = Path(path).read_bytes()
-        if len(code) > TAILAT:
-            sys.exit(f'{path}: {len(code)} bytes, a bank holds {TAILAT}')
+        if len(code) > CODEMAX:
+            sys.exit(f'{path}: {len(code)} bytes, a code bank holds {CODEMAX}')
         banks.append(bytearray(code + b'\xff' * (TAILAT - len(code))))
+    ncode = len(banks)
     img, nrec, load, s = patch_boot(*a.mem)
     if load != 0x0800:
         sys.exit('the memory test must run at $0800')
@@ -78,8 +83,10 @@ def main():
         sys.exit('the programs do not fit in the cartridge')
     while len(banks) < NBANKS:
         banks.append(bytearray(b'\xff' * TAILAT))
-    for b in banks:
+    for i, b in enumerate(banks):
         b += TAIL
+        if i < ncode:
+            b[CRCAT:CRCAT + 4] = struct.pack('<I', zlib.crc32(bytes(b[:CODEMAX])))
         sm = sum(b) & 0xFFFF           # (the sum's own two bytes are 0 here)
         b[0x1FEE:0x1FF0] = struct.pack('<H', sm)
 
@@ -88,7 +95,7 @@ def main():
     open(a.car, 'wb').write(head + rom)
     print(f'{a.car}: AtariMax 128K, code banks 0-{membk - 1} ('
           + ', '.join(f'{len(Path(p).read_bytes())} bytes' for p in a.bank)
-          + f' of {TAILAT}), memtest {len(img) // 256} pages from bank {membk}'
+          + f' of {CODEMAX}), memtest {len(img) // 256} pages from bank {membk}'
           + ''.join(f', {Path(p).name} in bank {membk + -(-len(img) // 256 // DATAPG) + i}'
                     for i, p in enumerate(a.data)))
 

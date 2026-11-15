@@ -20,6 +20,7 @@ the boot would swallow the next stage's first record.
 import argparse
 import struct
 import sys
+import zlib
 
 LEADER_MS = 15000   # mark tone before the first record (Necromancer: ~14.9 s)
 IRG_MS = 260        # gap between records
@@ -39,8 +40,9 @@ def read_labels(path):
     return labels
 
 
-def image_sum(img, load, ck_op):
-    """The 16-bit sum main.asm computes at run time.
+def image_sum(img, load, ck_op, tail=2):
+    """The 16-bit sum boot.asm computes at run time: every byte but the last
+    TAIL (the sum, and CRCFIX if there is one).
 
     The page operand of ck_op is rewritten as the loop runs; when the loop
     reaches that byte it holds the page currently being summed, which is the
@@ -49,7 +51,7 @@ def image_sum(img, load, ck_op):
     seen = bytearray(img)
     op = ck_op + 2 - load
     seen[op] = (ck_op + 2) >> 8
-    return sum(seen[:-2]) & 0xFFFF
+    return sum(seen[:-tail]) & 0xFFFF
 
 
 def record(data, ctrl=0xFC):
@@ -90,13 +92,31 @@ def load_image(path):
 
 def patch_boot(bin_path, lab_path):
     """Put the image sum into a boot image's last two bytes, in place
-    (mkcas and mkxex). Returns the image, its records, load address, sum."""
+    (mkcas and mkxex). Returns the image, its records, load address, sum.
+    With CRCFIX (the ROM test's self-check: the sum, then 4 bytes, end the
+    image): those 4 bytes are the CRC32 of the image from CRCAT up to them,
+    as it is in RAM once the boot has run (the page operands boot.asm's sum
+    loop and low RAM test change, as they leave them), so the CRC32 of
+    CRCAT to the end is the CRC32 residue."""
     img, nrec, load = load_image(bin_path)
     lab = read_labels(lab_path)
-    if load != lab['LOAD'] or lab['CKSUM'] - load != len(img) - 2:
+    tail = 6 if 'CRCFIX' in lab else 2
+    if load != lab['LOAD'] or lab['CKSUM'] - load != len(img) - tail:
         sys.exit('boot image layout does not match the label table')
-    s = image_sum(img, load, lab['CK_OP'])
-    img[-2:] = struct.pack('<H', s)
+    s = image_sum(img, load, lab['CK_OP'], tail)
+    k = len(img) - tail
+    img[k:k + 2] = struct.pack('<H', s)
+    if tail == 6:
+        ram = bytearray(img)         # the boot's own changes to its code:
+        ram[lab['CK_OP'] + 2 - load] = (load + len(img)) >> 8   # the sum loop's
+        for lr in ('LR_A', 'LR_B', 'LR_C', 'LR_D'):              # page, the low
+            if lr in lab:                                        # RAM test's
+                ram[lab[lr] + 2 - load] = 0x08                   # (it ends at 8)
+        at = lab['CRCAT'] - load
+        if at % 256:
+            sys.exit('CRCAT must be on a page')
+        img[-4:] = struct.pack('<I', zlib.crc32(bytes(ram[at:-4])))
+        assert zlib.crc32(bytes(ram[at:-4]) + bytes(img[-4:])) == 0x2144DF1C
     open(bin_path, 'wb').write(img)
     return img, nrec, load, s
 

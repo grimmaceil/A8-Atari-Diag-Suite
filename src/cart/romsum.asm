@@ -12,11 +12,14 @@
 ;   $BFE8  rts                                the OS's init address
 ;   $BFEE  the bank's sum (16 bits: every byte of the bank but these two)
 ;   $BFF0  sta $D500,x / jmp $A003            XBANK: on to bank X, warm
+;   $BFF6  the CRC32 of $A000-$BEFF (a code bank: its code stays below $BF00;
+;          the ROM test checks it, t_rom.asm)
 ;   $BFFA  the cartridge header
 ; A write to $D500+n selects bank n; the instruction after it comes from
 ; the new bank, which holds the same bytes there.
 ROMBASE	= $A000
 RSUMAT	= $BFEE
+RCRCAT	= $BFF6
 XBANK	= $BFF0
 XREQ	= BSS+$FC		; what a bank is entered for: 0 the menu, 1-7 that
 				; test, 8 the long memory test's loader

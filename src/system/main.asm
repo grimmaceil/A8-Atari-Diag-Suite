@@ -78,6 +78,16 @@ NEEDYN	= 1
 	.elseif .def WANT_GTIA
 NEEDYN	= 1
 	.endif
+	.ifdef WANT_ROM		; the ROM test checks this program's own copy too
+	.ifndef ROM		; (t_rom.asm's selfchk): a tape or disk file on its
+	.ifndef CHAIN		; own ends in CRCFIX (mkcas.py), from CRCAT = LOAD;
+SELFCRC	= 1			; the 32k+ image's comes from tape 1 (build.py)
+SELFAT	= LOAD
+SELFPG	= [IMGEND-LOAD]/256
+CRCAT	= LOAD
+	.endif
+	.endif
+	.endif
 	.ifdef GPART2		; the 8K sound and video tape: test 7's page 2 is
 SYSPART	= 1			; the tape's part two (gpart2.asm), loaded over
 NORAMCHK = 1			; the tests already run (common/loader.asm)
@@ -413,12 +423,21 @@ TSTART	= [>BSS]+1
 	.else
 	.ifndef CHAIN		; (the one-load image: no pages of its own, so the
 				; disk file needs no more than 32K)
-; Pad to a whole page; the last two bytes hold the image sum (mkcas.py).
-PADTO	= [[*+2+$FF]/$100]*$100
-	.if PADTO-*-2>0
-	:[PADTO-*-2] .byte 0
+; Pad to a whole page; the last two bytes hold the image sum (mkcas.py),
+; or (SELFCRC) the last six: the sum, then CRCFIX.
+	.ifdef SELFCRC
+TAILN	= 6
+	.else
+TAILN	= 2
+	.endif
+PADTO	= [[*+TAILN+$FF]/$100]*$100
+	.if PADTO-*-TAILN>0
+	:[PADTO-*-TAILN] .byte 0
 	.endif
 CKSUM	.word 0			; (as stage 3: the loader's plain sum)
+	.ifdef SELFCRC
+CRCFIX	.dword 0
+	.endif
 	.endif
 IMGEND
 NREC	= [IMGEND-LOAD]/128
