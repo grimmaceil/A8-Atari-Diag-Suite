@@ -1,8 +1,26 @@
-# A8 Cassette Diagnostics: Project Brief
+# A8 Atari Diag Suite: scope and design
 
-Cassette-loaded diagnostic suite for every Atari 8-bit computer: the 400, 800, 1200XL, 600XL, 800XL, 65XE, 800XE, 130XE and XE Game System. Each set of tapes is built for a minimum amount of RAM and runs on every machine with at least that much, newer models included (a tape halts with a clear signal on a machine with less). The goal is to give as much diagnostic information as possible through synchronized beeps and border flashes, adding plain-text screens as the video hardware proves itself.
+By **Michael Grimm**, written with Claude (Anthropic's AI). MIT license
+(see [LICENSE](LICENSE)).
 
-Authorship: Mike has programmed 6502 machine language and assembler since childhood, but for now this project is 100% AI-written. Working style: Claude writes the code; Mike reviews and watches. Keep changes reviewable, comment the 6502 code at the level of "why", and skip explanations of basics.
+A diagnostic suite for every Atari 8-bit computer: the 400, 800, 1200XL,
+600XL, 800XL, 65XE, 800XE, 130XE and XE Game System. It started as
+cassettes only (hence this file's name) and now runs from a cartridge,
+disk files and cassettes, all built from one source. The goal: as much
+diagnostic information as possible, first through border colours and
+beeps that work with no picture at all, then as plain text once the video
+hardware has proven itself.
+
+This document is the design as built at version 0.9: what is tested, how
+results are reported, and why. How the code is put together is in
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md); how to use it, in the
+[user guide](docs/USER-GUIDE.md).
+
+Authorship: the author has programmed 6502 machine language and assembler
+since childhood, but for now this project is 100% AI-written. Claude
+writes the code; the author directs, reviews and tests it on a MiSTer and
+on real machines. The design changed a lot over the sessions; this file
+records where it ended up.
 
 ---
 
@@ -10,188 +28,175 @@ Authorship: Mike has programmed 6502 machine language and assembler since childh
 
 | Machine | RAM | Notes |
 |---|---|---|
-| 400 | 8K or 16K | No RAM on motherboard; RAM on plug-in board |
-| 800 | Up to 48K, three 16K boards in slots | Slot position sets each board's address range; OS rev A/B on removable OS board |
-| 800XL | 64K, eight 4164 DRAMs (U9-U16), one chip per data bit | Verify the exact bit-to-U mapping against the schematic |
-| 130XE | 64K main + 64K extended (4 x 16K banks) | Different DRAM layout; needs its own chip table |
+| 400 | 8K or 16K | No RAM on the motherboard; RAM on a plug-in board |
+| 800 | Up to 48K, three 16K boards in slots | Slot position sets each board's address range; OS rev A/B on a removable OS board |
+| 800XL | 64K, eight 4164 DRAMs, one chip per data bit | |
+| 130XE | 64K main + 64K extended (4 x 16K banks) | Its own DRAM layout |
 | 1200XL | 64K | No BASIC built in; F1-F4 and HELP keys; two 8K OS chips |
 | 600XL | 16K (64K with the 1064 expansion) | Same MMU and PORTB banking as the 800XL |
 | 65XE, 800XE | 64K | 800XL-compatible |
 | XE Game System | 64K | Built-in BASIC and Missile Command (PORTB bit 6); detachable keyboard |
 
-Sets by RAM, not by model: the 400 set needs 8K, the 16k set and `diag-controls` and `diag-memtest` need 16K, `diag-32k-xl-xe` needs 32K. Every tape works on any machine with at least that much RAM. The tapes that need more than 8K check the OS's RAMTOP ($6A) before anything else and halt below it (`NEEDPG` in build.py, boot.asm): red border, the low tone 0.6 s on and 0.6 s off, for good.
-
 Memory decoding:
-- **400/800:** a fixed memory map decoded by discrete TTL. No software banking. The cart sets RD5 (left, $A000-$BFFF) or RD4 ($8000-$9FFF), which disables RAM there and asserts S5/S4.
-- **XL/XE:** the MMU (C061618) decodes using the address lines, RD4/RD5 and the PIA PORTB bits:
-  - bit 0: OS ROM
-  - bit 1: BASIC
-  - bit 7: self-test ROM
-  - bits 2-5 (130XE): bank select, CPU access, ANTIC access
-- On the 400/800, PIA PORTB is joystick ports 3/4.
+- **400/800:** a fixed memory map decoded by discrete TTL, no software
+  banking. A cartridge pulls RD5 ($A000-$BFFF) or RD4 ($8000-$9FFF), which
+  disables the RAM there in hardware.
+- **XL/XE:** the MMU decodes using the address lines, RD4/RD5 and the PIA
+  PORTB bits: bit 0 the OS ROM, bit 1 BASIC, bit 7 the self-test ROM,
+  bits 2-5 (130XE) the bank, CPU access and ANTIC access.
+- On the 400/800, PIA PORTB is joystick ports 3 and 4.
 
----
+## 2. Formats, and what each needs
 
-## 2. Key constraints
+| Format | Needs | Strengths |
+|---|---|---|
+| Cartridge (`diag-cart.car`, AtariMax 128K) | 8K of RAM, a flash cartridge or a MiSTer | The best: no loading, every test on one menu, runs from ROM, tests the RAM under itself |
+| Disk files (`.xex`) | 32K (16K for the memory test and BASCRC), DOS or a loader | Fast to load, no cost; the way in when the cartridge port is bad |
+| Cassettes (`.cas`) | 8K and up, by set | The least of the machine: no drive, no DOS; for an 8K 400 or a machine too sick to boot a disk |
 
-- **Cassette boot needs a working OS ROM and low RAM:** zero page, the stack, the cassette buffer at $0400, and wherever the boot stage loads. The suite diagnoses partly-bad RAM, not dead RAM. On a 400/800 the first RAM board must be mostly sound.
-- **Boot procedure:** hold START at power-on (START+OPTION on the XL to disable BASIC), wait for the beep, start playback, press a key.
-- **A BOOT ERROR during load is itself diagnostic.** The OS verifies each record's checksum, so the error points at low RAM, the cassette buffer or the SIO path.
-- **600 baud is roughly 80-90 s per 4K loaded.** Keep each tape small.
-- **Cassette is sequential (no seeking)**, so each test group is a separate, standalone bootable CAS image.
-- **Before low RAM is proven, the code must not rely on the stack or zero page:**
-  - SEI and NMIEN=0 (no interrupts)
-  - no JSR/RTS/PHA/PLA; inline macros instead
-  - state kept in A/X/Y only
+Sets by RAM, not by model: the 8k set needs 8K, the 16k set,
+`diag-controls` and `diag-16k-memtest` need 16K, `diag-32k-xl-xe` 32K.
+Every tape works on any machine with at least that much RAM. The tapes
+that need more than 8K check the OS's RAMTOP ($6A) first and halt below
+it: red border, the low tone 0.6 s on and 0.6 s off, for good. The disk
+files check before they load anything.
 
----
+## 3. Key constraints
 
-## 3. Feedback design
+- **A cassette boot needs a working OS ROM and low RAM:** zero page, the
+  stack, the cassette buffer at $0400, and wherever the program loads.
+  The suite diagnoses partly-bad RAM, not dead RAM (the cartridge needs
+  the least: 8K, and runs its code from ROM).
+- **Boot:** hold START at power-on, wait for the beep, start the tape,
+  press a key. No cartridge in: on a 400/800 a cassette won't boot with
+  one (a disk does). The programs switch an XL/XE's BASIC off themselves.
+- **A BOOT ERROR during load is itself diagnostic:** the OS checks each
+  record, so the error points at low RAM, the cassette buffer or the SIO
+  path.
+- **600 baud** is about 3K a minute: keep each tape small. Cassette is
+  sequential, so each test group is its own bootable image.
+- **Before low RAM is proven** the code doesn't use the stack or zero
+  page: SEI and NMIEN = 0, no JSR/RTS/PHA/PLA (return vectors in a BSS
+  page instead), state in A/X/Y.
 
-### Feedback ladder (each level is enabled only after its hardware checks out)
-1. **Abstract:** ANTIC DMA off; the border/background (COLBK) color plus POKEY beeps. Works even with garbage video, because GTIA shows COLBK regardless of what ANTIC fetches.
-2. **Display prerequisites:** test a 1K screen region (try another bank if it fails), checksum the character ROM, and confirm that VCOUNT ($D40B) counts.
-3. **Video check screen:** readable text and 8 color bars. A keypress confirms the video works. With no key within 20 s, a 10 s "last chance" follows (purple border, 3 s siren). If still unconfirmed, the text stays on anyway (the display prerequisites passed), and the results note "video check not confirmed". Beeps-only (ANTIC off) is used only when the display prerequisites fail. During the pauses in a result code, OPTION switches between text and full-screen flashes (for a garbled picture).
-4. **Plain-text results:** shown for every step from here on, with the beep/flash code running alongside.
+## 4. Feedback design
 
-### Colors
-- Green = alive / pass
-- Yellow = test running (a hang shows which test it stopped in)
-- Red = fail
-- Optional extra layer: a yellow flash marks a warning (an intermittent error). Color is never required to read a result.
+### The ladder (each level only after its hardware checks out)
 
-### Beep/flash code (every flash is paired with a beep, so it reads by eye or by ear)
-- **Timing:** long = ~600 ms, short = ~200 ms, gap 200 ms, 1 s between groups, 3 s before the report repeats.
-- **Group A (long):** where the fault is.
-  - Main RAM: bank or slot 1-4 (the slot on the 400/800, the 16K bank on the XL)
-  - 130XE extended banks 0-3: report as 5-8
-  - Other tests: the test number
-- **Group B (short):** what failed: the bit number counted 1-8 (D0 = 1 ... D7 = 8). Never zero.
-- **Multiple bad bits:** one B group per bad bit, then a distinct low "end of list" tone.
-- **RAM tests** report every bad bit in a bank in one pass. **Other tests** stop at the first failure, wait for a key, then continue.
-- **Ceiling:** at most 8 counts per group, because people miscount by ear beyond that.
+1. **Abstract:** ANTIC DMA off; the border colour (COLBK) plus POKEY
+   beeps (and the console speaker, in case POKEY is dead). Works even
+   with garbage video: GTIA shows COLBK whatever ANTIC fetches.
+2. **Display prerequisites:** a 1K screen block that tests good, the
+   character ROM read the same twice, VCOUNT counting.
+3. **Text:** every result also on screen. The first result screen is the
+   picture check: pressing a key there says the picture can be read, and
+   from then on the border stays steady and codes play once (QUIET).
+   OPTION or F switches between text and full-screen flashes, for a
+   garbled picture.
 
-### Flow control
-- **Pass:** auto-advance after ~2 s; holding OPTION pauses on the result.
-- **Fail:** stop on the result screen until continued.
-- **Continue input:** any key, START/SELECT/OPTION, or joystick fire, so a dead keyboard or POKEY can't strand the user.
-- **SELECT** replays the beep code.
-- **Every tape ends with a summary screen.** It ends with a green border if everything passed, red if anything failed.
+### Colours
+- Green: alive, a pass. Bright green flash: a pass beep.
+- Yellow: testing (a hang shows which test it stopped in). Memory test:
+  an intermittent fault seen. At the end with the start-up chirp: nothing
+  failed, but not every test ran.
+- Red: a fault. Bright red flash: a fault beep.
+- Purple: waiting for an answer.
+- Colour is never needed to read a result: every colour comes with a sound.
 
-### Screen layout (40-column GRAPHICS 0, uppercase)
-- **Header:** `A8 DIAG  TAPE n/3  <TEST NAME>  <step x OF y>`
-- **RAM fail screen:**
-  - slot or bank, and address range
-  - first error address
-  - WROTE / READ / XOR values
-  - error count
-  - bad bit(s) and the chip they map to
-  - a likely-cause hint (stuck low/high, dead chip, decoder, address line)
-  - the beep code
-  - the continue/replay prompt
-- **Summary screen:**
-  - machine, OS revision and RAM found
-  - numbered test list with PASS/FAIL and detail
-  - failure count
-  - a suggested next action
-  - SELECT = replay codes, START = run again
+### Sounds and the beep code
+- **Pass:** the charge, G4 C5 E5 G5 (twice for the final pass); then, while
+  it waits without text, one long green flash per 16K bank (RAM) every
+  5 s.
+- **Fail:** "impending doom", C4 C4 F#3, then the code if it has one.
+- **The code:** group A, long beeps (~600 ms): where (the RAM bank 1-4,
+  the 130XE's banks 5-8, or the test); group B, short beeps (~200 ms):
+  what (the data bit counted 1-8, D0 = 1, or the item); one B group per
+  bad bit, then a low end tone. At most 8 counts per group.
+- **Only the RAM and the ROMs have a code:** they are what a machine with
+  no picture can still tell you about. The ROM test's tones are lower than
+  the RAM's, so the two can be told apart by ear. The other tests show
+  their result on screen.
 
----
+### Flow and keys
+- **Nothing moves on by itself.** Every result and every question waits
+  for as long as it takes; a sound being asked about repeats until the
+  answer. (No timeouts after boot: they only annoy, and a technician needs
+  time to read, to walk away, or to re-test.)
+- **Two keys for every action**, a console key and a keyboard key, so a
+  dead key never strands the user: R re-test; T or SELECT the tones
+  again; F or OPTION full-screen flashes; any other key (START, a
+  joystick button) goes on. Questions: Y or START yes, N or SELECT no.
+- **R only where there is no menu:** the RAM tapes' summaries, the last
+  screen of every tape without a menu (all its tests again: no reloading
+  after a slip), the memory test's summary. A menu picks a test again.
+- **Skips:** S skips the RAM test (cartridge, 32k+ tape and disk file),
+  X the console key test.
 
-## 4. Shared core (included in every tape)
+### Screen layout (40-column text)
+- The title bar names the program (`DIAG-16K-02-SYSTEM  2 KEYBOARD`) and
+  its version; the line below says what it found (`FOUND: XL/XE  RAM 64K
+  NTSC`).
+- Each test's screen, then its result lines at rows 21-23 with the keys.
+- The end of a tape without a menu: a line per test and what to load
+  next (`DONE. R=RETEST. NEXT: DIAG-8K-04-PORTS`).
+- The menu (16k, 32k+, cartridge): 0 RAM, 1-7 the tests, ALL OF THEM, 8
+  the results and final code, 9 the long memory test (cartridge).
 
-- **Reporter:** the color and beep sequencer, built in two versions: registers-only (no stack) and normal.
-- **Continue/input handler** and **auto-advance timer.**
-- **Machine detection:** 400/800 versus XL/XE from the OS ROM, a RAM size probe, 130XE extended RAM, and optionally common PORTB RAM upgrades (e.g. 320K).
-- **Text screen setup:** the display list and 1K screen placed in RAM that tested good.
-- **Summary builder.**
+## 5. The tests
 
----
+Numbered the same in every format; the items are what `FAIL` lists.
 
-## 5. Tape 1: boot and RAM (`diag-01-boot-ram.cas`)
+| # | Test | What it does | Items |
+|---|---|---|---|
+| 0 | RAM | Low RAM ($0000-$07FF, non-destructive, no stack); then each 16K bank: March C- plus address-in-address (a decoder or address-line fault shows as a mirror); the program's own RAM page by page; the RAM under the XL/XE OS (bank 4) and a 130XE's banks 5-8; on the cartridge the 8K under it | the bank |
+| 1 | ROMs | CRC32 of each OS chip (400/800: three, each named on its own), the XL/XE built-in BASIC, the character set read twice, and the program itself (self-check) against section 10 | 1 OS reads differently twice; 2 built-in BASIC matches no revision; 3 unknown OS; 4 character set differs; 5 OS chips from different revisions; 6 self-check failed |
+| 2 | Keyboard | stuck key at the start; then a key map that lights each key | 1 stuck; 2 keys never pressed |
+| 3 | Console keys | START, SELECT, OPTION; the console speaker by ear | 1-3 the key; 4 the speaker |
+| 4 | Joysticks | live, 4 ports on a 400/800, 2 on an XL/XE; stuck lines at the start | the port |
+| 5 | Paddles | open-input check (every unplugged input reads 228), then live values with min, max and jitter; fast scan | the paddle |
+| 6 | POKEY | timer IRQ and RANDOM (automatic); each voice's scale and noise by ear; the sampled "hello" (cartridge, disk file, `diag-16k-03-hello`) | 1 timer; 2 random; 3-6 voices; 7 "hello" |
+| 7 | GTIA/ANTIC | luminance and colour ramps, the word ATARI in players and missiles scrolling right to left and snaking, PAL/NTSC; page 2: ANTIC 6, 7, the bitmaps 8, A, B, D, F, GTIA 9, 10, 11, fine scrolling | 1 page 1 looks wrong; 2 page 2 looks wrong |
 
-1. **Load.** A BOOT ERROR here points to low RAM or the SIO path.
-2. **Alive:** SEI, NMIEN=0, DMACTL=0, COLBK green, POKEY init (SKCTL=3), chirp.
-3. **Machine detection.**
-4. **Low RAM test** ($0000-$07FF): non-destructive (save, test, restore), registers only. A fail gives the abstract code and halts.
-5. **Display prerequisites:** 1K screen region, character ROM checksum, VCOUNT.
-6. **Video check screen** (confirmed, or beeps-only).
-7. **RAM test by slot or bank:**
-   - March C- plus an address-in-address test, which separates decoder/address-line faults from chip faults.
-   - The bad-bit mask maps to a chip through the per-machine table.
-   - Interpretation hints:
-     - one bit failing across a whole board or bank: dead chip
-     - all bits failing in one bank: the board, its socket/slot, or the decoder
-     - one bank mirroring another: an address line
-   - **XL:** also test the RAM under the OS, BASIC and self-test ROMs by banking them out through PORTB, with interrupts and NMIs off while the OS is out.
-8. **130XE extended banks** (only if detected): the same tests through the $4000-$7FFF window, using PORTB bits 2-3 for the bank and bit 4 for CPU access.
-   - Plus an **ANTIC-access check** (bit 5): put a pattern in an extended bank, point ANTIC at it, and confirm by eye.
-9. **Relocate:** copy the code to a bank that tested good, then test the region the loader occupied.
-   - **As built:** tape 1 is two files. Stage 1 (the boot file, $0800, must fit an 8K 400 with its screen block at $1C00) runs steps 2-7 and shows compact per-bank results. On pass, or START after a fail, it loads stage 2 at $2000 with the OS's SIO (cassette, short gaps; interrupts back on for the load). Stage 2 needs 16K and a clean bank 1; it tests the loader area ($0800 up to stage 1's end) and shows the summary with the first failure's detail. Every file ends with an EOF record: the OS boot reads one record past its count. Stage 2 also tests the RAM under the XL/XE OS (bank 4) and the 130XE extended banks (5-8; ANTIC-access check not yet). If stage 2 fails to load (read error or wrong file), START retries; the build also writes stage 2 as its own `-part2.cas` for players that don't stop with the motor.
-10. **Summary.**
+The memory test (burn-in) loops the RAM tests until a key: a clock, the
+passes done, and a log of every bad bit (first pass, passes failed);
+solid versus intermittent; yellow once anything intermittent is seen. The
+16K+ one keeps two copies of itself that test each other's RAM; the 8K one
+page-tests its own and stops on an XL/XE, whose extra RAM it can't reach.
 
-## 6. Tape 2: burn-in (`diag-02-ram-burnin.cas`)
+BASCRC checks a BASIC cartridge (CRC32, revisions A, B, C), which the
+programs don't read on a 400/800.
 
-1. Alive check and machine detection, as in tape 1.
-2. Loop the RAM tests over all memory, including the extended banks if present.
-3. Show a pass counter and elapsed time, with a green pulse at the end of each pass.
-4. Keep a compact error log: bank, bit, first pass seen, count.
-5. **Intermittent errors** turn the border yellow, and the beep code plays at the end.
-6. Stop on a keypress, then show the summary.
+## 6. The files
 
-## 7. Tape 3: system (`diag-03-system.cas`)
+| Set | Files |
+|---|---|
+| Cartridge | `diag-cart.car`: everything; the long memory test on menu line 9 (16K) |
+| Disk | `diag-32k-xl-xe.xex`, `diag-16k-memtest.xex`, `diag-bascrc.xex` (and `bascrc.lst`) |
+| 8k set | `diag-8k-01-ram` (stage 2 on 16K and up: its own RAM, the XL/XE extras), `-02-rom`, `-03-input` (2, 3), `-04-ports` (4, 5), `-05-sound` (6), `-06-video` (7), `diag-8k-memtest` |
+| 16k set | `diag-16k-01-ram` (one load), `diag-16k-02-system` (1-7 with the menu), `diag-16k-03-hello`, `diag-16k-memtest` |
+| 32k+ | `diag-32k-xl-xe`: the RAM test, then 1-7 with the menu, one load |
+| Others | `diag-controls` (2, 4, 5: a companion to the SALT disks, no harness), `diag-bascrc` (BASCRC as a listing for `ENTER "C:"`) |
 
-1. **ROM checksums:** the OS (plus BASIC and self-test on the XL), compared against a table of known revisions. An unknown revision shows its raw checksum.
-2. **Keyboard:**
-   - Check for stuck keys first (KBCODE/SKSTAT showing a key down at start).
-   - Then show an on-screen key map that lights each key as it's pressed. Include BREAK.
-   - START ends the test.
-3. **Console keys** (CONSOL $D01F) and the keyboard speaker click.
-4. **POKEY:**
-   - Automated: the timer IRQ fires; RANDOM changes.
-   - Then the four voices in turn, each confirmed by keypress if heard.
-5. **Joysticks and triggers:** a live display of 4 ports on the 400/800, 2 on the XL/XE.
-6. **Paddles:**
-   - Inputs: POT0-7 (8 total) on the 400/800; POT0-3 only on the XL/XE.
-   - The inputs are RC-timing counters, not true ADCs. Write POTGO ($D20B) to start a scan; read POTn ($D200-$D207) for 0-228; ALLPOT ($D208) shows which have finished.
-   - **Open-input check:** with nothing plugged in, every input should read 228. That proves the pot scan works.
-   - **Live display:** a value bar per input with the min/max seen, to verify a full sweep (about 1 to 228).
-   - **Jitter readout:** how much the value moves with the knob held still. A large spread flags a dirty pot.
-   - **Paddle triggers:** these share the joystick direction lines; show them live.
-   - **Fast-scan mode** (SKCTL bit 2): values settle in a couple of scanlines.
-   - **Beep code:** a dead or stuck input reports as the paddle number (1-8).
-7. **GTIA:** luminance and color ramps checked by eye, plus automatic PAL/NTSC detection (the PAL register at $D014).
-8. **Summary.**
+Within a set every tape relies only on what an earlier one proved: RAM
+before anything runs from it, the keyboard before a question.
 
----
+## 7. Build and development environment
 
-## 8. Build and dev environment
+- **Assembler:** MADS. **Tools:** Python (`tools/`): the build, the CAS,
+  XEX and CAR writers, a cycle-timed simulator on py65, the documentation
+  pictures.
+- **Deploy:** every build copies the changed release files to the share
+  the MiSTer reads.
+- **Test order:** the simulator for what it can show; then the MiSTer
+  (cartridge first, then disk, then tape); then real machines (an 800 and
+  an 800XL over an SIO adapter). The video test is judged by eye.
+- **Build flags:** `--fault BANK,BIT` builds with a fake stuck bit, to hear
+  a fail code (no emulator simulates a bad chip); `--fast` skips the slow
+  patterns.
+- **File names** start with `diag-`, carry the set and number, and the
+  version (`-v0.9`), so they sort together.
 
-- **Claude Code runs at home** on the same network as the SMB share and the MiSTer.
-- **Assembler:** MADS.
-- **CAS builder:** `tools/mkcas.py`. It wraps each stage as a boot tape:
-  - FUJI header and baud chunk
-  - data records: $55 $55 sync, control byte, 128 data bytes, checksum
-  - a boot header in the first record: flags, record count, load address, init address
-- **Repo layout:** `src/common/`, `src/tape1/`, `src/tape2/`, `src/tape3/`, `tools/`, `build/`.
-- **Deploy:** the build writes the `.cas` files straight to the SMB share the MiSTer reads, in the Atari800 core's folder under `games` (confirm the exact folder name). No scp.
-- **MiSTer:** update the Atari800 core first; CAS support was added recently. SSH is available for launching, logs and screenshots. Look at wizzomafizzo's mrext Remote for remote launch, key injection and screenshots, so Claude Code can see the result (verify it works with this core).
-- **Emulators:**
-  - Altirra (best debugger): use it to trace the reset and cassette boot paths per OS revision.
-  - `atari800 -boottape file.cas` on Linux for quick runs.
-  - Test configs: an 8K 400, a 48K 800 with OS rev B, an 800XL, a 130XE.
-- **Real hardware:**
-  - Play the CAS images through AspeQt over SIO2USB. Verify that the Android AspeQt build supports cassette playback; the desktop AspeQt/RespeQt does.
-  - Fallback: export a WAV (a8cas-tools) and play it into a real 410/1010.
-- **Build flags:**
-  - `FAULT=<slot>,<bit>`: inject a fake RAM failure to test the reporting. No emulator or the MiSTer can simulate a bad chip.
-  - `FAST`: skip the slow test patterns.
-- **Test order:** emulators, then MiSTer, then real hardware. Finally, a real fault test by pulling a socketed chip.
-- **File names** start with diag- and are numbered, so they sort together in AspeQt and the MiSTer browser: `diag-01-boot-ram.cas`, `diag-02-ram-burnin.cas`, `diag-03-system.cas`.
-
----
-
-## 9. Register quick reference
+## 8. Register quick reference
 
 | Register | Address | Use |
 |---|---|---|
@@ -218,7 +223,7 @@ Memory decoding:
 
 ---
 
-## 10. Reference sources
+## 9. Reference sources
 
 - **Mapping the Atari, Revised Edition** (Ian Chadwick, Compute!): address-by-address map. The revised edition covers the XL. Free at atariarchives.org.
 - **Altirra Hardware Reference Manual** (Avery Lee): the most accurate source on chip behavior, timing, and the cassette/SIO protocol.
@@ -231,10 +236,10 @@ Memory decoding:
 
 ---
 
-## 10a. Known ROM CRC32s (looked up, not taken from any one machine)
+## 10. Known ROM CRC32s (looked up, not taken from any one machine)
 
-Tape 3 is to identify ROMs by CRC32 against this table. It must not rely on
-the sums from one MiSTer's ROM files: a repaired machine can have mismatched
+The ROM test identifies ROMs by CRC32 against this table. It must not rely
+on the sums from one MiSTer's ROM files: a repaired machine can have mismatched
 chips, and nobody can simulate every variant. A ROM that matches no entry is
 reported as UNKNOWN; that covers patched, replacement (e.g. Altirra OS),
 failing and mis-socketed chips alike.
@@ -301,107 +306,49 @@ BASIC, 8K at $A000:
 | Arabic | C899F4D6 | MAME only (a65xea) |
 | (rev A misloaded) | CCF05648 | Rev A loaded from a `.car` file as a raw 8K ROM, as the MiSTer core does when a `.car` is given as the BASIC ROM. The 16-byte CART header wraps, so BASIC sits 16 bytes on (verified on Mike's file, 2026-11-07). Shown as "A, .CAR MISLOAD". |
 
-BASIC or a cartridge that's missing or unknown is never a fault: the line
-says NONE or NOT IN THE TABLE. On the 400/800 it's labelled CARTRIDGE: BASIC
-was always a cartridge there. The 1200XL has no BASIC.
+An XL/XE's built-in BASIC that matches no revision is a fault (item 2):
+the built-in ROM is always one of them. The 1200XL has no BASIC (`NONE`).
+On a 400/800 BASIC was always a cartridge, and the programs don't read the
+cartridge slot (`A CARTRIDGE: USE BASCRC`): BASCRC checks it against the
+same A, B and C values.
 
-## 11. To verify / open items
+## 11. Open items
 
-- [ ] Bit-to-chip tables for the 400, 800 (per 16K board), 800XL and 130XE, from the schematics.
-- [x] Known-good ROM table: see 10a. Tape 3 still shows raw sums until it switches to CRC32. Still missing: OS rev B PAL (if it exists), XEGS (32K image, MAME D50260D1).
-- [ ] Exact Atari800 folder path on the MiSTer share; MiSTer core 400/800 OS and RAM size options.
-- [ ] Android AspeQt cassette playback support.
-- [ ] Whether mrext Remote can launch and screenshot this core.
-- [ ] Trace in Altirra exactly which RAM the OS uses during cassette boot, per OS revision.
+- [ ] Bit-to-chip tables for the 400, 800 (per 16K board), 800XL and
+  130XE, from the schematics, so a RAM fault names its chip.
+- [ ] The 130XE's ANTIC-access check (PORTB bit 5): a pattern in an
+  extended bank shown on screen.
+- [ ] The cassettes played into a real machine (so far the MiSTer, and the
+  disk files on real machines).
+- [ ] The BASCRC tape (`ENTER "C:"`) confirmed on a MiSTer or a real
+  recorder; the disk file is confirmed.
+- [ ] The paddle test on a MiSTer (needs a paddle adapter that works with
+  it); it is confirmed on real machines.
+- [ ] ROM table gaps: OS rev B PAL (if it exists), the XEGS's 32K image
+  (MAME D50260D1).
+- [ ] The hardware facts checked line by line against *Mapping the Atari*.
+- [ ] More test areas, if wanted: collision registers, every player and
+  missile width and priority, DLI and VBI timing, POKEY's distortions,
+  16-bit and high-pass modes, timer IRQs per clock, the PIA's lines one by
+  one, cassette motor control.
 
----
+## 12. Shelved
 
-## 12. Shelved / background
+- **A RAM-less "dead test" cartridge:** the diagnostic-cart flag (bit 7 of
+  the option byte at $BFFD) makes the OS jump to the cartridge very early,
+  and a display could come from ROM with DMA off or by racing the beam.
+  The AtariMax cartridge took the other road: it needs 8K of RAM and the
+  OS, runs every test from ROM, and is the best way in all the same.
+- **A bootable disk image (`.atr`):** no DOS is ours to hand out; the
+  `.xex` files load from any DOS or loader instead.
+- **The 16k tapes as disk files:** above DOS they would need 24K, a rare
+  size; the 32K file covers the same tests.
 
-- **RAM-less "dead test" cartridge (shelved for now).**
-  - The diagnostic-cart flag is bit 7 of the option byte at $BFFD; the OS jumps to the cart very early in reset.
-  - Cart header layout:
+## 13. Status at 0.9 (2026-11-15)
 
-    | Address | Contents |
-    |---|---|
-    | $BFFA/B | Run address |
-    | $BFFC | $00 (cart present) |
-    | $BFFD | Option byte |
-    | $BFFE/F | Init address |
-
-  - Point both vectors at the entry point.
-  - The left slot always maps to $A000-$BFFF; no address switch is needed.
-  - Display without RAM: COLBK with DMA off, racing the beam with WSYNC, or a display list held in ROM.
-- **Atarimax MaxFlash:** its boot menu needs working RAM and the OS, so it's unsuitable for a no-RAM test. Useful for the later stages.
-
----
-
-## 13. Sets by RAM size, and more test areas (2026-11-07)
-
-The user picks the set that matches the machine. A set never loads a stage
-the machine can't hold, and it loads in as few steps as the RAM allows.
-
-| Set | For | Layout |
-|---|---|---|
-| `diag-400-*` (built) | 8K and up: every Atari | Each tape is one stage that fits 8K and leaves about 2K for the screen and working storage. The tests are split logically and run progressively: 01 RAM, 02 ROMs (test 1), 03 input (tests 2-3), 04 ports (5-6), 05 sound and video (4, 7). Later tapes rely only on what earlier ones proved: the Y/N answers come from keys already tested. |
-| `diag-16k-*` (built) | 16K and up | 01 RAM, one load (build_one16): stage 1 (ONE16) tests the RAM above the image, then stage 2, inserted in the same image, page-tests stage 1's RAM through the screen block (`src/common/pagetest.asm`) and shows the summary; START reruns from stage 1's `again`. 02 system: all seven tests in one 72-record load, with a menu (START runs, SELECT down, OPTION up, 1-7 jump; after a test the next one is highlighted; ALL runs every test). |
-| `diag-32k-xl-xe` (built) | 32K and up: an 800 with 32K-48K, every XL/XE but a 16K 600XL | One load, 142 records (build_one32): stage 1 at $0800, stage 2 at $1A00, the system tests at $2C00, shared BSS $4F00, screen $5000 (display list $53C0). Stage 1 tests the RAM above the image; stage 2 page-tests the image's RAM, then the RAM under the OS and the 130XE banks; then the system tests and menu, with RAM faults as test 8 and menu key 0 (RAMAGAIN) rerunning stage 1. The ROM test turns ANTIC off while the self-test ROM covers $5000-$57FF. It replaced the earlier 48k+ tape, whose code is removed. |
-| `diag-controls` (built) | 16K and up | The keyboard, joystick and paddle tests only (SETNO 3), no harness: a companion to the SALT disks. |
-| `diag-400-memtest`, `diag-memtest` (built) | 8K and up / 16K and up | The memory test (burn-in), one load each. The 8K one (OWNTEST, NOXL, NORAMK) re-checks its own image sum every pass. It then page-tests its own RAM: each page is saved in the screen block, given March C- and an address-in-page test, restored and read back. The screen block gets a visible sweep: each row inverted, held two frames, checked, restored and checked. Both are position-independent routines (branches and (zp),y only) copied to $0400-$04FF. The 16K+ one (BOUNCE) swaps between two relocated copies every pass, $20 pages apart on the 400/800 and at $8000 on the XL/XE, so its own RAM gets the full tests too. It falls back to the page test when copy B doesn't fit (16K). Not covered: page $FF under the XL/XE OS. |
-
-The system tapes are built from one `src/system/main.asm`, with a file per
-test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia`). The
-WANT_* defines pick which tests a tape gets, so the 16k and 32k+ tapes reuse the same
-files. A test keeps its number, and so its beep code, on every tape.
-
-Every set still tests the RAM its own code occupies. On the 400 that means
-relocating a small march into the screen block with the screen off, and
-reporting by beeps.
-
-Test menu (16k, 32k+): START runs the highlighted line, SELECT moves down,
-OPTION moves up, and 1-7 jump to a test (32k+: 0, or its own line, reruns
-the RAM test). "ALL OF THEM, IN ORDER" is
-highlighted at power-on. After a test the next one is highlighted.
-
-No timeouts after the first screen check (Mike, 2026-11-07: they only
-annoy). Every question waits for its answer:
-- the border is purple while a question waits
-- a sound being asked about repeats until the answer
-- a key pressed during the busy console-speaker tone still counts, through
-  the POKEY IRQST latch
-- tests that end with START also end with any key, in case START is dead.
-
-ROM test: CRC32 matched against section 10a. On the 400/800 each OS chip is
-identified on its own, so a repaired board with mixed revisions shows which
-chip is which. Anything that matches nothing is UNKNOWN; the raw CRC32 is
-always shown.
-
-New test areas (16k/32k+; 8K where they fit). None of these are built yet
-except the P/M-and-DLI sprite check in the GTIA test (item 2). "Auto" means the test passes or
-fails without asking the user:
-- **ANTIC:**
-  - every mode 2-F shown, labelled, and answered Y/N
-  - display-list features: LMS, blank lines, JMP/JVB, fine scrolling (HSCROL/VSCROL), narrow and wide playfields, CHACTL (inverse, blank, upside down), a RAM font via CHBASE
-  - DLI and VBI counts against VCOUNT (auto)
-- **GTIA:**
-  - the GTIA modes 9/10/11, each answered Y/N
-  - players and missiles at each width and priority, plus the fifth player
-  - collision registers: P-PF, P-P, M-PF and M-P with HITCLR, checked against known overlaps (auto)
-  - trigger latches
-- **POKEY sound:**
-  - the distortions (AUDC 0-7)
-  - volume-only mode
-  - 16-bit linked channels, the 1.79 MHz and 15 kHz clocks, the high-pass filters, two-tone mode
-  - the timer IRQs at each clock, timed against VCOUNT (auto)
-- **PIA:** joystick direction lines one by one, the PROCEED/INTERRUPT lines, and cassette motor control.
-
-Open: which of these are wanted, and in what order; whether the remaining
-400 tests (ROM, POKEY, joysticks, paddles, GTIA) become extra single-stage
-`diag-400` tapes.
-
-## 14. Status at v0.1.1 (2026-11-08)
-
-Every tape has passed on the MiSTer Atari800 core, in the core's 400, 800,
-XL and XE setups (most recently an 800XL with the rev 2 OS and 64K, and a
-130XE with 128K). Not yet run on real hardware. Tape is the low-spec version; a disk version is planned, for
-faster loading on machines with a working drive.
+All formats run on the MiSTer Atari800 core as a 400/800 and as an XL/XE
+(64K, and a 128K 130XE). The disk files run on a real 800 and 800XL over
+an SIO adapter, where the joystick and paddle ports were tested. Where the
+author has tried them, the results have been right: the RAM banks and
+their beeps, the ROM names, the self-checks, BASCRC from disk with a BASIC
+cartridge in.

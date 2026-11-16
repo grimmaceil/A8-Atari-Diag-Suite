@@ -1,7 +1,8 @@
 # A8 Atari Diag Suite: User Guide
 
-Free to use, copy and share. Please credit **Michael Grimm** (and
-Claude, the AI that helped write it) when you pass it on.
+By **Michael Grimm**, written with Claude (Anthropic's AI). Free to use,
+copy, change and share under the [MIT license](../LICENSE); please keep
+the credit when you pass it on.
 
 Version 0.9
 
@@ -10,18 +11,26 @@ every screen shows it at the right of the title bar (`V0.9`). If the two
 don't match, or a screen shows no version, you are running an older file.
 This guide leaves the `-v0.9` out of the names.
 
-These tapes test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
-800XL, 65XE, 800XE, 130XE and XE Game System. You load them like any
-cassette program. They tell you what works and what doesn't, by colour and
-by beeps first, and with text on screen once the screen itself has been
-checked. So they're still useful when the picture is bad.
+These programs test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
+800XL, 65XE, 800XE, 130XE and XE Game System. They tell you what works and
+what doesn't, by colour and by beeps first, and with text on screen once
+the screen itself has been checked. So they're still useful when the
+picture is bad. Nothing moves on by itself: every result waits for you.
 
-You don't need to know any programming. You need the `.cas` files from the
-`cassettes` folder and a way to play them into the machine (see
-[Loading a tape](#loading-a-tape)). With a disk drive, two of them also
-come as disk files, in the `disks` folder (see [From disk](#from-disk)),
-and all of the tests are on one cartridge, in the `carts` folder (see
-[From the cartridge](#from-the-cartridge)).
+You don't need to know any programming. There are three ways to run the
+tests, and they all show the same screens, colours and beeps. The
+cartridge is the best: no loading, every test on one menu, and it runs
+even when the RAM is too sick to load a program. The disk files and the
+cassettes are the alternatives that cost nothing (no flash cartridge to
+buy), and the way in when the cartridge port itself is bad:
+- **the cartridge** (`carts` folder): every test on one menu, run from
+  ROM, on any Atari (see [From the cartridge](#from-the-cartridge));
+- **disk files** (`disks` folder, `.xex`): the 32k+ program, the long
+  memory test and the BASIC cartridge check, for a machine with a disk
+  drive, a PC link or a MiSTer (see [From disk](#from-disk));
+- **cassettes** (`cassettes` folder, `.cas`): for every machine down to an
+  8K 400, and for one too sick to boot a disk (see
+  [Loading a tape](#loading-a-tape)).
 
 ## Keys
 
@@ -98,9 +107,10 @@ the tape to depend on. So it runs on the smallest machine there is, a 400
 with 8K, and on a machine too sick to boot a disk. Each tape loads into the
 bottom of RAM and tests everything else from there.
 
-**A disk version is planned.** It will load much faster, for machines with a
-working disk drive. The cassette tapes stay as the version for low-spec and
-failing machines.
+**Disk and cartridge too.** The disk files load in seconds on a machine
+with a working drive (or a PC link, or a MiSTer), and the cartridge needs
+no loading at all. The cassettes stay the version for low-spec and failing
+machines.
 
 **Several sets, because tape is slow.** A cassette loads at 600 baud:
 about 3K a minute. So the tests are split by how much RAM the machine has,
@@ -153,7 +163,7 @@ All the tapes:
 
 | Tape | Needs | Load time | Tests |
 |---|---|---|---|
-| `diag-8k-01-ram` | 8K | 2 min, then 1.5 min for part 2 | the video check and all the RAM. Part 2 (machines with 16K or more): the RAM the tape itself used, the RAM under an XL/XE's OS and a 130XE's extra RAM |
+| `diag-8k-01-ram` | 8K | 2 min, then 1.5 min for part 2 | the display checks and all the RAM. Part 2 (machines with 16K or more): the RAM the tape itself used, the RAM under an XL/XE's OS and a 130XE's extra RAM |
 | `diag-8k-02-rom` | 8K | 2 min | test 1, the ROMs |
 | `diag-8k-03-input` | 8K | 2 min | tests 2 and 3, the keyboard and the console keys |
 | `diag-8k-04-ports` | 8K | 2 min | tests 4 and 5, the joysticks and the paddles |
@@ -251,8 +261,8 @@ recorder. This hasn't been tried with these tapes yet.
 
 ### From disk
 
-Two of the tapes also come as Atari binary files (`.xex`), in the `disks`
-folder. They load in seconds, not minutes:
+Three Atari binary files (`.xex`) are in the `disks` folder. They load in
+seconds, not minutes:
 
 | File | Same tests as | Needs |
 |---|---|---|
@@ -273,10 +283,12 @@ To load one:
 - **A PC or FujiNet:** AspeQt, SIO2SD and FujiNet can boot an `.xex`
   straight from their own menus.
 
-Take any cartridge out first, as for a tape. You don't need to hold OPTION:
-the tests switch an XL or XE's BASIC off themselves. Everything on screen is
-the same as on the tape, except the title bar: ` DIAG-32K-XEX ` and
-` DIAG-MEMTEST-XEX `.
+Take any cartridge out first, as for a tape (a disk does boot with one
+in, unlike a tape, but the 8K of RAM under the cartridge can't be tested
+then: a 48K 800 shows `RAM 40K`). BASCRC is the exception: it needs its
+BASIC cartridge in. You don't need to hold OPTION: the tests switch an XL
+or XE's BASIC off themselves. Everything on screen is the same as on the
+tape, except the title bar: ` DIAG-32K-XEX ` and ` DIAG-16K-MEMTEST-XEX `.
 
 If the file can't run, it says so before it loads, with a red border and
 the low tone on and off:
@@ -307,8 +319,8 @@ Atari, an 8K 400 included, and on a machine whose RAM is too sick to load
 a tape into. Switch on with the cartridge in:
 
 1. The RAM test starts at once (green border and a chirp, then yellow
-   while it tests), and ends on the RAM summary, which waits for START.
-2. The ROM test runs next and waits on its result. START goes to the menu.
+   while it tests), and ends on the RAM summary, which waits for a key.
+2. The ROM test runs next and waits on its result. A key goes to the menu.
 
 **S skips the RAM test.** A tap is enough, any time from switching on: S
 goes on to the ROM test (line 0 shows `SKIPPED`), then the menu. S works on
@@ -334,8 +346,8 @@ again for it), with a fault there reported in bank 3.
 
 The long test, line 9, copies itself into RAM and switches the cartridge
 off while it runs, so it tests all of the RAM. When you stop it (any key,
-at the end of the pass) it shows its summary; START there switches the
-cartridge back on and returns to the menu. The earlier results are gone
+at the end of the pass) it shows its summary; a key there (other than T)
+switches the cartridge back on and returns to the menu. The earlier results are gone
 by then (the test used that RAM), and line 0 shows `SKIPPED`.
 
 In the ROM test the `DIAG CART` line is the cartridge checking itself:
@@ -367,10 +379,10 @@ unreadable or the screen is switched off:
 |---|---|---|---|
 | ![](img/color-green.png) | green | `#009B58` | alive (just after loading); everything passed |
 | ![](img/color-green-flash.png) | bright green flash | `#4CE5AB` | a pass: the charge, then one long flash per RAM bank or test that passed |
-| ![](img/color-yellow.png) | yellow | `#F0C55A` | testing. If it stays yellow and silent, the machine hung in that test. Memory test: an intermittent fault has been seen |
+| ![](img/color-yellow.png) | yellow | `#F0C55A` | testing. If it stays yellow and silent, the machine hung in that test. Memory test: an intermittent fault has been seen. At the end, with the start-up chirp: nothing failed, but not every test ran. `diag-8k-memtest` on an XL/XE: use `diag-16k-memtest` |
 | ![](img/color-red.png) | red | `#891104` | a fault; the beep code follows |
 | ![](img/color-red-flash.png) | bright red flash | `#D15D57` | a fault beep (see the beep code below) |
-| ![](img/color-purple.png) | purple | `#AD3C9F` | waiting for you: a question to answer, or the video check's last chance |
+| ![](img/color-purple.png) | purple | `#AD3C9F` | waiting for you: a question to answer |
 | | black | `#000000` | the short gap between two flashes, and the moment after you answer a question |
 
 **Red border with a low tone on and off, straight after loading, and
@@ -405,13 +417,13 @@ machine with no picture can still tell you about.
 - **The RAM test** runs first, before anyone has said they can see the
   screen. A fail flashes the border with every beep, holds red for 3 s
   and plays again, over and over, until you press a key. A pass plays the
-  charge, then one long green flash per bank every 5 s, until START.
+  charge, then one long green flash per bank every 5 s, until a key.
 - **From the ROM test on** the border stays steady and nothing repeats.
 - **The ROM test** (test 1) plays its code once: one long beep in a lower
   pitch than the RAM's (330 Hz), then one short beep (660 Hz) per failed
-  item number, then the low beep. SELECT plays it again.
+  item number, then the low beep. T or SELECT plays it again.
 - **Every other test** only shows its result. A pass plays the charge; a
-  fail plays the doom and waits for START with a red border.
+  fail plays the doom. Both wait for a key (green or red border).
 - **The final result** plays a code only for ROM and RAM faults: for the
   RAM one long beep at the RAM's pitch (440 Hz), then one short beep per
   bad bank number.
@@ -472,9 +484,9 @@ tape:
   to the menu
 - `diag-32k-xl-xe`'s RAM summary: a key goes on to the system tests
 
-After the opening video check, no question has a time limit: every question
-waits until you answer it, with a purple border, and a test that asks about
-a sound keeps playing it until you answer.
+No question has a time limit either: every question waits until you answer
+it, with a purple border, and a test that asks about a sound keeps playing
+it until you answer.
 
 ## The tapes, screen by screen
 
@@ -492,8 +504,9 @@ machine with a lot of RAM this takes a few minutes.
 1. What the tape found.
 2. The bank being tested now.
 
-**Result** (the 8k tape; the 16k and 32k+ tapes go straight on to the
-summary below).
+**Result** (the 8k tape and the 32k+ tape, after the main RAM; the 16k
+tape goes straight on to the summary below). It waits for a key: on 16K
+and up a key goes on to the rest of the RAM test.
 
 ![RAM test passed](img/ram-03-pass.png)
 
@@ -534,7 +547,7 @@ moment), testing it and putting it back. The summary waits for you:
 2. Every bank, and the area the tape itself ran in.
 3. The number of failures and the next tape. A failure shows its first bad
    address and bits, with a hint (one bit: one RAM chip).
-4. START runs the whole RAM test again.
+4. R runs the whole RAM test again; any other key plays the tones again.
 
 ### ROMs (`diag-8k-02-rom`; test 1 on the system tapes)
 
@@ -557,8 +570,8 @@ it up in a table of known Atari ROMs.
    cartridge the slot is taken.
 4. The character set's checksum.
 5. The result. The ROM test waits here until you press a key, so you can
-   read the names (on `diag-8k-02-rom` it is the end of the tape: nothing
-   to press).
+   read the names (on `diag-8k-02-rom` it is the end of the tape: R runs it
+   again).
 
 On an XL/XE the OS is one 16K chip, named as a whole:
 
@@ -622,7 +635,9 @@ It prints the CRC32 and `PEEK(43234)` (the byte that says the revision,
 for a cross-check), then `REV A - GOOD`, `REV B - GOOD` or
 `REV C - GOOD`. `NO MATCH - BAD OR UNKNOWN ROM` with a `PEEK(43234)` that
 names a revision (162 A, 96 B, 234 C) points at the ROM or the
-cartridge's contacts: clean them, reseat it, and run it again. A badly
+cartridge's contacts: clean them (DeoxIT, see
+[When something fails](#when-something-fails)), reseat it, and run it
+again. A badly
 failing cartridge may not get BASIC far enough to run it at all.
 
 On an XL/XE it checks the built-in BASIC the same way (no cartridge in,
@@ -721,6 +736,16 @@ test.
    still: a large jitter means a dirty or worn paddle. A `T` at the end
    means the paddle's button is pressed.
 
+**The end of the tape.** The paddles were the tape's last test, so its
+screen stays up with the tape's results under it; every tape without a
+menu ends this way:
+
+![The end of a tape](img/ports-03-end.png)
+
+1. A line for each test on the tape.
+2. What to load next. R runs the tape's tests again; any other key plays
+   the tones again. Nothing needs a press: you can leave it here.
+
 ### Sound and video (`diag-8k-05-sound`, `diag-8k-06-video`; tests 6 and 7)
 
 **POKEY.** The sound chip's timer and random-number generator are checked
@@ -811,7 +836,9 @@ Running a test again replaces its old result.
 
 ![Results](img/system-02-results.png)
 
-1. Every test: PASS, FAIL and its items, or `-` if not run.
+1. Every test: PASS, FAIL and its items, or `-` if not run. Here test 7
+   wasn't run, so the final result is yellow (nothing failed, but not
+   everything was tested) with the start-up chirp.
 2. The ROMs (see [ROMs](#roms-diag-8k-02-rom-test-1-on-the-system-tapes)).
 
 ### The 32k+ tape (`diag-32k-xl-xe`)
@@ -829,7 +856,7 @@ One tape, one load, for any machine with 32K or more:
 2. Every bank, the area the tape ran in, and here (an XL) the RAM under the
    OS as bank 4.
 3. The result and what's next.
-4. START goes on: the ROM test, then the menu.
+4. A key goes on: the ROM test, then the menu.
 
 5. The seven tests, with the menu:
 
@@ -837,7 +864,7 @@ One tape, one load, for any machine with 32K or more:
 
 1. `0 RAM`: the whole RAM test again from the start, with the RAM result
    so far beside it. Choose it with SELECT and START, or press 0. After
-   the RAM summary, START brings you back to this menu, with the other
+   the RAM summary, a key brings you back to this menu, with the other
    tests cleared to `-`.
 2. The tests.
 3. All of them, in order.
@@ -885,6 +912,11 @@ What each one covers:
   than run an incomplete test: yellow border, and the bottom line says
   `XL/XE: USE DIAG-16K-MEMTEST`.
 
+![The 8K memory test on an XL/XE](img/memtest-04-xl.png)
+
+1. An XL/XE (its main RAM only: this tape doesn't look further).
+2. Load `diag-16k-memtest` instead.
+
 ![Memory test running](img/memtest-01-running.png)
 
 1. The passes done (`PASSES 0` during the first) and how long it has run.
@@ -923,6 +955,12 @@ inverted, held for two frames, checked, put back and checked again.
 
 ## When something fails
 
+**Dirty contacts cause a lot of "faults".** An unpaid recommendation from
+the author: DeoxIT contact cleaner (CAIG Laboratories) on the cartridge
+port, the cartridge's own contacts, the SIO and joystick connectors, and
+an 800's RAM and OS board edges. Clean, reseat, and test again before
+blaming a chip.
+
 - **Note the code** (or the screen). Long beeps say where, short beeps say
   which bit or item.
 - **RAM:** a bad bit in one bank usually means one RAM chip. On an 800XL
@@ -953,12 +991,12 @@ machines load in fewer, longer steps. Tape is slow, so loading the fewest
 bytes matters. The 8k set works on everything, which is why it's the
 fallback. See [Why cassette, and why several sets](#why-cassette-and-why-several-sets).
 
-### Why not a disk?
+### Why cassette at all, now there are disk files and a cartridge?
 
 A disk needs a working drive and more of the machine before anything can
 run. The cassette tapes are for the machines that can't manage that: an
-8K 400, or a machine that fails to boot a disk. A disk version is planned,
-for faster loading on machines that have a drive.
+8K 400, or a machine that fails to boot a disk. The cartridge needs no
+loading, but an AtariMax flash cartridge (or a MiSTer) to put it on.
 
 ### Is this a substitute for the memory test?
 
@@ -973,3 +1011,12 @@ controller ports, and the sound and video chips as far as you could see
 and hear them. The SIO port gets a workout just by loading the tape. It
 doesn't test a disk drive, a printer, or the cartridge slot (BASCRC checks
 a BASIC cartridge).
+
+### What has it been tried on?
+
+The MiSTer's Atari800 core, as a 400/800 and as an XL/XE (64K and a 128K
+130XE), with tapes, disk files and the cartridge; and real 800 and 800XL
+machines with the disk files over an SIO adapter, where the joystick and
+paddle ports get their real test. The paddle test can't be tried on a
+MiSTer without a paddle adapter that works with it. The cassettes haven't
+been played into a real machine yet.

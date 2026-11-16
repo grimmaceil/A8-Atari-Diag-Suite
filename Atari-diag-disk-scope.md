@@ -1,19 +1,26 @@
-# A8 Diagnostics, Disk Port: Scope
+# A8 Atari Diag Suite, disk files: scope
 
-Status: built 2026-11-08 (v0.2): both files pass in the simulator; MiSTer
-test pending. Where the build settled a point differently from the
-proposal, the text below says what was built.
+By **Michael Grimm**, written with Claude (Anthropic's AI). MIT license
+(see [LICENSE](LICENSE)).
 
-I can program 6502 ml and assembler since a child but this is 100% AI for now.
+Status at 0.9 (2026-11-15): built, and run from the MiSTer's XEX loader
+and on a real 800 and 800XL over an SIO adapter. First built in v0.2
+(2026-11-08) from the proposal below; where the build settled a point
+differently, the text says what was built, and section 10 lists what
+changed since.
+
+The author has programmed 6502 machine language and assembler since
+childhood, but this is 100% AI-written for now.
 
 ## 1. What this is
 
-The two tests that fit a disk best, as Atari binary files (`.xex`):
+The programs that fit a disk best, as Atari binary files (`.xex`):
 
-| File | The tape it comes from | Needs | Loads at | Ends |
+| File | The tape it comes from | Needs | Loads at | Ends (0.9) |
 |---|---|---|---|---|
-| `diag-32k-xl-xe.xex` | `diag-32k-xl-xe.cas` | 32K | $2000 | about $6740 |
-| `diag-memtest.xex` | `diag-memtest.cas` | 16K | $2000 | about $3B40 |
+| `diag-32k-xl-xe.xex` | `diag-32k-xl-xe.cas` | 32K | $2000 | $7728 (image $2000-$76FF, then the mover) |
+| `diag-16k-memtest.xex` | `diag-16k-memtest.cas` | 16K | $2000 | $3C28 (image $2000-$3BFF) |
+| `diag-bascrc.xex` | BASCRC, the BASIC listing (added in 0.9) | 16K, DOS, the BASIC cartridge in | $2000 | (runs there, returns to DOS) |
 
 These files load from:
 
@@ -24,17 +31,17 @@ These files load from:
 Loading from disk is faster than from tape, and the file can be copied to
 any disk the user already has.
 
-**The tapes don't change.** Every `.cas` file builds byte-identical to
-v0.1.2 (Mike's rule). The cassette brief (`Atari-diag-cassette-scope.md`)
-stays frozen at v0.1.2.
+**The tapes didn't change for the port.** In v0.2 every `.cas` file built
+byte-identical to v0.1.2 (the author's rule then). Since then the tapes and
+the disk files have changed together, from the same source.
 
 **The disk files are their own build (Mike: "xex versions should have some
 differences").** They come from the same source as their tapes, assembled
 with an `XEX` define. Every difference sits behind `.ifdef XEX`, so a tape
 build can't pick one up. The differences:
 
-- **Title bar:** ` DIAG-32K-XEX ` and ` DIAG-MEMTEST-XEX `, so a screen
-  photo shows which one ran.
+- **Title bar:** ` DIAG-32K-XEX ` and ` DIAG-16K-MEMTEST-XEX `, so a
+  screen photo shows which one ran.
 - **Too-little-RAM check:** it moves out of the program into the guard (see
   4), which checks before anything loads. (The program's own NEEDPG check
   runs too late for a disk file: by the time it runs, the file has already
@@ -43,7 +50,7 @@ build can't pick one up. The differences:
 Everything else is the tape program: the tests, the screens, the colours
 and the beep codes.
 
-## 2. Why these two, and not the others
+## 2. Why these, and not the others
 
 - **The 32k test:** the full suite in one file (RAM, ROMs, keyboard,
   console keys, sound, video, joysticks, paddles, and a menu). It needs 32K
@@ -131,7 +138,7 @@ jump.
 **8K:** the guard itself needs RAM at `$2000`, so an 8K machine can't even
 show the message. No disk drive works with 8K (DOS needs more), so this
 only matters with a PC or MiSTer loader; the user guide says to use the
-400 tapes there.
+8k tapes there.
 
 **Memory, 32k file:** the image is about `$4700` bytes (the XEX
 differences may shift it by a few bytes; the build works it out). Loaded at `$2000` it ends
@@ -213,7 +220,8 @@ The same machine setups as the tapes: 400 and 800 at 16K, 32K and 48K;
   - which two files;
   - how to load them (MiSTer XEX loader; DOS menu binary load);
   - holding OPTION is not needed (the tests switch BASIC off themselves);
-  - a cartridge still shows `CART IN`;
+  - a cartridge in hides the 8K of RAM under it (a disk boots with one in,
+    unlike a tape);
   - what the `NEEDS` / `DOS IS IN THE WAY` lines mean.
 
   Everything after "Reading the results" is the same as the tapes, so the
@@ -239,3 +247,16 @@ Marked so Mike can check them:
 - **Load address `$2000`.** SpartaDOS 3.x on disk is not supported; it
   gets a plain message instead.
 - **Only `.xex`:** no `.atr`, no DOS shipped.
+
+## 10. Since v0.2
+
+- **0.3:** the 130XE crash fixed (stage 2's working storage was inside
+  the $4000-$7FFF bank window).
+- **0.6-0.8:** the 32k file carried the long memory test as menu line 9
+  and the sampled "hello" (it needed 34K for a while, then 32K again).
+- **0.9:** the long memory test left the 32k file again: it can never
+  return to the menu, so it is `diag-16k-memtest.xex` on its own (renamed
+  from `diag-memtest.xex`). The 32k file plays the cartridge's 15.7 kHz
+  "hello". `diag-bascrc.xex` added: the BASIC cartridge check, from DOS
+  with the cartridge in. The same keys, no timers and the same tests as
+  every other format.

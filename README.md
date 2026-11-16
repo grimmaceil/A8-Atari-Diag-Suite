@@ -1,146 +1,135 @@
 # A8 Atari Diag Suite
 
-Free to use, copy and share. Please credit **Michael Grimm** (and
-Claude, the AI that helped write it) when you pass it on.
+By **Michael Grimm**, written with Claude (Anthropic's AI). Free to use,
+copy, change and share under the [MIT license](LICENSE); please keep the
+credit when you pass it on.
 
-Diagnostics for every Atari 8-bit computer, on cassette, disk and
-cartridge: the 400, 800, 1200XL,
-600XL, 800XL, 65XE, 800XE, 130XE and XE Game System. Load one like
-any cassette program and it tests the machine: RAM, ROMs, keyboard, console
-keys, joysticks, paddles, sound and video, plus a memory test (burn-in) for faults that
-come and go.
+Diagnostics for every Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
+800XL, 65XE, 800XE, 130XE and XE Game System. They test the RAM, the
+ROMs, the keyboard, the console keys, the joystick and paddle ports, the
+sound chip (POKEY) and the video chips (GTIA and ANTIC), and there is a
+long memory test (burn-in) for faults that come and go.
 
 It reports by **border colour and beeps** first, so it works even when the
 picture doesn't. Text appears on screen once the screen itself has been
-checked.
+checked. Nothing moves on by itself: every result waits for you, for as
+long as you like.
+
+![The cartridge menu](docs/img/cart-01-menu.png)
+
+## Three ways to run it
+
+All three show the same tests, screens, colours and beeps. **The cartridge
+is the best way:** no loading, every test on one menu, and it works on a
+machine whose RAM is too sick to load a program. The disk files and the
+cassettes are the alternatives that cost nothing (no flash cartridge to
+buy), and the way in when the cartridge port itself is bad.
+
+| | File | Needs | What it is |
+|---|---|---|---|
+| **Cartridge** | `carts/diag-cart.car` | any Atari (8K); a MiSTer or an AtariMax 128K flash cartridge | every test on one menu, run from ROM: no loading, and it works when the RAM is too sick to load a program into |
+| **Disk** | `disks/diag-32k-xl-xe.xex` | 32K; DOS, a PC link or a MiSTer | the RAM test, then every test with the menu, in one file |
+| | `disks/diag-16k-memtest.xex` | 16K | the long memory test |
+| | `disks/diag-bascrc.xex` | 16K and DOS, with the BASIC cartridge in | the check for a BASIC cartridge (BASCRC) |
+| **Cassette** | the 8k set: `diag-8k-01-ram` to `diag-8k-06-video` | 8K: every Atari | six small tapes, about 2 minutes each; long test `diag-8k-memtest` (400/800) |
+| | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, `diag-16k-03-hello` | 16K | about 3.5 minutes each; long test `diag-16k-memtest` |
+| | `diag-32k-xl-xe` | 32K | one tape, about 6 minutes: the RAM test, then every test with the menu |
+| | `diag-controls` | 16K | keyboard, joysticks and paddles only: goes with Atari's SALT disks, no test harness needed |
+| | `diag-bascrc` | BASIC cartridge in | BASCRC as a BASIC listing (`ENTER "C:"`); also `disks/bascrc.lst` for `ENTER "D:"` |
 
 **Why cassette:** a cassette boot needs the least of the machine: no disk
 drive, no DOS, just the computer, its OS and the first few K of RAM. So it
 runs on an 8K Atari 400 and on machines too sick to boot a disk. Tape is
-slow (about 3K a minute), so there are three sets, by RAM size: the more
-RAM, the fewer tapes. Each set works on every machine with at least that
-much RAM, newer models included. With a disk drive, the 32k+ tape and the
-memory test also come as **disk files** (`.xex`, in `disks/`) that load in
-seconds. All of it is also on one **cartridge** (in `carts/`): plug it in,
-switch on, pick a test.
+slow (about 3K a minute), so the tapes come in sets by RAM size: the more
+RAM, the fewer tapes. A set works on every machine with at least that much
+RAM, newer models included.
 
 Version 0.9. Every file has its version in its name
 (`diag-32k-xl-xe-v0.9.xex`) and every screen shows it at the right of the
-title bar (`V0.9`), so you can tell which one you are running. The names
-below leave the `-v0.9` out.
-
-![The menu](docs/img/system-01-menu.png)
+title bar (`V0.9`). The names here leave the `-v0.9` out.
 
 ## Get started
 
-1. Pick the tapes by RAM: the biggest set the machine has the RAM for.
-
-   | RAM | Tapes (in `cassettes/`) |
-   |---|---|
-   | 8K or more (every Atari) | the 8k set: `diag-8k-01-ram` to `diag-8k-06-video`, about 2 min each; long test `diag-8k-memtest` |
-   | 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, about 3.5 min each; long test `diag-16k-memtest`; the sampled sound test `diag-16k-03-hello` |
-   | 32K or more (an 800 with 32K-48K, any 64K or 128K XL/XE) | the 32k+ tape: `diag-32k-xl-xe`, one tape, about 6 min; long test `diag-16k-memtest` |
-   | keyboard, joysticks, paddles only (16K or more) | `diag-controls`: no test harness needed; goes with Atari's SALT disks |
-   | with a disk drive or a MiSTer: 32K or more | `disks/diag-32k-xl-xe.xex`: everything in one file; the long test: `disks/diag-16k-memtest.xex` (16K) |
-   | a MiSTer, or an AtariMax 128K flash cartridge: any machine, 8K or more | `carts/diag-cart.car`: every test, run from ROM, with the menu; the long test from its line 8 (16K) |
-   | a BASIC cartridge (400/800, 1200XL) | BASCRC: `disks/diag-bascrc.xex` (from DOS, 16K), or as a BASIC program: `cassettes/diag-bascrc.cas` (`ENTER "C:"`), `disks/bascrc.lst` (`ENTER "D:"`); see the user guide |
-
-   A machine that won't get through its own set: use the 8k set. A tape
-   that needs more RAM than the machine has stops at once: red border, a
-   low tone on and off.
-
-2. Take out any cartridge, then load the first tape: hold START, switch the
-   machine on, start the tape and press a key when it beeps. You can
-   use a MiSTer, a PC with a USB-SIO cable and AspeQt, or a real cassette.
+1. Pick a way: the cartridge if you have a flash cartridge or a MiSTer;
+   the disk file with a drive and 32K; otherwise the tapes for the
+   machine's RAM (a machine that won't get through its own set: the 8k
+   set). A tape that needs more RAM than the machine has stops at once:
+   red border, a low tone on and off.
+2. Take out any cartridge (BASIC too) and load it: for a tape, hold START,
+   switch on, start the tape and press a key when it beeps.
 3. Watch and listen: green is good, red plus beeps is a fault. Long beeps
-   say where (RAM bank or test number), short beeps say what (data bit or
-   item).
+   say where (the RAM bank or the test), short beeps say what (the data
+   bit or the item).
+
+Keys at every result, each with a console key and a keyboard key so one
+dead key never traps you: **R** re-test (where there is no menu to pick
+the test from again), **T** or SELECT the tones again, **F** or OPTION
+full-screen flashes, any other key (START, a joystick button) goes on.
+**S** skips the RAM test on the cartridge, the 32k+ tape and disk file.
+
+**Dirty contacts cause a lot of "faults".** An unpaid recommendation from
+the author: DeoxIT contact cleaner (CAIG Laboratories) on the cartridge
+port, the cartridge's own contacts, the SIO and joystick connectors, and
+an 800's RAM and OS board edges. Clean, reseat, and test again before
+blaming a chip.
 
 **[The user guide](docs/USER-GUIDE.md)** explains every screen, the colours
-and beeps, loading from a PC, and what to do when something fails.
+and beeps, loading from a PC or a MiSTer, and what to do when something
+fails. It starts with a table of every test and the files that have it.
+
+## Status
+
+Tried on the MiSTer's Atari800 core as a 400/800 and as an XL/XE (64K, and
+a 128K 130XE), with the tapes, the disk files and the cartridge; and on a
+real 800 and a real 800XL with the disk files over an SIO adapter, where
+the joystick and paddle ports get their real test. Not tried yet: the
+cassettes played into a real machine, and the paddles on a MiSTer (it
+needs a paddle adapter that works with it). Reports from other machines
+are welcome.
 
 ## Versions
 
-- **0.9** (2026-11-15)
-  - The end of a tape without a menu (the 8k tapes, `diag-16k-03-hello`,
-    `diag-controls`): no more `START = AGAIN`. The last test's screen
-    stays up with a line for each test on the tape and what to load next
-    (`TEST COMPLETE. NEXT: DIAG-8K-03-INPUT`), and nothing needs a press.
-    The last test goes straight there, without its own result pause.
-    `diag-16k-01-ram`, and `diag-8k-01-ram` on an 8K machine, end the same
-    way.
-  - A fail now plays "impending doom" (C4, C4, F#3, the tritone) before
-    its beep code, instead of the sad trombone, and every failed test plays
-    it, at the test and at the end.
-  - GTIA test, page 2: every display mode on one screen (ANTIC 6, 7, the
-    bitmaps 8, A, B, D, F with a wave drawn in each, and GTIA's 9, 10, 11),
-    a line wiggling sideways (HSCROL) and the question bobbing (VSCROL);
-    item 2.
-  - The ATARI word scrolls right to left; each letter rides the wave on its
-    own counter, as in 0.8. The hue bands are 4 lines (from 5), and the
-    word sits in the middle of the space that leaves.
-  - Page 2 of test 7 (`7 VIDEO MODES`) is clearer: a label line above
-    each mode, even colour bars in the bitmaps (no waves), the GTIA bands
-    apart, a line that slides and one that moves up and down, and the
-    question still.
-  - The final result when nothing failed but not every test ran (skipped,
-    or not run from the menu): steady yellow and the start-up chirp, not
-    the green double charge.
-  - Keys at every result: T or SELECT the tones again, F or OPTION
-    full-screen flashes, any other key goes on (at the end of a tape
-    without a menu: the tones). R re-tests wherever there is no menu to
-    pick the test again from: the last screen of every tape without a menu
-    (all its tests again), the RAM tapes and the memory tests. In the user
-    guide's first section, with a table of every test and the files that
-    have it.
-  - S skips the RAM test on the 32k+ tape and the disk file too, as on the
-    cartridge; X no longer skips the ROM test (the console key test keeps
-    it).
-  - The 8k sound and video tape is two tapes, `diag-8k-05-sound` and
-    `diag-8k-06-video`, each one load (no part two), so R can run every
-    test again. The 8k tapes carry only their own tests' names.
-  - "hello": the cartridge's recording everywhere (15.7 kHz, seven plays);
-    `diag-16k-03-hello` loads in 3.5 min. The disk file no longer carries
-    the long memory test (it could never come back to the menu): that is
-    `diag-16k-memtest.xex`, and the tape `diag-16k-memtest` (was
-    `diag-memtest`).
-  - The memory test's summary shows the passes done again; R restarts it.
-  - The keyboard test ends on any console key. The Atari key shows the
-    logo on every machine. `diag-8k-01-ram` shows the main RAM (48K on an
-    XL/XE) until part 2 tests the rest.
-  - Test 7 is named GTIA/ANTIC (its page 2 is mostly ANTIC's modes).
-  - Prompts say ANY KEY where any key goes on (`ANY KEY = GO ON`,
-    `ANY KEY = MENU`), so a dead START or key isn't a dead end. The
-    paddle test's first step and the 8k av tape's part two retry now take
-    any key too, not only START.
-  - "hello" on the disk file and the hello tape: all seven plays, as on
-    the cartridge (the two-voice ones too), from a recording at half the
-    rate played twice as fast: a squeaky "hello".
-  - Long memory test: the count is passes done, 0 in the first and up by
-    one as each pass ends; the summary shows it with the time. A key shows
-    `ENDING AFTER PASS` (a bank number no longer lands after it).
-  - `diag-8k-memtest` stops at once on an XL/XE (yellow, `XL/XE: USE
-    DIAG-16K-MEMTEST`): it can't reach the RAM under the OS or a 130XE's
-    banks, so its test there would be incomplete.
-  - The RAM test's pass beeps: one long beep for every 16K bank. The 32k+
-    tape and disk file left bank 1 out (their program sits above $4000),
-    so a 130XE beeped 7 times, not 8.
-  - The `FOUND:` line no longer says `CART IN`.
-  - The cartridge counts the RAM under itself at every start, so a 48K
-    machine shows 48K on the menu even after S or the long RAM test (it
-    showed 40K then).
-  - No timers: no result moves on by itself after 2 seconds any more.
-    Every one waits for a key (`T=TONES  ANY OTHER KEY=GO ON`, or `=MENU`
-    when one test was run from the menu), so it can be read, left, or
-    re-tested; that includes `diag-8k-01-ram`'s first part before it loads
-    part 2.
-  - ROM test: a self-check line. The tape or disk file checks its own copy
-    in RAM by CRC32, and the cartridge checks each of its program banks
-    against a CRC32 stored in it (item 6). The 400/800 cartridge reading
-    is gone: a BASIC cartridge is checked by BASCRC, a short BASIC program
-    (`diag-bascrc` tape, `bascrc.lst`, and `diag-bascrc.xex`, the same
-    check in machine code). The XL/XE's built-in BASIC is
-    still checked, and one that matches no revision is now a fault.
+- **0.9** (2026-11-15), against 0.8:
+  - **Keys:** R re-test, T or SELECT the tones, F or OPTION full-screen
+    flashes, any other key goes on, at every result; every action has a
+    console key and a keyboard key. S skips the RAM test on the cartridge,
+    the 32k+ tape and the disk file; X skips the console key test.
+  - **No timers:** no result moves on by itself any more (a pass used to
+    go on after 2 seconds). R works at the last screen of every tape
+    without a menu (all its tests again), at the RAM summaries and at the
+    memory test's summary.
+  - **The end of a tape without a menu:** a line for each of its tests and
+    what to load next, for example `DONE. R=RETEST. NEXT:
+    DIAG-8K-04-PORTS`.
+  - **Sounds:** a fail plays "impending doom" (C4, C4, F#3, the tritone)
+    before its code, instead of the sad trombone. A final result with
+    nothing failed but not every test run is steady yellow with the
+    start-up chirp.
+  - **The 8k set** is six tapes: the sound and video tape became
+    `diag-8k-05-sound` and `diag-8k-06-video`, one load each.
+  - **ROM test:** a self-check (item 6): a tape or disk file checks its own
+    copy in RAM by CRC32, the cartridge each of its program banks. The
+    XL/XE's built-in BASIC must match a revision (item 2). The 400/800's
+    BASIC cartridge is checked by **BASCRC** instead: a disk file, a BASIC
+    listing on tape and a `.lst` file.
+  - **RAM:** one long beep per 16K bank at a pass (the 32k+ tape and disk
+    file left bank 1 out, so a 130XE beeped 7 times, not 8). The cartridge
+    counts the RAM under itself at every start (48K, not 40K, after S or
+    the long test). The `FOUND:` line no longer says `CART IN`.
+  - **Memory test:** the count is passes done, from 0; a key shows `ENDING
+    AFTER PASS`; R starts it again. `diag-memtest` is now
+    `diag-16k-memtest` (tape and disk file); the disk's 32k+ file no longer
+    carries it. `diag-8k-memtest` stops at once on an XL/XE (yellow,
+    `XL/XE: USE DIAG-16K-MEMTEST`): it can't reach their extra RAM.
+  - **Test 7 is GTIA/ANTIC:** the word ATARI scrolls right to left and
+    snakes on its own wave; page 2 shows the video modes (ANTIC 6 and 7,
+    the bitmaps 8, A, B, D, F, GTIA 9, 10, 11) and fine scrolling.
+  - **"hello"** plays the cartridge's 15.7 kHz recording everywhere it is
+    (cartridge, disk file, `diag-16k-03-hello`), seven plays.
+  - The keyboard test ends on any console key; the Atari key shows the
+    logo on every machine.
+  - Documents: a keys section and a table of every test by file, the MIT
+    license, and current pictures.
 - **0.8** (2026-11-15)
   - The 400 set is now the 8k set: `diag-8k-01-ram` to `diag-8k-05-av` and
     `diag-8k-memtest`. It runs on any Atari, tells a 400/800 from an XL/XE
@@ -299,17 +288,50 @@ and beeps, loading from a PC, and what to do when something fails.
 
 ## For developers
 
-[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) covers building from source, the
-simulator, the source layout and the attributions. The design notes are in
-[Atari-diag-cassette-scope.md](Atari-diag-cassette-scope.md).
+Everything is built from source with the MADS assembler and a few Python
+tools; a cycle-timed simulator runs the programs without an Atari.
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) covers the environment,
+building, the source layout, the simulator, how each format is put
+together, the rules the code keeps (byte budgets, no timeouts, two keys for
+everything) and the lessons learned along the way.
+[Atari-diag-cassette-scope.md](Atari-diag-cassette-scope.md) is the design
+and the ROM table; [Atari-diag-disk-scope.md](Atari-diag-disk-scope.md)
+the disk files' design.
 
-## Authorship and status
+Contributions are welcome: issues and pull requests on GitHub are the way
+to reach the author (email isn't checked). A report from real hardware is
+as useful as code: say which machine, OS and RAM, which file, and what the
+screen and the beeps said.
+
+## Credits
+
+- **Michael Grimm:** the author. He directs the work, reviews it and tests
+  it on hardware, and wrote BASCRC, the BASIC cartridge check.
+- **Claude** (Anthropic's AI): wrote the code, the tools and the
+  documents, under his direction.
+- **Other people's work** this builds on (details in
+  [DEVELOPMENT.md](docs/DEVELOPMENT.md#attributions)):
+  - [MADS](https://github.com/tebe6502/Mad-Assembler), the assembler, by
+    Tomasz Biela (Tebe);
+  - [py65](https://github.com/mnaberez/py65), the 6502 core in the
+    simulator, by Mike Naberezny; [Pillow](https://python-pillow.org/) for
+    the pictures;
+  - the ROM tables: the [atari800](https://github.com/atari800/atari800)
+    emulator, [MAME](https://github.com/mamedev/mame) and Freddy Offenga's
+    *Atari 8-bit Operating Systems* (OSROMS.TXT);
+  - the "hello" recording: `En-us-hello.ogg` by Dvortygirl, Wikimedia
+    Commons, public domain;
+  - the [MiSTer Atari800 core](https://github.com/MiSTer-devel/Atari800_MiSTer)
+    and [AspeQt](https://sourceforge.net/projects/aspeqt/), which the
+    testing relies on;
+  - prior art: Atari's SALT and Super SALT diagnostic disks, and Sys-Check.
+
+No Atari ROM code is included. The simulator and the pictures used the
+author's own ROM files, which are not distributed here.
+
+## Authorship
 
 The author has programmed 6502 machine language and assembler since
 childhood. Even so, all of the code and documents here are, for now, 100%
 written by AI (Claude, by Anthropic). The author directs the work, reviews
 it and tests it on hardware.
-
-Tested on a MiSTer Atari800 core and in the project's
-simulator; not yet on a real 400, 800, XL or XE. Issues and pull requests
-are the way to reach the author; email is not checked.

@@ -45,10 +45,11 @@ RUNS = {
         ('HEARD IT?', 1, 'input-02-console'),
         ('3 CONSOLE KEYS', 1, 'input-03-results')]),
     'input-fail': ('diag-8k-03-input', ['--auto', '--skip', '5', '--until', '60'], [
-        ('START = GO ON', 1, 'input-04-fail')]),
-    'ports': ('diag-8k-04-ports', ['--auto', '--until', '90'], [
+        ('^T=TONES  ANY OTHER KEY=GO ON', 0.1, 'input-04-fail')]),   # (--auto goes on at +0.25 s)
+    'ports': ('diag-8k-04-ports', ['--auto', '--until', '120'], [
         ('STICK 4', 1, 'ports-01-joysticks'),
-        ('VAL MIN MAX', 2, 'ports-02-paddles')]),
+        ('VAL MIN MAX', 2, 'ports-02-paddles'),
+        ('^DONE. R=RETEST', 1, 'ports-03-end')]),
     'av': ('diag-8k-05-sound', ['--auto', '--until', '120'], [
         ('VOICE 2:', 0.4, 'av-01-pokey')]),
     'video': ('diag-8k-06-video', ['--auto', '--until', '60'], [
@@ -56,18 +57,21 @@ RUNS = {
     'cart': ('diag-cart.car', ['--ram', '0x4000', '--con', 'START:8:0.4,START:22:0.4',
                                '--until', '32'], [   # (no --auto: it would run ALL)
         ('^START=RUN', 1, 'cart-01-menu')]),
-    'menu': ('diag-16k-02-system', ['--ram', '0x8000', '--auto', '--until', '400'], [
+    # the menu runs: tests 1-6 by their keys, then 8, the results (test 7's
+    # video modes page can't be read in the simulator, so --auto can't answer it)
+    'menu': ('diag-16k-02-system', ['--ram', '0x8000', '--auto', '--walk', '1234568',
+                                    '--until', '1200'], [
         ('^START=RUN', 0.5, 'system-01-menu'),
-        ('^START = MENU', 1, 'system-02-results')]),
+        ('^NUMBERS AFTER FAIL', 0.1, 'system-02-results')]),   # (--auto: menu at +0.25 s)
     '16k': ('build/t16-fast', ['--ram', '0x4000', '--key', '10', '--until', '400'], [
-        ('^START=AGAIN', 2, '16k-01-summary')]),
-    '32k-sum': ('build/t32-fast', ['--xl', '--basic', '@BASIC', '--key', '10',
-                                   '--until', '600'], [        # (no --auto: it waits)
-        ('^START=GO ON  SELECT', 1, '32k-01-summary')]),
+        ('^R=RETEST  ANY OTHER KEY', 2, '16k-01-summary')]),
+    '32k-sum': ('build/t32-fast', ['--xl', '--auto', '--basic', '@BASIC', '--key', '10',
+                                   '--until', '600'], [   # (--auto: past stage 1's result;
+        ('^T=TONES  ANY OTHER KEY=GO ON', 0.1, '32k-01-summary')]),   # it goes on at +0.25 s)
     '32k': ('build/t32-fast', ['--xl', '--auto', '--basic', '@BASIC', '--key', '10',
-                               '--until', '1200'], [
+                               '--walk', '1234568', '--until', '1200'], [
         ('^START=RUN', 0.5, '32k-02-menu'),
-        ('^START = MENU', 1, '32k-03-results')]),
+        ('^NUMBERS AFTER FAIL', 0.1, '32k-03-results')]),
     'memtest': ('diag-16k-memtest', ['--ram', '0x8000', '--stuck', '6FFC-6FFF:3:1',
                                  '--key', '150', '--until', '220'], [
         ('PASSES 4', 3, 'memtest-01-running'),
@@ -76,6 +80,8 @@ RUNS = {
     # row 13 (the save-page churn and the sweep alternate every pass)
     'memtest-sweep': ('diag-8k-memtest', ['--ram', '0x2000', '--until', '11',
                                            '--shot', '10:@RAW/memtest-03-sweep.png'], []),
+    'memtest-xl': ('diag-8k-memtest', ['--xl', '--until', '40'], [
+        ('XL/XE: USE', 1, 'memtest-04-xl')]),
 }
 
 # The guide's callouts: picture -> [(first text row, last text row, number)].
@@ -104,6 +110,8 @@ ANNOT = {
     'memtest-01-running': [(5, 5, 1), (6, 6, 2), (8, 9, 3), (23, 23, 4)],
     'memtest-02-summary': [(5, 6, 1), (8, 9, 2)],
     'memtest-03-sweep': [(13, 13, 1)],
+    'memtest-04-xl': [(2, 2, 1), (23, 23, 2)],
+    'ports-03-end': [(21, 22, 1), (23, 23, 2)],
 }
 
 

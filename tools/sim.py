@@ -490,7 +490,8 @@ WALK = [0x1F, 0x1E, 0x1A, 0x18, 0x1D, 0x1B, 0x33]   # keys 1-7: the menu order
 class Auto:
     """Answers tape 3's prompts as a person would, from the screen text.
     deny: prompt words to answer No to; skip: keys to leave unpressed."""
-    PROMPTS = ['HEARD ALL', 'PRESS EVERY KEY', 'PRESS START, SELECT AND OPTION', 'HEARD IT?',
+    PROMPTS = ['HEARD ALL', 'PRESS EVERY KEY', 'PRESS START, SELECT AND OPTION',
+               'PRESS START, SELECT, OPTION', 'HEARD IT?',
                'MOVE EACH STICK', 'UNPLUG ALL PADDLES', 'TURN EACH', 'LOOKS RIGHT?',
                'LOOKS RIGHT?']
 
@@ -517,7 +518,8 @@ class Auto:
                 else:                         # START: ALL at first, then (walk)
                     self.hw.press(when, 'CON', 1)            # the results
             return
-        if 'START = GO ON' in text or 'START=GO ON' in text:   # a result that waits: one
+        if ('START = GO ON' in text or 'START=GO ON' in text or 'ANY OTHER KEY=GO ON' in text
+                or 'ANY OTHER KEY=MENU' in text):   # a result that waits: one
             ln = self.hw.line        # press, as a person would (a tap during a tone
             lines = text.splitlines()  # counts, and a second could leak into the next test)
             sig = 'GOON|' + lines[0] + '|' + '|'.join(l for l in lines if 'TEST ' in l or 'PASS' in l)
