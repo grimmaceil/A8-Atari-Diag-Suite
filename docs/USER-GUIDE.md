@@ -185,8 +185,10 @@ machine with 16K or more.
 ### Starting the machine for a cassette boot
 
 1. Turn the Atari off.
-2. **Take out any cartridge**, BASIC included. A cartridge covers 8K of RAM,
-   so the RAM test can't reach it (the `FOUND:` line shows 8K less).
+2. **Take out any cartridge**, BASIC included. On a 400/800 a cassette
+   won't boot with a cartridge in at all (a disk will). And a cartridge
+   covers 8K of RAM, so the RAM test couldn't reach it: a 48K 800 with
+   BASIC in shows `RAM 40K`.
    An XL or XE's built-in BASIC doesn't matter: the tapes switch it off
    themselves.
 3. Hold **START** and turn the Atari on, still holding START. It beeps once.
@@ -600,6 +602,15 @@ Or the BASIC program:
      listing it stops with `ERROR- 21`, "not a SAVE file") and
      press RETURN. It beeps once: start the tape and press a key. It reads
      about a minute, stopping between blocks.
+
+     The tape has to be at its start for every try: after an error, or
+     after a CLOAD, rewind it. On a **MiSTer**: type `ENTER "C:"` and
+     RETURN first; at the beep, mount the tape with **Load Tape** in the
+     core's menu (not Boot Tape: that boots it as a machine-code tape,
+     which this isn't, and it crashes), then press RETURN. The MiSTer
+     can't rewind a tape: after a failed try, load the `.cas` again from
+     the menu (that starts it from the beginning; Backspace in the tape
+     menu unmounts it if the Atari's SIO seems stuck).
    - **Disk:** copy `disks/bascrc` (`.lst`) onto a DOS disk as
      `BASCRC.LST`, then `ENTER "D:BASCRC.LST"`.
    - **Type it in** (below). Line 40 catches a typing mistake in the
@@ -849,7 +860,7 @@ keeps its screen.
 
 The keyboard, joystick and paddle tests from above, on one tape for 16K
 and up, with nothing else: no menu, no RAM or ROM test. They run in order,
-and at the end START runs them again. Use it alongside Atari's SALT
+and at the end R runs them again. Use it alongside Atari's SALT
 diagnostic disks, whose controller tests need a test harness.
 
 ### Memory test (`diag-16k-memtest`, `diag-8k-memtest`)

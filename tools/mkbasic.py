@@ -16,7 +16,7 @@ from pathlib import Path
 
 from mkcas import chunk, record
 
-LEADER_MS = 10000
+LEADER_MS = 20000      # (as LIST "C:" writes it: slack before the first block)
 IRG_MS = 3000
 
 
