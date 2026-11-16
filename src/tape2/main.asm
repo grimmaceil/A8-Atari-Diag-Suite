@@ -1278,9 +1278,9 @@ s_nsol	dta d' SOLID, ',$FF
 s_nextok dta d'ALL PASSED',$FF
 s_nextbad dta d'FIX SOLID FIRST',$FF
 	.ifdef CART
-s_toggle2 dta d'T=TONES  ANY KEY=MENU',$FF
+s_toggle2 dta d'T=TONES  ANY OTHER KEY=MENU',$FF
 	.else
-s_toggle2 dta d'R=RETEST  ANY KEY=TONES',$FF
+s_toggle2 dta d'R=RETEST  ANY OTHER KEY=TONES',$FF
 	.endif
 
 	.ifdef BOUNCE

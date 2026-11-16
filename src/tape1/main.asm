@@ -85,7 +85,7 @@ rt_go	jsr ramtest
 	.ifdef ONE16
 	jmp PAYAT+6		; no results here: stage 2's summary has them all
 	.else
-	lda RAMTOP		; 16K and up: a press (or a pass) goes on to
+	lda RAMTOP		; 16K and up: a key goes on to
 	cmp #$40		; stage 2. 8K: the end, nothing to press; the
 	bcc rt_8k		; results' stage 2 line says what to load next
 	lda #<load2
@@ -402,8 +402,8 @@ s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_bank4	dta d'BANK 4 $C000-$FFFF  IN STAGE 2',$FF
 s_result dta d'RESULT: ',$FF
-s_toggle dta d'R=RETEST  T=TONES  ANY KEY=GO ON',$FF
-s_toggle2 dta d'R=RETEST  ANY KEY=TONES',$FF
+s_toggle dta d'R=RETEST  T=TONES  ANY OTHER KEY=GO ON',$FF
+s_toggle2 dta d'R=RETEST  ANY OTHER KEY=TONES',$FF
 s_l2load dta d'LOADING STAGE 2...',$FF
 s_l2pre	dta d'STAGE 2: ',$FF
 s_l2_8k	dta d'16K ONLY. NEXT: DIAG-8K-02-ROM',$FF

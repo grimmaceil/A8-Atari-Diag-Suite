@@ -126,8 +126,11 @@ and beeps, loading from a PC, and what to do when something fails.
     tape and disk file left bank 1 out (their program sits above $4000),
     so a 130XE beeped 7 times, not 8.
   - The `FOUND:` line no longer says `CART IN`.
-  - The menu's results say `MENU IN 2 S` and `ANY KEY = MENU` when one test
-    was run from the menu, not `NEXT TEST`.
+  - No timers: no result moves on by itself after 2 seconds any more.
+    Every one waits for a key (`T=TONES  ANY OTHER KEY=GO ON`, or `=MENU`
+    when one test was run from the menu), so it can be read, left, or
+    re-tested; that includes `diag-8k-01-ram`'s first part before it loads
+    part 2.
   - ROM test: a self-check line. The tape or disk file checks its own copy
     in RAM by CRC32, and the cartridge checks each of its program banks
     against a CRC32 stored in it (item 6). The 400/800 cartridge reading

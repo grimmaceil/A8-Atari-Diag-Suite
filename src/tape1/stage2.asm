@@ -604,9 +604,9 @@ s_nextok dta d'ALL PASSED. NEXT: DIAG-8K-02-ROM',$FF
 s_nextbad dta d'FIX THIS FIRST',$FF
 	.endif
 	.ifdef GOMENU
-s_toggle2 dta d'T=TONES  ANY KEY=GO ON',$FF
+s_toggle2 dta d'T=TONES  ANY OTHER KEY=GO ON',$FF
 	.else
-s_toggle2 dta d'R=RETEST  ANY KEY=TONES',$FF
+s_toggle2 dta d'R=RETEST  ANY OTHER KEY=TONES',$FF
 	.endif
 
 	.ifndef ROM		; (in ROM every byte counts: no page alignment)

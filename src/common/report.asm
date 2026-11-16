@@ -274,11 +274,10 @@ rq_x	rts
 
 ; ---------------------------------------------------------------------------
 ; pass: the charge (G4 C5 E5 G5); twice at the end (no continue vector, or
-; ENDING 2: the final results). With a continue vector: hold green ~2 s,
-; then go on.
-; Without (the end of the tape): every ~5 s one long green flash per bank
-; tested, steady green between, forever; quiet (see tone): steady green and
-; silent.
+; ENDING 2: the final results). Then it waits, with no time limit, so the
+; screen can be read: every ~5 s one long green flash per bank tested,
+; steady green between; quiet (see tone): steady green and silent. A key
+; goes on (the continue vector; at the end of a tape: the tones again).
 pass	lda #C_GREEN
 	sta COLBK
 	jsr arm
@@ -305,13 +304,6 @@ pa_jin	ldx RCNT
 	lda #C_GREEN
 	sta HOLDC
 	NCALL RET1, hold
-	lda CONTVEC+1
-	beq pa_top
-	.ifdef RPEND
-	lda ENDING		; the system tapes' end: START goes on (again),
-	bne pa_top		; nothing goes on by itself
-	.endif
-	jmp (CONTVEC)
 pa_top	lda QUIET
 	bne pa_hold
 	lda NBANKS

@@ -450,8 +450,11 @@ failed. The results screen says `NUMBERS AFTER FAIL = ITEMS THAT FAILED`.
 See [Keys](#keys) at the start: R re-test, T or SELECT the tones, F or
 OPTION full-screen flashes, any other key goes on.
 
-A test that passes moves on by itself after about 2 seconds, except the ROM
-test, which waits so you can read the names and checksums. The end of a
+No result moves on by itself: every one waits for a key, as long as you
+like, so you can read it, walk away, or press R. While a pass waits the
+border is green (without the text screen it gives one long green flash
+every few seconds). Any other key goes on: to the next test, to the menu,
+or, on `diag-8k-01-ram` with 16K or more, to loading part 2. The end of a
 tape:
 - the 8k tapes 02-06, `diag-16k-03-hello` and `diag-controls` (no menu):
   the last test's screen stays up, with a line for each test on the tape

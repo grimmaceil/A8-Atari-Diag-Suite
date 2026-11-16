@@ -370,34 +370,17 @@ ts_on	lda #23
 	cmp #2
 	beq tsend
 	.endif
-	lda #21
+	lda #21			; (every result waits for a key: time to read it)
 	jsr tline
-	ldx TEST
-	lda BADMASK,x
-	bne ts_go
-	.ifdef WANT_ROM
-	dex			; (the ROMs wait for a press)
-	beq ts_go
-	.endif
 	.ifdef MENU
 	lda MMODE		; one test from the menu: back to it
-	bne ts_np
-	PRINT 23, 0, s_mpass
-	rts
-ts_np
-	.endif
-	PRINT 23, 0, s_tpass
-ts_x	rts
-ts_go
-	.ifdef MENU
-	lda MMODE
 	bne ts_ng
-	PRINT 23, 0, s_toggle3	; R, T, a key = the menu
+	PRINT 23, 0, s_toggle3
 	rts
 ts_ng
 	.endif
 	PRINT 23, 0, s_goon
-	rts
+ts_x	rts
 
 	.ifndef MENU
 ; tsend: the end of a tape without a menu: a line for each test on it (two
@@ -913,8 +896,7 @@ s_mram	dta d'0 RAM',$FF
 	.else
 s_m2	dta d'OR PRESS 1-8 FOR THAT LINE',$FF
 	.endif
-s_toggle3 dta d'T=TONES  ANY KEY=MENU',$FF
-s_mpass	dta d'MENU IN 2 S',$FF
+s_toggle3 dta d'T=TONES  ANY OTHER KEY=MENU',$FF
 	.endif
 
 	.ifdef MENU
@@ -1147,8 +1129,7 @@ s_test	dta d'TEST ',$FF
 s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_items	dta d', ITEMS',$FF
-s_tpass	dta d'NEXT TEST IN 2 S',$FF
-s_goon	dta d'T=TONES  ANY KEY=GO ON',$FF
+s_goon	dta d'T=TONES  ANY OTHER KEY=GO ON',$FF
 	.ifdef NEEDYN
 s_heard	dta d'HEARD IT? Y/START=YES, N/SELECT=NO',$FF
 	.endif
