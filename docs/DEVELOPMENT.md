@@ -365,9 +365,11 @@ callouts; `--annotate` redraws them without running anything. The raw
 screens go to `docs/img/raw/` (not in git). The video test's picture
 (`av-02-gtia`) is left out of the regular runs: the simulator can't draw
 that screen as it really looks. For the same reason `--auto` can't answer
-test 7's video modes page (it can't read that screen), so the menu
+test 7's video modes page (it can't read that screen), so the 16k menu
 pictures walk tests 1-6 by their keys and then open line 8, the results
-(`--walk 1234568`); test 7 shows there as not run.
+(`--walk 1234568`); test 7 shows there as not run. (The simulator's 32k+
+menu doesn't take the number keys, so it has no results picture of its
+own: the page is the same.)
 
 ## Lessons learned
 

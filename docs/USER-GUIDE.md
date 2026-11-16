@@ -871,14 +871,10 @@ One tape, one load, for any machine with 32K or more:
 4. The results.
 5. The keys.
 
-At the end, RAM faults show up again as test 0, with the bank as the item:
-
-![32K results](img/32k-03-results.png)
-
-1. Test 0: the RAM. FAIL with the bank numbers if any RAM failed; the code
-   plays one long beep, then short × bank.
-2. The seven tests.
-3. The ROMs: here a real XL OS rev 2 and BASIC rev A.
+The results page (line 8) is the one shown under
+[The menu](#the-menu-diag-16k-02-system-and-diag-32k-xl-xe), with one more
+line on top: test 0, the RAM. FAIL there lists the bad banks, and the
+final code plays one long beep, then short × bank.
 
 During the ROM test the screen goes blank for about a third of a second:
 the test is reading the XL/XE's self-test ROM, which sits where this tape

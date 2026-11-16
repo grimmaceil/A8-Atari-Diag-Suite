@@ -69,9 +69,8 @@ RUNS = {
                                    '--until', '600'], [   # (--auto: past stage 1's result;
         ('^T=TONES  ANY OTHER KEY=GO ON', 0.1, '32k-01-summary')]),   # it goes on at +0.25 s)
     '32k': ('build/t32-fast', ['--xl', '--auto', '--basic', '@BASIC', '--key', '10',
-                               '--walk', '1234568', '--until', '1200'], [
-        ('^START=RUN', 0.5, '32k-02-menu'),
-        ('^NUMBERS AFTER FAIL', 0.1, '32k-03-results')]),
+                               '--until', '420'], [
+        ('^START=RUN', 0.5, '32k-02-menu')]),   # (its results page: as the 16k tape's)
     'memtest': ('diag-16k-memtest', ['--ram', '0x8000', '--stuck', '6FFC-6FFF:3:1',
                                  '--key', '150', '--until', '220'], [
         ('PASSES 4', 3, 'memtest-01-running'),
@@ -106,7 +105,6 @@ ANNOT = {
     '16k-01-summary': [(5, 6, 1), (7, 10, 2), (14, 16, 3), (23, 23, 4)],
     '32k-01-summary': [(5, 6, 1), (7, 11, 2), (14, 16, 3), (23, 23, 4)],
     '32k-02-menu': [(4, 4, 1), (5, 11, 2), (12, 12, 3), (13, 13, 4), (18, 19, 5)],
-    '32k-03-results': [(4, 4, 1), (5, 11, 2), (13, 16, 3)],
     'memtest-01-running': [(5, 5, 1), (6, 6, 2), (8, 9, 3), (23, 23, 4)],
     'memtest-02-summary': [(5, 6, 1), (8, 9, 2)],
     'memtest-03-sweep': [(13, 13, 1)],

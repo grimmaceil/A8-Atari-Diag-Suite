@@ -851,7 +851,7 @@ def main():
             if limit is None:
                 t_done = 0
             break
-        if steps > 400_000_000:
+        if steps > 800_000_000:          # (every result waits now: long --auto runs need more)
             sys.exit('runaway: no report produced')
 
     if a.events:
