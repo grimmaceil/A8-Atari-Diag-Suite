@@ -126,6 +126,9 @@ and beeps, loading from a PC, and what to do when something fails.
     tape and disk file left bank 1 out (their program sits above $4000),
     so a 130XE beeped 7 times, not 8.
   - The `FOUND:` line no longer says `CART IN`.
+  - The cartridge counts the RAM under itself at every start, so a 48K
+    machine shows 48K on the menu even after S or the long RAM test (it
+    showed 40K then).
   - No timers: no result moves on by itself after 2 seconds any more.
     Every one waits for a key (`T=TONES  ANY OTHER KEY=GO ON`, or `=MENU`
     when one test was run from the menu), so it can be read, left, or

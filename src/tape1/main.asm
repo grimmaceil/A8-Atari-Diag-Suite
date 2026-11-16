@@ -58,6 +58,9 @@ LOAD	= $0800
 
 	icl '../common/boot.asm'
 	jsr dprereq
+	.ifdef ROM
+	jsr ucsize		; the RAM under the cartridge, in the RAM count
+	.endif			; (even when the RAM test is skipped)
 	.ifdef SKIPKEY		; (the keyboard latch is on: boot.asm)
 	.ifdef ROM
 	lda $07FE		; back from the long memory test (tape2's

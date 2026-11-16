@@ -6,30 +6,51 @@
 ; off, tests the 8K and switches bank 0 back in. Only when the RAM reaches
 ; the cartridge (RAMTOP = $A000): a smaller machine has nothing there.
 ;
-; The test: $00 and $55, each written everywhere, read back and inverted,
-; read back again; then every byte gets (address low EOR address high), to
-; catch address faults. Bad bits go to bank 3. RAMK gets the 8K.
+; ucsize, at every start (before S or the way back from the long memory
+; test can skip the RAM test): only a look whether there is RAM, and if so
+; RAMK gets the 8K, so the machine line shows the real size (48K, not 40K).
+; undercart, the RAM test's part: the test: $00 and $55, each written
+; everywhere, read back and inverted, read back again; then every byte gets
+; (address low EOR address high), to catch address faults. Bad bits go to
+; bank 3.
 ; Interrupts are off, so the XL OS never sees the cartridge go (TRIG3).
 UCAT	= $0600			; low RAM (tested)
 UCERR	= $8A			; bad bits found
 UCPAT	= $8B			; the pattern
 
-undercart lda RAMTOP
+ucsize	ldx #0			; X 0: only the look
+	jsr ucrun
+	beq uc_x
+	lda RAMK
+	clc
+	adc #8
+	sta RAMK
+	rts
+
+; ucrun: X (0 look, 1 test) to the copy at UCAT, which runs with the
+; cartridge off. Z set: no RAM there (or the RAM ends below the cartridge).
+ucrun	lda RAMTOP
 	cmp #$A0
-	bne uc_x
+	bne uc_n
+	txa
+	pha
 	ldx #0
 uc_cp	lda ucsrc,x
 	sta UCAT,x
 	inx
 	cpx #uc_len
 	bne uc_cp
+	pla
+	tax
 	jsr UCAT
 	txa			; X = 0: no RAM there
+	rts
+uc_n	lda #0
+	rts
+
+undercart ldx #1
+	jsr ucrun
 	beq uc_x
-	lda RAMK
-	clc
-	adc #8
-	sta RAMK
 	lda UCERR
 	beq uc_x
 	ora BADMASK+3
@@ -51,8 +72,9 @@ uc_cnt	inc ECNTLO+3
 	inc ECNTHI+3
 uc_x	rts
 
-; ucsrc: runs at UCAT (branches, and one jump by its UCAT address).
-; Returns X = 1 if there is RAM (UCERR = its bad bits), 0 if not.
+; ucsrc: runs at UCAT (branches, and jumps by their UCAT address). X 0:
+; only the look, 1: the test too. Returns X = 1 if there is RAM (UCERR =
+; its bad bits), 0 if not.
 ucsrc	sta $D510		; the cartridge off
 	ldy #0
 	sty UCERR
@@ -69,7 +91,10 @@ ucsrc	sta $D510		; the cartridge off
 	eor UCPAT
 	bne uc_ram
 	jmp UCAT+uc_none-ucsrc
-uc_ram	tya			; (0: the first pattern)
+uc_ram	txa			; only the look: there is RAM
+	bne uc_go
+	jmp UCAT+uc_yes-ucsrc
+uc_go	tya			; (0: the first pattern)
 uc_p	sta UCPAT
 	lda #$A0
 	sta PTR+1
@@ -137,7 +162,7 @@ uc_v	tya
 	lda PTR+1
 	cmp #$C0
 	bne uc_v
-	ldx #1
+uc_yes	ldx #1
 	bne uc_on
 uc_none	ldx #0
 uc_on	sta $D500		; bank 0 back in

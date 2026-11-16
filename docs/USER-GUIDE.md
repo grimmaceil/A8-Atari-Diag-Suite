@@ -327,9 +327,10 @@ the disk file and the 32k+ tape too.
 
 A cartridge switches off the 8K of RAM it sits over ($A000-$BFFF), which
 is why a 48K machine with a BASIC cartridge shows 40K. This cartridge
-switches itself off for a moment during the RAM test, tests that 8K too,
-and switches back on, so the machine shows its real size (48K, or 64K on
-an XL/XE) and a fault there is reported in bank 3.
+switches itself off for a moment at every start to look for that RAM, so
+the machine shows its real size (48K, or 64K on an XL/XE) even when the
+RAM test is skipped; and the RAM test tests that 8K too (switching off
+again for it), with a fault there reported in bank 3.
 
 The long test, line 9, copies itself into RAM and switches the cartridge
 off while it runs, so it tests all of the RAM. When you stop it (any key,
