@@ -150,11 +150,18 @@ ag_n	inx
 ; ---------------------------------------------------------------------------
 ; RAM test, bank by bank (16K each) from TSTART to RAMTOP, minus the screen
 ; block (tested in findscr). Below TSTART is low RAM (tested) and this stage.
-ramtest	lda #1
+ramtest	lda RAMTOP		; one long beep per 16K bank at a pass, every bank
+	clc			; the RAM reaches: bank 1 too when this stage sits
+	adc #$3F		; over all of its part (the 32k+ image, above
+	asl			; $4000). (XL/XE banks 4-8: xlram.asm adds them.)
+	rol
+	rol
+	and #3
+	sta NBANKS
+	lda #1
 	sta CURBANK
 rt_bank	jsr bankrange
 	bcs rt_next
-	inc NBANKS
 	jsr showbank
 	jsr split
 	lda RNGN

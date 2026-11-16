@@ -88,9 +88,11 @@ and beeps, loading from a PC, and what to do when something fails.
     the green double charge.
   - Keys at every result: T or SELECT the tones again, F or OPTION
     full-screen flashes, any other key goes on (at the end of a tape
-    without a menu: the tones). R re-tests where there is no menu to pick
-    the test again from: the RAM and ROM tapes and the memory tests. In the
-    user guide's first section.
+    without a menu: the tones). R re-tests wherever there is no menu to
+    pick the test again from: the last screen of every tape without a menu
+    (all its tests again), the RAM tapes and the memory tests. In the user
+    guide's first section, with a table of every test and the files that
+    have it.
   - S skips the RAM test on the 32k+ tape and the disk file too, as on the
     cartridge; X no longer skips the ROM test (the console key test keeps
     it).
@@ -114,9 +116,16 @@ and beeps, loading from a PC, and what to do when something fails.
   - "hello" on the disk file and the hello tape: all seven plays, as on
     the cartridge (the two-voice ones too), from a recording at half the
     rate played twice as fast: a squeaky "hello".
-  - Long memory test: the count is passes done (0 in the first). A key
-    shows `ENDING AFTER THIS PASS`; the summary shows the time, not a pass
-    count.
+  - Long memory test: the count is passes done, 0 in the first and up by
+    one as each pass ends; the summary shows it with the time. A key shows
+    `ENDING AFTER PASS` (a bank number no longer lands after it).
+  - `diag-8k-memtest` stops at once on an XL/XE (yellow, `XL/XE: USE
+    DIAG-16K-MEMTEST`): it can't reach the RAM under the OS or a 130XE's
+    banks, so its test there would be incomplete.
+  - The RAM test's pass beeps: one long beep for every 16K bank. The 32k+
+    tape and disk file left bank 1 out (their program sits above $4000),
+    so a 130XE beeped 7 times, not 8.
+  - The `FOUND:` line no longer says `CART IN`.
   - The menu's results say `MENU IN 2 S` and `ANY KEY = MENU` when one test
     was run from the menu, not `NEXT TEST`.
   - ROM test: a self-check line. The tape or disk file checks its own copy

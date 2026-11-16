@@ -289,9 +289,8 @@ rs_ok
 	.endif
 	lda PORTB		; XL/XE: built-in BASIC out (PORTB bit 1), so the
 	ora #$02		; RAM under it is found and tested. (400/800: the
-	sta PORTB		; PIA port is input, the write does nothing.) A
-				; plugged-in cartridge can't be switched out:
-				; machinfo says CART IN ($BFFC = 0)
+	sta PORTB		; PIA port is input, the write does nothing. A
+				; plugged-in cartridge can't be switched out)
 
 ; RAM size. One probe per 4K block from $2000 (the stage itself loaded below
 ; $2000, and every machine has 8K). A block counts as RAM if $A5 and $5A

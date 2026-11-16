@@ -53,8 +53,8 @@ RUNS = {
         ('VOICE 2:', 0.4, 'av-01-pokey')]),
     'video': ('diag-8k-06-video', ['--auto', '--until', '60'], [
         ('LOOKS RIGHT?', 1, 'av-02-gtia')]),
-    'cart': ('diag-cart.car', ['--ram', '0x4000', '--con', 'START:8:0.4,START:14:0.4',
-                               '--until', '24'], [   # (no --auto: it would run ALL)
+    'cart': ('diag-cart.car', ['--ram', '0x4000', '--con', 'START:8:0.4,START:22:0.4',
+                               '--until', '32'], [   # (no --auto: it would run ALL)
         ('^START=RUN', 1, 'cart-01-menu')]),
     'menu': ('diag-16k-02-system', ['--ram', '0x8000', '--auto', '--until', '400'], [
         ('^START=RUN', 0.5, 'system-01-menu'),

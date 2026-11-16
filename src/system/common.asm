@@ -102,20 +102,20 @@ tk_go
 	jmp (NEXTVEC)
 
 	.ifndef MENU
-	.ifdef WANT_ROM
-; trestart: R at the end of the ROM tape (no menu): the test again, with a
-; fresh result. (With a menu it is picked again there instead.)
+; trestart: R at the end of a tape without a menu: its tests again from the
+; first, with fresh results (no reloading after a slip). (With a menu a test
+; is picked again there instead.)
 trestart lda #0
 	sta ENDING
 	sta TIDX
 	sta MRUN
+	sta RETESTV+1		; (R again only at the end)
 	ldx #7
 trs_cl	sta BADMASK,x
 	dex
 	bne trs_cl
 	jsr tnextv
 	jmp (NEXTVEC)
-	.endif
 	.endif
 
 ; tnextv: NEXTVEC = the next tlist entry.
@@ -497,12 +497,10 @@ final
 	sta CONTVEC
 	lda #>menu
 	.else
-	.ifdef WANT_ROM
-	lda #<trestart		; R: the ROM test again
+	lda #<trestart		; R: the tape's tests again
 	sta RETESTV
 	lda #>trestart
 	sta RETESTV+1
-	.endif
 	lda #0			; (a key: the tones again)
 	.endif
 	sta CONTVEC+1
@@ -1158,13 +1156,9 @@ s_heard	dta d'HEARD IT? Y/START=YES, N/SELECT=NO',$FF
 ; s_next: the end of a tape without a menu: what to load next.
 	.if SETNO=0
 	.if TAPENO=6
-s_next	dta d'DONE. LAST 8K TAPE',$FF
+s_next	dta d'DONE. R=RETEST. LAST 8K TAPE',$FF
 	.else
-	.if TAPENO=2
 s_next	dta d'DONE. R=RETEST. NEXT: DIAG-8K-0',[TAPENO+$11]
-	.else
-s_next	dta d'DONE. NEXT: DIAG-8K-0',[TAPENO+$11]
-	.endif
 	.if TAPENO=2
 	dta d'-INPUT',$FF
 	.elseif TAPENO=3
@@ -1176,8 +1170,8 @@ s_next	dta d'DONE. NEXT: DIAG-8K-0',[TAPENO+$11]
 	.endif
 	.endif
 	.elseif SETNO=1
-s_next	dta d'DONE. LAST 16K TAPE',$FF
+s_next	dta d'DONE. R=RETEST. LAST 16K TAPE',$FF
 	.else
-s_next	dta d'DONE',$FF
+s_next	dta d'DONE. R=RETEST',$FF
 	.endif
 	.endif

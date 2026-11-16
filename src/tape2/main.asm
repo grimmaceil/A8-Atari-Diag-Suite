@@ -91,7 +91,7 @@ REFOK	= BSS+$F3		; nonzero: REFSUM is set
 	.endif
 
 ; Tape 2 variables, in the BSS page above the shared ones.
-PASSNO	= BSS+$E0		; 2: passes started
+PASSNO	= BSS+$E0		; 2: passes done (up by one as each one ends)
 STOPREQ	= BSS+$E2		; a stop press was seen (set by the VBI)
 TARM	= BSS+$E3		; VBI: controls seen released
 TFRM	= BSS+$E4		; clock: frames left in this second
@@ -180,7 +180,16 @@ bi_fps	sta FPSV
 	jsr scr_on
 	jsr bscreen
 
-bi_vbi	lda #$40		; keyboard interrupt on in POKEY (the CPU still
+bi_vbi
+	.ifdef NOXL		; the 8K tape has no test for an XL/XE's bank 4
+	lda MACHINE		; (under the OS) or a 130XE's banks 5-8: there it
+	beq bi_8k		; would be incomplete. It stops: yellow, and the
+	lda #C_YELLOW		; bottom line says to load diag-16k-memtest
+	sta COLBK		; (bscreen)
+bi_hlt	bne bi_hlt
+bi_8k
+	.endif
+	lda #$40		; keyboard interrupt on in POKEY (the CPU still
 	sta IRQEN		; masks it): IRQST bit 6 latches a keypress
 	lda #<vbios		; start the clock
 	sta VVBLKI
@@ -199,10 +208,7 @@ pass1
 	jmp ps_half
 ps_a
 	.endif
-	inc PASSNO
-	bne ps_go
-	inc PASSNO+1
-ps_go	lda BCOL
+	lda BCOL
 	sta COLBK
 	ldx #15			; this pass's bad bits; first errors stay
 	lda #0
@@ -329,37 +335,43 @@ ps_xl
 
 ps_end
 	.ifdef BOUNCE
-	jsr halfa		; copy A's half with copy B to come: the log, and
-	bcc ps_log		; a stop, wait for B's half (the pass in progress
-	jsr bounce		; is the pair)
-	lda STOPREQ		; (the copy didn't read back: A goes on alone)
-	beq ps_ag
-	jsr logpass
-	jmp stop
-ps_ag	jmp pass1
-ps_log
+	jsr halfa		; copy A's half with copy B to come: B's half ends
+	bcc ps_log		; the pass (the pass in progress is the pair)
+	jsr bounce
+	jsr endpass		; (back here: the copy didn't read back: A's half
+	jmp pass1		; was the pass, and A goes on alone)
+ps_log	jsr endpass
+	jsr bounce		; on to the other copy, if there is room for it
+	jmp pass1
 	.endif
-	jsr logpass
-	jsr pulse
+
+; endpass: a pass is done: the count up, the log, the end-of-pass beep; a
+; stop press seen: the summary. (The count shows as the next pass starts.)
+endpass	inc PASSNO
+	bne ep_lg
+	inc PASSNO+1
+ep_lg	jsr logpass
+	lda QUIET		; the green end-of-pass flash and beep (quiet: the
+	bne ep_col		; pass count is on the screen), then the state
+	BEEP T_J1		; color
+ep_col	lda BCOL
+	sta COLBK
 	lda DISPOK
-	beq ps_next
-	jsr showlog		; (the pass count: when the next one starts)
-ps_next	lda STOPREQ
+	beq ep_st
+	jsr showlog
+ep_st	lda STOPREQ
 	bne stop
 	.ifdef BOUNCE
-	jsr bounce		; on to the other copy, if there is room for it
-	.endif
+	rts
+	.else
 	jmp pass1
+	.endif
 
 ; ---------------------------------------------------------------------------
 ; Stop: clock off, summary, then the code for every bank with a bad bit.
 stop	lda #0
 	sta NMIEN
 	sta IRQEN
-	inc PASSNO		; (so showpass, PASSNO-1, counts this one: done)
-	bne st_pn
-	inc PASSNO+1
-st_pn
 	.ifndef CART		; R: the memory test again (the cartridge's: its
 	lda #<mtagain		; menu instead)
 	sta RETESTV
@@ -572,13 +584,6 @@ so_c	lda DVAL
 so_no	clc
 	rts
 
-; pulse: the green end-of-pass flash and beep, then the state color.
-pulse	lda QUIET		; quiet: the pass count is on the screen
-	bne pu_col
-	BEEP T_J1
-pu_col	lda BCOL
-	sta COLBK
-	rts
 
 ; ---------------------------------------------------------------------------
 ; Screens.
@@ -592,25 +597,38 @@ bscreen	lda #<s_hburn
 	jsr chinfo
 	.endif
 	PRINT 8, 0, s_legend
-	PRINT 23, 0, s_stop
-	rts
+	lda #23			; the bottom line: how to stop (the 8K tape on an
+	ldx #0			; XL/XE: which tape to use instead, mtinit)
+	jsr at
+	lda #<s_stop
+	ldy #>s_stop
+	.ifdef NOXL
+	ldx MACHINE
+	beq bs_st
+	lda #<s_use16
+	ldy #>s_use16
+bs_st
+	.endif
+	jmp puts
 
 ; step: "NOW: " + the string at A/Y on row 6, the rest of the row blank.
+; The stop line first (once a press was seen): the caller may add to the
+; step's text (a bank number), at the cursor this leaves.
 step	ldx DISPOK
 	beq st_x
 	pha
 	tya
 	pha
-	lda #6
+	lda STOPREQ
+	beq st_ns
+	PRINT 23, 0, s_stopping
+st_ns	lda #6
 	jsr clrrow
 	PRINT 6, 0, s_now
 	pla
 	tay
 	pla
-	jsr puts
-	lda STOPREQ		; the stop line, once a press was seen
-	beq st_x
-	PRINT 23, 0, s_stopping
+	jmp puts
 st_x	rts
 
 ; putc_s: putc, only with a screen.
@@ -618,17 +636,14 @@ putc_s	ldx DISPOK
 	beq st_x
 	jmp putc
 
-; showpass: "PASSES n   TIME h:mm:ss" on row 5, as a pass starts
-; (PASSNO counts the passes started, this one too: 0 in the first).
+; showpass: "PASSES n   TIME h:mm:ss" on row 5, as a pass starts: the
+; passes done (0 in the first).
 showpass lda DISPOK
 	beq st_x
 	PRINT 5, 0, s_pass
 	lda PASSNO
-	sec
-	sbc #1
 	sta DVAL
 	lda PASSNO+1
-	sbc #0
 	sta DVAL+1
 	jsr putdec
 	lda #<s_time
@@ -1239,6 +1254,9 @@ s_hburn	dta d'MEMTEST',$FF
 s_hsum	dta d'SUMMARY',$FF
 s_legend dta d'BANK BIT  FIRST  FAILED/PASSES',$FF
 s_stop	dta d'KEY: END AFTER PASS',$FF
+	.ifdef NOXL
+s_use16	dta d'XL/XE: USE DIAG-16K-MEMTEST',$FF
+	.endif
 s_stopping dta d'ENDING AFTER PASS  ',$FF
 s_now	dta d'NOW: ',$FF
 s_low	dta d'LOW RAM',$FF
