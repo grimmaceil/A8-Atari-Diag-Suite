@@ -79,7 +79,7 @@ lc_lp	lda (CUR),y
 	bne lc_lp
 lc_x	rts
 
-s_con1	dta d'PRESS START, SELECT AND OPTION.',$FF
-s_con2	dta d'ONE DEAD? A KEY GOES ON. X=SKIP',$FF
+s_con1	dta d'PRESS START, SELECT, OPTION.',$FF
+s_con2	dta d'ONE DEAD? KEY=GO ON. X=SKIP',$FF
 s_cons	dta d'START  SELECT  OPTION',$FF
-s_spk	dta d'LISTEN: A TONE FROM THE SPEAKER',$FF
+s_spk	dta d'LISTEN: THE CONSOLE SPEAKER',$FF

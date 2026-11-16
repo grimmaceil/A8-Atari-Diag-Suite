@@ -374,7 +374,7 @@ click	lda #F_SHORT		; (and on POKEY: one of the two may be dead)
 	icl 'kbmap.asm'
 kbrtab	.word kbrow0, kbrow1, kbrow2, kbrow3, kbrow4
 
-s_kb1	dta d'PRESS EVERY KEY. A CONSOLE KEY ENDS IT.',$FF
+s_kb1	dta d'PRESS EVERY KEY. CONSOLE KEYS END IT.',$FF
 s_logo	.byte $0F, $7C, $3C, $FF	; /|\ (three columns, as INV: same key cell)
 s_kb2	dta d'PLAIN=TO DO  INVERSE=DONE  BLINK=HELD',$FF
 s_kb3	dta d'INVERSE = PRESSED',$FF

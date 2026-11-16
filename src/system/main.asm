@@ -53,8 +53,10 @@ RAM8	= 1			; test 0 (kept at index 8)
 RAM8	= 1
 RAMAGAIN = xram			; and the RAM test again is in bank 0
 	.endif
-	.ifdef ROM		; common.asm: the RAM test can be skipped (CTRL+S,
+	.ifdef ROM		; common.asm: the RAM test can be skipped (S,
 SKIPKEY	= 1			; tape1/main.asm): its line says so
+	.elseif .def CHAIN
+SKIPKEY	= 1
 	.endif
 	.ifdef ROM		; common.asm: the long memory test on the menu (9):
 LONGT	= 1			; the cartridge (on disk it is a file of its own,

@@ -40,20 +40,10 @@ t_rom	lda #1
 	lda #<s_t1
 	ldy #>s_t1
 	jsr tpage
-	.ifdef RAM8		; X skips it: at power on it runs by itself
-	lda #$40		; (the keyboard latch: a tap in the middle of a
-	sta IRQEN		; CRC counts too)
-	lda DISPOK
-	beq tr_rd
-	PRINT 23, 0, s_xskip
-	.endif
 tr_rd	lda #0
 	sta ROMHAVE
 
 	jsr osread		; the OS
-	.ifdef RAM8
-	jsr xkey
-	.endif
 	jsr osids
 	bcc tr_osok
 	ldx #11			; unknown: read it again
@@ -75,18 +65,12 @@ tr_flk	lda #1
 tr_osb	ora BADMASK+1
 	sta BADMASK+1
 tr_osok	jsr mixed
-	.ifdef RAM8
-	jsr xkey
-	.endif
 	jsr selfchk		; this program's own copy
 	bcc tr_bas
 	lda #32			; item 6
 	ora BADMASK+1
 	sta BADMASK+1
 tr_bas
-	.ifdef RAM8
-	jsr xkey
-	.endif
 	jsr basread		; the XL/XE's built-in BASIC
 	bcc tr_font
 	lda #2
@@ -105,11 +89,6 @@ tr_font	lda CHSTAB		; the font, summed twice by dprereq
 	ora BADMASK+1
 	sta BADMASK+1
 tr_show
-	.ifdef RAM8
-	jsr xkey
-	lda #0
-	sta IRQEN
-	.endif
 	lda DISPOK
 	beq tr_end
 	lda #5
@@ -117,30 +96,6 @@ tr_show
 	lda #5
 	jsr rominfo
 tr_end	jmp tend
-
-	.ifdef RAM8
-; xkey: X held now, or pressed since the last look (POKEY's latch): leave
-; the test (common.asm's tskip), not back to the caller.
-xkey	lda SKSTAT
-	and #4
-	beq xk_key
-	lda IRQST
-	and #$40
-	bne xk_x
-	lda #0			; (the latch: off and on again clears it)
-	sta IRQEN
-	lda #$40
-	sta IRQEN
-xk_key	lda KBCODE
-	and #$3F
-	cmp #$16		; X
-	bne xk_x
-	pla
-	pla
-	jmp tskip
-xk_x	rts
-s_xskip	dta d'X = SKIP',$FF
-	.endif
 
 ; osread: the OS CRCs into OSCRC.
 osread	lda MACHINE

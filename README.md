@@ -86,10 +86,14 @@ and beeps, loading from a PC, and what to do when something fails.
   - The final result when nothing failed but not every test ran (skipped,
     or not run from the menu): steady yellow and the start-up chirp, not
     the green double charge.
-  - Keys at every result: R re-test (the test again; at a tape's end its
-    tests; at a RAM summary the RAM test), T or SELECT the tones again, F
-    or OPTION full-screen flashes, any other key goes on (at the end of a
-    tape without a menu: the tones). In the user guide's first section.
+  - Keys at every result: T or SELECT the tones again, F or OPTION
+    full-screen flashes, any other key goes on (at the end of a tape
+    without a menu: the tones). R re-tests where there is no menu to pick
+    the test again from: the RAM and ROM tapes and the memory tests. In the
+    user guide's first section.
+  - S skips the RAM test on the 32k+ tape and the disk file too, as on the
+    cartridge; X no longer skips the ROM test (the console key test keeps
+    it).
   - The 8k sound and video tape is two tapes, `diag-8k-05-sound` and
     `diag-8k-06-video`, each one load (no part two), so R can run every
     test again. The 8k tapes carry only their own tests' names.

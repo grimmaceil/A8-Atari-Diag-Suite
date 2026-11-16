@@ -26,6 +26,13 @@
 	icl '../common/defs.asm'
 
 LDRFOLD	= 1			; report.asm: fold the loader area into bank 1
+	.ifdef ROM		; S skips the RAM test (as stage 1): on to the
+SKIPKEY	= 1			; system tests (tomenu; the 32k+ image: SYS32)
+SKIPTO	= tomenu
+	.elseif .def ONE32
+SKIPKEY	= 1
+SKIPTO	= SYS32+6
+	.endif
 	.ifdef ONE16
 RESTART	= 1			; report.asm: the end waits for START: again
 SHLIB	= 1			; one-load image: stage 1's library (lib.asm)
@@ -81,16 +88,16 @@ tk_lp	lda S1BSS,x
 	lda #>summary
 	sta REDRAWV+1
 	.endif
-	.ifdef ROM
+	.ifdef SKIPKEY
 	lda #0			; (S: from here on only at skip2's safe points,
 	sta INRT		; not in the middle of the march)
 	.endif
 	lda #0			; this stage's result is the tape's last
 	sta CONTVEC+1
-	.ifdef ROM		; CTRL+S in stage 1: no RAM test, on to the menu
+	.ifdef SKIPKEY		; S in stage 1: no RAM test, on to the tests
 	lda SKIPRAM
 	beq noskip
-	jmp tomenu
+	jmp SKIPTO
 noskip
 	.endif
 
@@ -202,11 +209,11 @@ rl_go	lda #LDRIDX
 
 	lda MACHINE
 	beq no_os
-	.ifdef ROM
+	.ifdef SKIPKEY
 	jsr skip2
 	.endif
 	jsr underos
-	.ifdef ROM
+	.ifdef SKIPKEY
 	jsr skip2
 	.endif
 	jsr xebanks
@@ -214,10 +221,14 @@ no_os	lda DISPOK
 	beq fin
 	jsr summary
 fin
-	.ifdef ONE16		; R: the whole RAM test again (stage 1's again);
-	lda #<S1AGAIN		; the 8k tape: this stage's tests again (stage 1
-	sta RETESTV		; is in RAM, its results in its BSS: entry2 takes
-	lda #>S1AGAIN		; them over again)
+	.ifdef ROM		; R: none where the menu follows (its line 0 is
+	lda #0			; the RAM test again)
+	.elseif .def ONE32
+	lda #0
+	.elseif .def ONE16	; the 16k tape: the whole RAM test again (stage
+	lda #<S1AGAIN		; 1's again); the 8k tape: this stage's tests
+	sta RETESTV		; again (stage 1 is in RAM, its results in its
+	lda #>S1AGAIN		; BSS: entry2 takes them over again)
 	.else
 	lda #<entry2
 	sta RETESTV
@@ -249,8 +260,8 @@ fin_bad	jmp report
 
 redraw	= summary		; scrtoggle's text screen
 
-	.ifdef ROM
-; skip2: CTRL+S, between this stage's parts (as stage 1's skipchk).
+	.ifdef SKIPKEY
+; skip2: S, between this stage's parts (as stage 1's skipchk).
 skip2	lda SKSTAT
 	and #4
 	beq s2_key
@@ -268,9 +279,11 @@ s2_key	lda KBCODE
 	inc SKIPRAM
 	ldx #$FF
 	txs
-	jmp tomenu
+	jmp SKIPTO
 s2_x	rts
+	.endif
 
+	.ifdef ROM
 ; tomenu: the RAM faults (banks 1-8) become test 0's items (kept at index
 ; 8: item = bank), as the system tests' results have them; then the menu.
 tomenu	lda #0
@@ -591,7 +604,7 @@ s_nextok dta d'ALL PASSED. NEXT: DIAG-8K-02-ROM',$FF
 s_nextbad dta d'FIX THIS FIRST',$FF
 	.endif
 	.ifdef GOMENU
-s_toggle2 dta d'R=RETEST  T=TONES  ANY KEY=GO ON',$FF
+s_toggle2 dta d'T=TONES  ANY KEY=GO ON',$FF
 	.else
 s_toggle2 dta d'R=RETEST  ANY KEY=TONES',$FF
 	.endif

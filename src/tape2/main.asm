@@ -359,10 +359,13 @@ stop	lda #0
 	inc PASSNO		; (so showpass, PASSNO-1, counts this one: done)
 	bne st_pn
 	inc PASSNO+1
-st_pn	lda #<mtagain		; R: the memory test again
+st_pn
+	.ifndef CART		; R: the memory test again (the cartridge's: its
+	lda #<mtagain		; menu instead)
 	sta RETESTV
 	lda #>mtagain
 	sta RETESTV+1
+	.endif
 	ldx #15
 st_m	lda EVER,x
 	sta BADMASK,x
@@ -1257,7 +1260,7 @@ s_nsol	dta d' SOLID, ',$FF
 s_nextok dta d'ALL PASSED',$FF
 s_nextbad dta d'FIX SOLID FIRST',$FF
 	.ifdef CART
-s_toggle2 dta d'R=RETEST  T=TONES  ANY KEY=MENU',$FF
+s_toggle2 dta d'T=TONES  ANY KEY=MENU',$FF
 	.else
 s_toggle2 dta d'R=RETEST  ANY KEY=TONES',$FF
 	.endif

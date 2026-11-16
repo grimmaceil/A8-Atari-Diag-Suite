@@ -33,8 +33,10 @@ SHLIB	= 1			; part's library (lib.asm)
 	.endif
 
 KEEP	= BSS+$EB		; (system/common.asm)
-	.ifdef ROM		; S skips the RAM test, on the cartridge
-SKIPKEY	= 1			; (ramtest.asm looks at it every page)
+	.ifdef ROM		; S skips the RAM test, on the cartridge and the
+SKIPKEY	= 1			; 32k+ tape and disk file (ramtest.asm looks at it
+	.elseif .def ONE32	; every page)
+SKIPKEY	= 1
 	.endif
 	opt h-
 	.ifdef ROM
@@ -57,6 +59,7 @@ LOAD	= $0800
 	icl '../common/boot.asm'
 	jsr dprereq
 	.ifdef SKIPKEY		; (the keyboard latch is on: boot.asm)
+	.ifdef ROM
 	lda $07FE		; back from the long memory test (tape2's
 	cmp #$5A		; backcart): no RAM test, the menu
 	bne rt_nb
@@ -67,7 +70,9 @@ LOAD	= $0800
 	inc SKIPRAM
 	inc KEEP		; (the menu, not the ROM test: system/common.asm)
 	jmp PAYAT+6
-rt_nb	inc INRT		; (not before: the screen block's march, in
+rt_nb
+	.endif
+	inc INRT		; (not before: the screen block's march, in
 	jsr skipchk		; dprereq, must run to the end)
 	.endif
 	.ifdef ROM

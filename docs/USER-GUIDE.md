@@ -31,17 +31,17 @@ you:
 
 | Key | Does |
 |---|---|
-| **R** | re-test: the test you just saw again (at the end of a tape without a menu: all its tests; at the end of a RAM test: the whole RAM test) |
+| **R** | re-test, where there is no menu to pick the test again from: the RAM tapes (`diag-8k-01-ram`, `diag-16k-01-ram`), the ROM tape (`diag-8k-02-rom`) and the memory tests (tape and disk) |
 | **T** or SELECT | the tones (the beep code, or the pass tune) again |
 | **F** or OPTION | full-screen flashes on and off: the whole screen flashes with the code, easier to see when the picture is garbled |
-| START, any other key, or a joystick button | go on: the next test, or back to the menu. At the end of a tape without a menu, where there is nothing to go on to: the tones again |
+| START, any other key, or a joystick button | go on: the next test, or back to the menu (where a test is simply picked again). At the end of a tape without a menu, where there is nothing to go on to: the tones again |
 
 Other keys:
 - questions: Y or START = yes, N or SELECT = no;
 - the keyboard test ends on any console key (the keys are what it tests),
   and the console key test goes on with any key;
-- S skips the cartridge's RAM test, X the ROM test and the console key
-  test;
+- S skips the RAM test on the cartridge, the 32k+ tape and the disk file
+  (the menu shows it as `SKIPPED`), X the console key test;
 - the memory test stops after its pass on any key.
 
 Pictures in this guide come from the project's simulator, using the MiSTer
@@ -278,11 +278,9 @@ a tape into. Switch on with the cartridge in:
    while it tests), and ends on the RAM summary, which waits for START.
 2. The ROM test runs next and waits on its result. START goes to the menu.
 
-**S skips the RAM test, X skips the ROM test.** A tap is enough, any time
-from switching on: S goes on to the ROM test (line 0 shows `SKIPPED`), X
-goes on to the menu (the ROM line shows `-`). S then X gets you to the
-menu in a second or two. X also works on the disk file and the 32k+ tape,
-where the ROM test runs by itself after the RAM test too.
+**S skips the RAM test.** A tap is enough, any time from switching on: S
+goes on to the ROM test (line 0 shows `SKIPPED`), then the menu. S works on
+the disk file and the 32k+ tape too.
 
 ![Cartridge menu](img/cart-01-menu.png)
 
@@ -427,9 +425,9 @@ test, which waits so you can read the names and checksums. The end of a
 tape:
 - the 8k tapes 02-06, `diag-16k-03-hello` and `diag-controls` (no menu):
   the last test's screen stays up, with a line for each test on the tape
-  and what to load next, for example `DONE. R=RETEST. NEXT:
-  DIAG-8K-03-INPUT`. Nothing needs a press; R runs the tape's tests again,
-  any other key plays the tones again. The last test goes straight there:
+  and what to load next, for example `DONE. NEXT:
+  DIAG-8K-04-PORTS`. Nothing needs a press; a key plays the tones again
+  (and on the ROM tape R runs the ROM test again). The last test goes straight there:
   the pass or fail sound plays once, for the whole tape.
 - `diag-16k-01-ram`, and `diag-8k-01-ram` on an 8K machine: the summary
   stays up, with what to load next. R runs the RAM test again.
