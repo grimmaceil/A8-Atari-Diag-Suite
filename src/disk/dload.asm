@@ -245,7 +245,7 @@ DLLEN	= dl_end-dl_src
 ; dsum: Z set if this piece's sum is right: every byte from LOAD up to the
 ; stored sum (CKSUM; CRCFIX after it isn't summed), as tools/mkatr.py sums
 ; it. Needs the stack and PTR.
-	.ifdef DSUM
+	.ifdef WANTDSUM
 dsum	lda #0
 	sta SUM
 	sta SUM+1

@@ -21,6 +21,7 @@ NPORT	= T3D+$02		; joystick ports on this machine (paddles: twice)
 				; $03-$1F: test 1's results (kept for the summary)
 TSCR	= T3D+$20		; $20-$5F: scratch, each test its own use
 
+	.ifdef NEEDTRUN		; (the boot disk: only in the menu's piece)
 ; trun: from the boot, the first test on the list.
 trun	jsr tinit
 	lda #0
@@ -44,6 +45,7 @@ tst_all	inc MMODE
 	.endif
 	jsr tnextv
 	jmp (NEXTVEC)
+	.endif
 
 ; tinit: what the tests need to know about the machine and the tape.
 tinit	lda #2			; ports: 4 on the 400/800, 2 on the XL/XE
@@ -382,7 +384,7 @@ tp_x	rts
 ; stays above). Also scrtoggle's redraw. A tape without a menu, at its end
 ; (ENDING 2): every test's line and what to load next (tsend).
 tshow
-	.ifdef MENU
+	.ifdef RESPAGE
 	lda TEST		; 8: past the last test, the results
 	cmp #8
 	bne ts_t
@@ -598,6 +600,7 @@ MROW0	= 5
 MROW0	= 4
 	.endif
 
+	.ifdef MENUCODE		; (the boot disk: only in the menu's piece)
 menu	lda #0
 	sta MMODE
 	lda #C_BLACK		; a steady border, whatever the last test left
@@ -924,7 +927,9 @@ md_gx
 
 kdigit	.byte $1F, $1E, $1A, $18, $1D, $1B, $33	; KBCODEs of 1-7
 s_hmenu	dta d'MENU',$FF
+	.endif			; (results uses it too; here, as it always was)
 s_notrun dta d'-',$FF
+	.ifdef MENUCODE
 s_mall	dta d'ALL OF THEM, IN ORDER',$FF
 s_mres	dta d'8 RESULTS AND THE FINAL CODE',$FF
 s_m1	dta d'START=RUN  SELECT=DOWN  OPTION=UP',$FF
@@ -940,10 +945,11 @@ s_mram	dta d'0 RAM',$FF
 	.else
 s_m2	dta d'OR PRESS 1-8 FOR THAT LINE',$FF
 	.endif
+	.endif
 s_toggle3 dta d'T=TONES  ANY OTHER KEY=MENU',$FF
 	.endif
 
-	.ifdef MENU
+	.ifdef RESPAGE
 ; results: every test on the tape, PASS or FAIL and its items, then the ROM
 ; names if test 1 ran.
 	.ifdef RAM8		; the first test's row: under the RAM line (0)

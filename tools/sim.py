@@ -535,8 +535,10 @@ class Auto:
                'MOVE EACH STICK', 'UNPLUG ALL PADDLES', 'TURN EACH', 'LOOKS RIGHT?',
                'LOOKS RIGHT?']
 
-    def __init__(self, hw, deny, skip, menuwalk=False, walk=None, skiponce=False):
+    def __init__(self, hw, deny, skip, menuwalk=False, walk=None, skiponce=False,
+                 menuall=False):
         self.hw, self.deny, self.skip, self.seen = hw, deny, skip, set()
+        self.menuall = menuall           # SELECT down to ALL, then START, once
         self.menuwalk, self.walk = menuwalk or bool(walk), 0
         self.keys = walk or WALK          # the menu keys, in turn
         self.skiponce = skiponce
@@ -552,7 +554,13 @@ class Auto:
                 self.seen = {x for x in self.seen if x.startswith('MENU|')}
                 self.seen.add(sig)          # (a test run again is answered again)
                 when = self.hw.line + int(1000 * LINES_PER_MS)
-                if self.menuwalk and self.walk < len(self.keys):   # a test by its key
+                if self.menuall:              # ALL highlighted yet?
+                    if any('all#of#them' in l for l in sel):   # (inverse: '#' for space)
+                        self.menuall = False
+                        self.hw.press(when, 'CON', 1)
+                    else:
+                        self.hw.press(when, 'CON', 2)
+                elif self.menuwalk and self.walk < len(self.keys):   # a test by its key
                     self.hw.press(when, 'KB', self.keys[self.walk])
                     self.walk += 1
                 else:                         # START: ALL at first, then (walk)
@@ -685,6 +693,8 @@ def main():
     ap.add_argument('--deny', default='', help='with --auto: answer No where the screen shows these (comma list)')
     ap.add_argument('--skip', type=int, default=0, help='with --auto: leave this many keys unpressed')
     ap.add_argument('--walk', help='with --auto: menu digits to press in turn, e.g. 22')
+    ap.add_argument('--menuall', action='store_true',
+                    help='with --auto: at the first menu, SELECT down to ALL and run it')
     ap.add_argument('--skiponce', action='store_true', help='--skip only the first keyboard test')
     ap.add_argument('--menuwalk', action='store_true',
                     help='with --auto: run the menu tests one at a time by their keys')
@@ -852,7 +862,7 @@ def main():
     auto = Auto(hw, [d for d in a.deny.split(',') if d], a.skip, a.menuwalk,
                 [0x32 if c == '0' else 0x35 if c == '8' else WALK[int(c) - 1]
                  for c in a.walk] if a.walk else None,
-                a.skiponce) if a.auto else None
+                a.skiponce, a.menuall) if a.auto else None
     next_auto = 0
     while True:
         if auto and hw.line >= next_auto:

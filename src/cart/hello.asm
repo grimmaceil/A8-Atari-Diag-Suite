@@ -29,12 +29,24 @@ HLINES	= 1
 	.ifdef ROM
 HDATA	= $A000			; (bank HELLOBK, HELLOPG pages: build.py)
 HPAGES	= HELLOPG
+	.elseif .def DISK
+HDATA	= HELLOAT		; (the boot disk: a piece of its own, HELLOPG
+HPAGES	= HELLOPG		; pages, loaded here by dfetch)
 	.else
 HDATA	= hl_data
 HPAGES	= >[hl_end-hl_data]
 	.endif
 
-hello	lda DISPOK
+hello
+	.ifdef DISK		; the recording, from the disk: 16K and up (on
+	lda RAMTOP		; 8K, item 7 is left out, as on the 8k sound
+	cmp #$40		; tape)
+	bcs hl_ld
+	rts
+hl_ld	ldx #P_HELLO
+	jsr dfetch
+	.endif
+	lda DISPOK
 	beq hl_cp
 	lda #7
 	jsr clrrow
@@ -225,7 +237,9 @@ hp_len	= *-hp_src
 s_hl1	dta d'HELLO 7 TIMES: VOICES 1-4, SPEAKER,',$FF
 s_hl2	dta d'VOICES 1+2 AND 3+4. SCREEN OFF MEANWHILE',$FF
 s_hl3	dta d'HEARD ALL 7? Y/START=YES, N/SELECT=NO',$FF
-	.ifndef ROM
+	.ifdef ROM
+	.elseif .def DISK
+	.else
 hl_data	ins '../cart/audio/hello-15k.bin'	; (whole pages)
 hl_end
 	.endif

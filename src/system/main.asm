@@ -34,6 +34,13 @@
 ; all seven. A test in the other bank is a thunk that asks for it (XREQ)
 ; and switches to that bank (OTHER), whose warm entry runs it. HASLDR: this
 ; bank holds the long memory test's loader (cart/ldmem.asm).
+;
+; DISK (the boot disk, Atari-diag-boot-disk-scope.md): one of its pieces,
+; built as the cartridge's banks are, with a disk load (src/disk/dload.asm)
+; where they switch banks: at $0900 with the results page at $0800, entered
+; at $0906 with XREQ saying why. MENUPC: the menu's piece (the menu screen
+; and the power-on start); the others reach it by a thunk. The results page
+; is in the ROM test's piece (it has the ROM names).
 
 	icl '../common/hw.asm'
 	icl '../common/vars.asm'
@@ -52,19 +59,49 @@ RAM8	= 1			; test 0 (kept at index 8)
 	.elseif .def ROM
 RAM8	= 1
 RAMAGAIN = xram			; and the RAM test again is in bank 0
+	.elseif .def DISK
+RAM8	= 1
+RAMAGAIN = xram			; (a RAM piece)
 	.endif
 	.ifdef ROM		; common.asm: the RAM test can be skipped (S,
 SKIPKEY	= 1			; tape1/main.asm): its line says so
 	.elseif .def CHAIN
 SKIPKEY	= 1
+	.elseif .def DISK
+SKIPKEY	= 1
 	.endif
 	.ifdef ROM		; common.asm: the long memory test on the menu (9):
-LONGT	= 1			; the cartridge (on disk it is a file of its own,
-	.endif			; diag-16k-memtest.xex: it can't come back)
+LONGT	= 1			; the cartridge and the boot disk (the .xex is a
+	.elseif .def DISK	; file of its own: it can't come back)
+LONGT	= 1
+	.endif
+	.ifdef ROM		; tlist.asm: the tests are split over banks or
+SPLIT	= 1			; pieces; the others' are thunks
+	.elseif .def DISK
+SPLIT	= 1
+WANTDSUM = 1			; (dload.asm: a piece checks its own sum)
+	.endif
+	.ifdef DISK		; common.asm: the menu screen and the power-on
+	.ifdef MENUPC		; start only in the menu's piece, the results page
+MENUCODE = 1			; only in the ROM test's; elsewhere both are in
+NEEDTRUN = 1			; every program with a menu
+	.endif
+	.ifdef WANT_ROM
+RESPAGE	= 1
+	.endif
+	.else
+NEEDTRUN = 1
+	.ifdef MENU
+MENUCODE = 1
+RESPAGE	= 1
+	.endif
+	.endif
 	.ifdef WANT_POK		; cart/hello.asm: sampled sound, where there is
-	.ifdef ROM		; room: the cartridge and the disk file, and the
+	.ifdef ROM		; room: the cartridge and the disk files, and the
 SAMPLED	= 1			; 8k hello tape (WANT_SND)
 	.elseif .def XEX
+SAMPLED	= 1
+	.elseif .def DISK
 SAMPLED	= 1
 	.endif
 	.elseif .def WANT_SND
@@ -103,6 +140,8 @@ NOFONT	= 1			; display.asm, info.asm: only the ROM test shows
 	opt h-
 	.if .def ROM
 LOAD	= $A000
+	.elseif .def DISK
+LOAD	= $0900
 	.elseif .def SYSAT
 LOAD	= SYSAT			; the 32k+ one-load tape: in tape 1's image,
 				; after its stage 2 (build.py's build_one32)
@@ -173,6 +212,111 @@ xmem	= ldmem
 xmem	lda #8
 	bne xgo
 	.endif
+	.ifndef WANT_ROM
+xt1	lda #1
+	bne xgo
+	.endif
+	.ifndef WANT_KB
+xt2	lda #2
+	bne xgo
+	.endif
+	.ifndef WANT_CON
+xt3	lda #3
+	bne xgo
+	.endif
+	.ifndef WANT_JOY
+xt4	lda #4
+	bne xgo
+	.endif
+	.ifndef WANT_PAD
+xt5	lda #5
+	bne xgo
+	.endif
+	.ifndef WANT_POK
+xt6	lda #6
+	bne xgo
+	.endif
+	.ifndef WANT_GTIA
+xt7	lda #7
+	bne xgo
+	.endif
+	.elseif .def DISK
+; A disk piece: the tape-style header (tools/mkatr.py reads it), then the
+; entries the disk loader uses.
+	.byte 0
+	.byte NREC
+	.word LOAD
+	.word 0
+	jmp warm		; LOAD+6
+	jmp warm		; LOAD+9 (a RAM piece's "again"; not used here)
+; warm: from the disk loader, interrupts off. This piece's sum, then what
+; was asked for (XREQ, as on the cartridge; and $80, the power-on start).
+warm	sei
+	cld
+	ldx #$FF
+	txs
+	jsr dsum
+	beq wm_ok
+	inc LOADERR
+	jmp report
+wm_ok	lda DISPOK		; (a key at the RAM summary: the picture is seen)
+	sta VIDEOOK
+	jsr tinit
+	lda XREQ
+	.ifdef MENUPC
+	bpl wm_m
+	jmp trun		; $80: the power-on start
+wm_m	bne wm_t
+	jmp menu		; 0: the menu
+wm_t
+	.endif
+	.ifdef WANT_ROM
+	cmp #9			; 9: the results (this piece has the ROM names)
+	bne wm_r
+	jmp final
+wm_r
+	.endif
+	ldx #0			; 1-7: that test (it is in this piece)
+wm_fd	cmp ttests,x
+	beq wm_go
+	inx
+	bne wm_fd
+wm_go	txa
+	asl
+	sta TIDX
+	jsr tnextv
+	jmp (NEXTVEC)
+
+; The other pieces' tests, the RAM test, the long memory test, the menu.
+xgo	sta XREQ		; A = 1-9: the piece that has it, at LOAD+6
+	tax
+	lda tpiece-1,x
+	tax
+	lda #6
+	jmp dchain
+tpiece	.byte P_ROM, P_INPUT, P_INPUT, P_PORTS, P_PORTS, P_SOUND, P_VIDEO
+	.byte P_MEM, P_ROM
+xram	ldx #P_RAM8		; the RAM piece for this machine, again (its
+	lda RAMTOP		; LOAD+9)
+	cmp #$40
+	bcc xr_go
+	ldx #P_RAM16
+xr_go	lda #9
+	jmp dchain
+	.ifndef MENUPC
+menu	lda #0			; the menu's piece
+	sta XREQ
+	ldx #P_MENU
+	lda #6
+	jmp dchain
+	.endif
+	.ifndef WANT_ROM	; the results are the ROM test's piece's
+XFINAL	= 1
+final	lda #9
+	bne xgo
+	.endif
+xmem	lda #8
+	bne xgo
 	.ifndef WANT_ROM
 xt1	lda #1
 	bne xgo
@@ -304,6 +448,8 @@ t_snd	lda #6
 	.ifdef HASLDR
 	icl '../cart/ldmem.asm'
 	.endif
+	.elseif .def DISK	; (no boot here: the RAM piece did it)
+	icl '../disk/dload.asm'
 	.elseif .not .def CHAIN
 	icl '../common/display.asm'
 
@@ -333,6 +479,27 @@ NORAMT	= 1			; (no RAM test here)
 	.endif
 IMGEND
 BSS	= $0800			; in RAM, shared by the banks
+TSTART	= [>BSS]+1
+	.elseif .def DISK
+	.ifdef SELFCRC		; the sum (and CRCFIX), as a tape's, on a page end
+TAILN	= 6
+	.else
+TAILN	= 2
+	.endif
+PADTO	= [[*+TAILN+$FF]/$100]*$100
+	.if PADTO-*-TAILN>0
+	:[PADTO-*-TAILN] .byte 0
+	.endif
+CKSUM	.word 0
+	.ifdef SELFCRC
+CRCFIX	.dword 0
+	.endif
+IMGEND
+	.if IMGEND>$1C00
+	.error "this disk piece is over $1BFF: it must fit an 8K machine"
+	.endif
+NREC	= [IMGEND-LOAD]/128
+BSS	= $0800			; the results page, shared by the pieces
 TSTART	= [>BSS]+1
 	.else
 	.ifndef CHAIN		; (the one-load image: no pages of its own, so the

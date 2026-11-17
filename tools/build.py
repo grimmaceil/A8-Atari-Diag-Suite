@@ -307,8 +307,20 @@ def build_disk(fast, out=None):
     import mkatr
     out = out or BUILD / ('diag-disk-fast.atr' if fast else 'diag-disk.atr')
     f = {'FAST': 1} if fast else {}
+    hello = ROOT / 'src' / 'cart' / 'audio' / 'hello-15k.bin'
+    sysd = dict(f, DISK=1, MENU=1, SETNO=0, TAPENO=0, HELLOPG=len(hello.read_bytes()) // 256)
+    def system(name, **want):
+        mads('system', 'main.asm', BUILD / f'disk-{name.lower()}', dict(sysd, **want))
+        return BUILD / f'disk-{name.lower()}.bin'
     def pieces():
-        return {'RAM16': build_one16('disk-ram16', dict(f, DISK=1), '', disk=True)}
+        return {'RAM16': build_one16('disk-ram16', dict(f, DISK=1), '', disk=True),
+                'MENU': system('MENU', MENUPC=1),
+                'ROM': system('ROM', WANT_ROM=1),
+                'INPUT': system('INPUT', WANT_KB=1, WANT_CON=1),
+                'PORTS': system('PORTS', WANT_JOY=1, WANT_PAD=1),
+                'SOUND': system('SOUND', WANT_POK=1),
+                'VIDEO': system('VIDEO', WANT_GTIA=1),
+                'HELLO': hello}
     tabf = BUILD / 'disktab.asm'
     tabf.write_text(mkatr.disktab(mkatr.layout({})))
     first = {n: b.read_bytes() for n, b in pieces().items()}

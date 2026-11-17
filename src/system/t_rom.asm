@@ -764,6 +764,8 @@ n_basc	dta d'C',$FF
 s_rself	dta d'DIAG CART',$FF
 	.elseif .def XEX
 s_rself	dta d'DIAG DISK',$FF
+	.elseif .def DISK
+s_rself	dta d'DIAG DISK',$FF
 	.else
 s_rself	dta d'DIAG TAPE',$FF
 	.endif
