@@ -313,7 +313,9 @@ def build_disk(fast, out=None):
         mads('system', 'main.asm', BUILD / f'disk-{name.lower()}', dict(sysd, **want))
         return BUILD / f'disk-{name.lower()}.bin'
     def pieces():
-        return {'RAM16': build_one16('disk-ram16', dict(f, DISK=1), '', disk=True),
+        mads('tape1', 'main.asm', BUILD / 'disk-ram8', dict(f, DISK=1, NORAMK=1))
+        return {'RAM8': BUILD / 'disk-ram8.bin',
+                'RAM16': build_one16('disk-ram16', dict(f, DISK=1), '', disk=True),
                 'MENU': system('MENU', MENUPC=1),
                 'ROM': system('ROM', WANT_ROM=1),
                 'INPUT': system('INPUT', WANT_KB=1, WANT_CON=1),

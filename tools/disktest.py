@@ -84,8 +84,10 @@ CHECKS = {
              [(150, '|OWN RAM $0800-$'), (150, 'ALL RAM PASSED'),
               (150, '|LEFT ALONE, IT GOES ON AFTER 3 CODES'),
               (400, ' 2 KEYBOARD         PASS')]),
-    # a stuck bit in RAM8's own RAM: its line fails, the code is bank 1
-    'ram8bad': (real_disk, ['--ram', '0x2000', '--stuck', '0A00-0AFF:3:1'],
+    # a stuck bit in RAM8's own RAM (the results page: a byte RAM8 doesn't
+    # use; one in its code fails the image sum first, as on tape): its line
+    # fails, D2, and the code is bank 1
+    'ram8bad': (real_disk, ['--ram', '0x2000', '--stuck', '08D7-08D8:3:1'],
                 [(150, 'fail:#see#the#code'), (150, 'D2')]),
     # 8 on the menu: the results page, in the ROM test's piece
     'results': (real_disk, ['--xl', '--auto', '--walk', '8'],

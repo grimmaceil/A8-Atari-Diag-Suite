@@ -33,6 +33,11 @@ RPFOLD	= 1
 	.ifdef RESTART		; the end waits for START
 RPEND	= 1
 	.endif
+	.ifdef DISK		; the boot disk's RAM8: its results go on by
+	.ifndef SYSCODES	; themselves (AUTON)
+RPAUTO	= 1
+	.endif
+	.endif
 	.endif
 
 ; Tone table: frequency, flash color, length and the pause after it, both

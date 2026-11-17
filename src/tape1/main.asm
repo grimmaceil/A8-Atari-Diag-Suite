@@ -49,6 +49,22 @@ BACKMK	= 1
 	.elseif .def DISK
 BACKMK	= 1
 	.endif
+	.ifdef ONE16		; where S and the long test's way back go on to:
+RAMEND	= PAYAT+6		; stage 2, in the image
+	.elseif .def DISK	; (RAM8: the menu's piece)
+RAMEND	= ramhand
+STASH	= BSS+$E3		; (system/common.asm: the tests' results, kept
+				; while the RAM test runs again)
+LDRFOLD	= 1			; report.asm: its own RAM (LDRIDX) beeps as bank 1
+	.endif
+	.ifdef DISK		; the last result entry the final code looks at
+	.ifndef ONE16
+RESLAST	= LDRIDX		; (RAM8: its own RAM too)
+	.endif
+	.endif
+	.ifndef RESLAST
+RESLAST	= 4
+	.endif
 	opt h-
 	.ifdef ROM
 LOAD	= $A000
@@ -92,7 +108,7 @@ LOAD	= $0800
 	sta $07FE		; (once)
 	inc SKIPRAM
 	inc KEEP		; (the menu, not the ROM test: system/common.asm)
-	jmp PAYAT+6
+	jmp RAMEND
 rt_nb
 	.endif
 	inc INRT		; (not before: the screen block's march, in
@@ -107,6 +123,17 @@ rt_nb
 rt_go	jsr ramtest
 	.ifdef ONE16
 	jmp PAYAT+6		; no results here: stage 2's summary has them all
+	.else
+	.ifdef DISK		; RAM8: its own RAM too, then the menu's piece, by
+	jsr ownram		; itself after three codes or at a key (no R: the
+	lda #<ramhand		; menu has line 0)
+	sta CONTVEC
+	lda #>ramhand
+	sta CONTVEC+1
+	lda #1
+	sta ENDING
+	lda #3
+	sta AUTON
 	.else
 	lda RAMTOP		; 16K and up: a key goes on to
 	cmp #$40		; stage 2. 8K: the end, nothing to press; the
@@ -124,10 +151,11 @@ rt_res	lda #<again		; R: the RAM test again
 	sta RETESTV
 	lda #>again
 	sta RETESTV+1
+	.endif
 	lda DISPOK
 	beq final
 	jsr results
-final	ldx #4
+final	ldx #RESLAST
 res_lp	lda BADMASK,x
 	bne res_bad
 	dex
@@ -140,8 +168,53 @@ res_bad	jmp report
 redraw	= results		; has them; scrtoggle's text screen)
 	.endif
 
-	.if .not .def ONE16
+	.ifndef ONE16
+	.ifndef DISK
 	icl '../common/loader.asm'
+	.endif
+	.endif
+
+	.ifdef DISK
+	.ifndef ONE16
+; ownram: RAM8's own RAM, the results page ($0800) up to TSTART, which the
+; RAM test (from TSTART up) can't march: page by page, as the long test
+; does (common/pagetest.asm, from a copy in low RAM): each page saved in
+; the screen block (tested), March C- and an address-in-page test, put
+; back. No display (no tested block to save in): the NOT test. Faults go
+; to this piece's own entry (LDRIDX), which beeps as bank 1 (LDRFOLD).
+ownram	ldx #0
+or_cp	lda pgsrc,x
+	sta PGCODE,x
+	inx
+	cpx #PICLEN
+	bne or_cp
+	lda #0
+	sta NTPTR
+	sta BUFP
+	sta NTERR
+	lda SCRPG
+	sta BUFP+1
+	lda #>BSS
+	sta NTPTR+1
+	lda DISPOK
+	bne or_pg
+	ldx #TSTART-[>BSS]
+	jsr NTCODE
+	jmp orbad
+or_pg	lda #0
+	sta NTERR
+	jsr PGCODE
+	jsr orbad
+	inc NTPTR+1
+	lda NTPTR+1
+	cmp #TSTART
+	bne or_pg
+	rts
+orbad	lda NTERR		; (bad bits: this piece's own entry)
+	ora BADMASK+LDRIDX
+	sta BADMASK+LDRIDX
+	rts
+	.endif
 	.endif
 
 ; again: the whole RAM test once more, from the low RAM test on (R at its
@@ -270,7 +343,7 @@ sk_key	lda KBCODE
 	cmp #$3E		; S
 	bne sk_x
 	inc SKIPRAM
-	jmp PAYAT+6		; (stage 2 sets the stack up again)
+	jmp RAMEND		; (stage 2 sets the stack up again; RAM8: ramhand)
 sk_x	rts
 	.endif
 
@@ -373,7 +446,37 @@ rs_next	inc RROW
 	beq rs_end
 	jmp rs_bank
 
-rs_end	lda MACHINE
+rs_end
+	.ifdef DISK		; RAM8: its own RAM (a 400/800: no bank 4)
+	lda RROW
+	ldx #0
+	jsr at
+	lda #<s_own
+	ldy #>s_own
+	jsr puts
+	lda #TSTART-1
+	jsr puthex
+	lda #<s_ff
+	ldy #>s_ff
+	jsr puts
+	lda #LDRIDX
+	sta CURBANK
+	lda BADMASK+LDRIDX
+	bne rs_of
+	lda #<s_pass
+	ldy #>s_pass
+	jsr puts
+	jmp rs_tot
+rs_of	lda #<s_fail
+	ldy #>s_fail
+	jsr puts
+	jsr bitsline
+rs_tot	lda AUTON		; (gone after a press: OPTION's redraw)
+	beq rs_na
+	PRINT 22, 0, s_auto
+rs_na	PRINT 23, 0, s_toggle
+	.else
+	lda MACHINE
 	beq rs_tot
 	lda RROW
 	ldx #0
@@ -395,9 +498,10 @@ rs_l2	lda L2MSG+1		; why stage 2 didn't run
 	lda L2STAT
 	beq rs_res
 	jsr puthex
+	.endif
 rs_res
 	PRINT 20, 0, s_result
-	ldx #4
+	ldx #RESLAST
 rs_any	lda BADMASK,x
 	bne rs_bad
 	dex
@@ -429,6 +533,11 @@ s_pass	dta d'PASS',$FF
 s_fail	dta d'FAIL'*,$FF
 s_bank4	dta d'BANK 4 $C000-$FFFF  IN STAGE 2',$FF
 s_result dta d'RESULT: ',$FF
+	.ifdef DISK
+s_toggle dta d'T=TONES AND WAIT  ANY OTHER KEY=GO ON',$FF
+s_auto	dta d'LEFT ALONE, IT GOES ON AFTER 3 CODES',$FF
+s_own	dta d'OWN RAM $0800-$',$FF
+	.else
 s_toggle dta d'R=RETEST  T=TONES  ANY OTHER KEY=GO ON',$FF
 s_toggle2 dta d'R=RETEST  ANY OTHER KEY=TONES',$FF
 s_l2load dta d'LOADING STAGE 2...',$FF
@@ -439,6 +548,7 @@ s_l2_big dta d'TOO BIG',$FF
 s_l2_sio dta d'ERROR $',$FF
 s_l2_hdr dta d'NOT ON TAPE',$FF
 s_l2_sum dta d'BAD CHECKSUM',$FF
+	.endif
 s_allpass dta d'ALL RAM PASSED',$FF
 s_somefail dta d'FAIL: SEE THE CODE'*,$FF
 	.endif
@@ -454,6 +564,11 @@ NPAT	= *-pats
 	icl '../common/lib.asm'
 	.ifndef ONE16
 	icl '../common/bits.asm'
+	.ifdef DISK
+	icl '../common/pagetest.asm'
+	icl '../disk/dload.asm'
+	icl '../disk/ramhand.asm'
+	.endif
 	.endif
 	.ifdef ROM
 	icl '../cart/romsum.asm'
