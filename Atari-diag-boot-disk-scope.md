@@ -73,7 +73,7 @@ Measured from the builds, 2026-11-16.
 
 | RAM | 8K machine | Use |
 |---|---|---|
-| $0000-$07FF | 2K | low RAM: the OS, the stack, the boot loader in page 7 (tested first, non-destructively: every byte put back) |
+| $0000-$07FF | 2K | low RAM: the OS, the stack; the disk loader runs in page 7 (tested first, non-destructively: every byte put back) |
 | $0800-$08FF | one page | the shared results page (BSS), as on the cartridge |
 | $0900-$1BFF | **4.75K** | the piece that is running |
 | $1C00-$1FFF | 1K | the screen (the disk's RAM pieces look for it from $1C00 up, never just above themselves as a tape does, so no later piece loads over it; on a bigger machine it may sit higher) |
@@ -118,7 +118,7 @@ Every piece loads at $0900 and ends by $1BFF unless it says otherwise.
 
 | Piece | What | Needs | About |
 |---|---|---|---|
-| boot | sectors 1-2, at $0700: picks and loads the RAM piece | 8K | 256 bytes |
+| boot | sectors 1-2, at $0600: picks and loads the RAM piece | 8K | 256 bytes |
 | `RAM8` | RAM test, one part, 400/800 under 16K | 8K | 4.6K |
 | `RAM16` | RAM test, one part, everything else | 16K | 6.25K, to $21FF |
 | `ROM` | test 1, and the results page (it has the ROM names, as on the cartridge) | 8K | 4.5K |
@@ -136,7 +136,7 @@ About 50K in all, of the disk's 90K.
 
 - `.atr`, single density: 720 sectors of 128 bytes, 16-byte ATR header.
 - Sectors 1-2: the boot (OS boot header: flags 0, two sectors, load
-  $0700, init: an `rts`). The OS loads them and calls $0706.
+  $0600, init: an `rts`). The OS loads them and calls $0606.
 - From sector 3 on: each piece in a run of whole sectors, one after
   another. A table of each piece's first sector and sector count is
   written by the build into every piece and the boot (its size is fixed,
@@ -147,10 +147,11 @@ About 50K in all, of the disk's 90K.
 
 ## 8. Loading a piece
 
-**The boot** (page 7, loaded by the OS with everything running): reads
-RAMTOP, loads `RAM8` or `RAM16` to $0900 with the OS's SIO (`SIOV`, unit
-1, command `R`), and jumps to its power-on entry. The RAM test's low RAM
-test runs over page 7 too and puts it back.
+**The boot** (page 6, loaded by the OS with everything running): reads
+RAMTOP and has the chain loader (below) load `RAM8` or `RAM16` to $0900
+with the OS's SIO (`SIOV`, unit 1, command `R`) and enter its power-on
+entry. The RAM test's low RAM test runs over pages 6 and 7 too and puts
+them back.
 
 **The chain loader** (`common/dload.asm`, in every piece): page 7 is not
 safe for long (test 7's sprites and the long test's log use pages 4-7),
