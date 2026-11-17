@@ -298,6 +298,19 @@ def build_car(fast):
     return car
 
 
+def make_disk(out, bins):
+    """The boot disk from finished pieces ({name: .bin}, tools/mkatr.py's
+    PIECES names): their layout into build/disktab.asm, the boot (which
+    includes it), then the .atr."""
+    import mkatr
+    pieces = {n: Path(b).read_bytes() for n, b in bins.items()}
+    tab = mkatr.layout(pieces)
+    (BUILD / 'disktab.asm').write_text(mkatr.disktab(tab))
+    mads('disk', 'boot.asm', BUILD / 'disk-boot', {})
+    mkatr.atr(out, (BUILD / 'disk-boot.bin').read_bytes(), pieces, tab)
+    return Path(out)
+
+
 def wrap(out, label, xex):
     """The boot image as a tape, or with xex (the RAM needed, in pages) as a
     disk file, out.xex; xex 'img': just the image (.bin, .lab), for mkcar.py."""

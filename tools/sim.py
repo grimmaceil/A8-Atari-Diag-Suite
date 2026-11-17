@@ -425,6 +425,12 @@ def vbi(mpu, hw):
         vec = hw.ram[0x222] | hw.ram[0x223] << 8
         regs = (mpu.a, mpu.x, mpu.y)
         if vec >= 0xC000:
+            # the OS's own VBI (the disk loader runs with it): just its
+            # shadow copies, the screen and the border as they will look
+            for reg, sh in ((0xD01A, 0x2C8), (0xD017, 0x2C5), (0xD018, 0x2C6),
+                            (0xD400, 0x22F), (0xD402, 0x230), (0xD403, 0x231),
+                            (0xD409, 0x2F4), (0xD401, 0x2F3)):
+                hw[reg] = hw.ram[sh]
             return
     push(mpu, hw, mpu.pc >> 8)
     push(mpu, hw, mpu.pc)
@@ -456,16 +462,43 @@ def cas_records(path):
     return out
 
 
-def siov(mpu, hw, stream):
-    """Stand-in for the OS's SIOV, cassette reads only, held to what the OS
-    listing says the call needs: the cassette DCB as RBLOK builds it, short
-    gaps, and interrupts running (VBI timers, serial-input IRQ). Anything
-    else is a timeout ($8A)."""
+def siov(mpu, hw, stream, disk=None, diskerr=None):
+    """Stand-in for the OS's SIOV, held to what the OS listing says the call
+    needs. Cassette reads: the cassette DCB as RBLOK builds it, short gaps.
+    Disk reads (an .atr, drive 1): command R, 128 bytes, about 0.11 s a
+    sector (an 810); diskerr {sector: times} fails a sector that often
+    ($90, the drive's error). Both need interrupts running (VBI timers,
+    serial IRQs). Anything else is a timeout ($8A)."""
     m = hw.ram
+    irq_ok = not mpu.p & mpu.INTERRUPT and hw.regs.get(0xD40E, 0) & 0x40
+    if disk is not None and m[0x300] == 0x31:
+        sec = m[0x30A] | m[0x30B] << 8
+        buf = m[0x304] | m[0x305] << 8
+        ok = (m[0x301] == 1 and m[0x302] == 0x52 and m[0x303] == 0x40
+              and m[0x308] | m[0x309] << 8 == 128)
+        if not ok or not irq_ok:
+            status = 0x8A
+            print(f'SIOV timeout ({"DCB" if not ok else "interrupts off"})')
+        elif not 1 <= sec <= len(disk) // 128 or diskerr.get(sec, 0) > 0:
+            if sec in diskerr:
+                diskerr[sec] -= 1
+            status = 0x90
+        else:
+            for k in range(128):
+                hw[buf + k] = disk[(sec - 1) * 128 + k]
+            status = 1
+        mpu.processorCycles += int(0.11 * 1.79e6)
+        m[0x303] = status
+        mpu.y = status
+        mpu.p = (mpu.p & ~(mpu.NEGATIVE | mpu.ZERO)) | (mpu.NEGATIVE if status & 0x80 else 0)
+        lo = m[0x100 + ((mpu.sp + 1) & 0xFF)]
+        hi = m[0x100 + ((mpu.sp + 2) & 0xFF)]
+        mpu.sp = (mpu.sp + 2) & 0xFF
+        mpu.pc = ((hi << 8) | lo) + 1
+        return
     dcb_ok = (m[0x300] == 0x60 and m[0x302] == 0x52 and m[0x303] == 0x40 and
               m[0x304] | m[0x305] << 8 == 0x3FD and m[0x308] | m[0x309] << 8 == 131
               and m[0x30B] & 0x80)
-    irq_ok = not mpu.p & mpu.INTERRUPT and hw.regs.get(0xD40E, 0) & 0x40
     if dcb_ok and irq_ok and stream:
         rec = stream.pop(0)
         m[0x3FD:0x3FD + 131] = rec[:131]
@@ -617,7 +650,8 @@ def decode(ts):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('tape', help='a .cas (boot stage, then later stages read via SIOV) or a raw boot .bin')
+    ap.add_argument('tape', help='a .cas (boot stage, then later stages read via SIOV), '
+                    'an .xex, a .car, an .atr (the boot disk) or a raw boot .bin')
     ap.add_argument('--ram', type=lambda x: int(x, 0), default=0xC000)
     ap.add_argument('--memlo', type=lambda x: int(x, 0), default=0x1CFC,
                     help='.xex: MEMLO as DOS leaves it (DOS 2.5: $1CFC)')
@@ -662,6 +696,8 @@ def main():
                     help='console keys pressed, e.g. START:52,SELECT:60 (seconds)')
     ap.add_argument('--joy', default='',
                     help='joystick 1, e.g. DOWN:52,FIRE:60 (UP, DOWN, LEFT, RIGHT, FIRE; seconds[:hold])')
+    ap.add_argument('--diskerr', default='',
+                    help='.atr: SECTOR[:TIMES],... sectors that fail to read (once, or TIMES times)')
     ap.add_argument('--bss', type=lambda x: int(x, 0),
                     help='where the program keeps its BSS page, for the end report (the 32k+ image: its BSS label)')
     ap.add_argument('--events', help='write every logged register write (line, register, value) to this file')
@@ -684,7 +720,7 @@ def main():
         stuck = (lo, hi, 0xFF if lvl else 0xFF ^ m, m if lvl else 0)
 
     stream = []                            # records left on the tape
-    xex = car = None
+    xex = car = disk = None
     if a.tape.lower().endswith('.xex'):
         # Load it as DOS does: segment by segment, INITAD after any segment
         # that sets it, RUNAD at the end (xex_next, in the main loop). The
@@ -707,6 +743,13 @@ def main():
         car = raw[16:]
         assert len(car) == 0x20000
         img = bytes(6)                     # (the image: whichever the menu copies)
+    elif a.tape.lower().endswith('.atr'):
+        # The OS's disk boot: sector 1's header says how many sectors and
+        # where; it loads them there and calls load+6 (as a tape boot).
+        raw = open(a.tape, 'rb').read()
+        assert raw[:2] == bytes([0x96, 0x02]), 'not an .atr'
+        disk = raw[16:]
+        img = disk[:disk[1] * 128]
     elif a.tape.lower().endswith('.cas'):
         recs = cas_records(a.tape)
         nrec = recs[0][4]
@@ -797,6 +840,10 @@ def main():
         hw.press(to_line(at), 'FIRE' if key == 'FIRE' else 'JOY',
                  {'UP': 1, 'DOWN': 2, 'LEFT': 4, 'RIGHT': 8, 'FIRE': 1}[key],
                  float(h[0]) if h else 0.25)
+    diskerr = {}
+    for kv in (x for x in a.diskerr.split(',') if x):
+        sec, *n = kv.split(':')
+        diskerr[int(sec)] = int(n[0]) if n else 1
     limit = None
     steps = 0
     entered = set()
@@ -828,7 +875,7 @@ def main():
             xex_next()
             continue
         if mpu.pc == SIOV:
-            siov(mpu, hw, stream)
+            siov(mpu, hw, stream, disk, diskerr)
             continue
         if mpu.pc == 0x2006 and 0x2006 not in entered and xex is None and car is None:   # (not .xex: its program has code there)
             entered.add(0x2006)
