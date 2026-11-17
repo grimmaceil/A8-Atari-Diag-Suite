@@ -181,7 +181,7 @@ def build_bounce(name, defines, label, xex=None):
     return wrap(out, label, xex)
 
 
-def build_one16(name, defines, label):
+def build_one16(name, defines, label, disk=False):
     """The one-load 16k RAM tape: tape 1's stage 1 (ONE16) with stage 2
     inserted at PAYAT, built to run there. Stage 1's BSS and TSTART depend
     on stage 2's size, and stage 2 on those, but no size depends on an
@@ -205,6 +205,8 @@ def build_one16(name, defines, label):
         s1 = new
     else:
         sys.exit('build_one16: did not settle')
+    if disk:                        # a boot disk's piece: just the image
+        return Path(f'{out}.bin')
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkcas.py'), f'{out}.cas',
                     '--boot', f'{out}.bin', f'{out}.lab', '--name', label], check=True)
     return [Path(f'{out}.cas')]
@@ -296,6 +298,28 @@ def build_car(fast):
                     '--mem', *map(str, me), '--data', str(hello), '--data-at', str(hellobk)],
                    check=True)
     return car
+
+
+def build_disk(fast, out=None):
+    """The boot disk (Atari-diag-boot-disk-scope.md): every piece built, laid
+    out (build/disktab.asm, which every piece includes: its size is fixed,
+    so a second round settles it), summed, and written as an .atr."""
+    import mkatr
+    out = out or BUILD / ('diag-disk-fast.atr' if fast else 'diag-disk.atr')
+    f = {'FAST': 1} if fast else {}
+    def pieces():
+        return {'RAM16': build_one16('disk-ram16', dict(f, DISK=1), '', disk=True)}
+    tabf = BUILD / 'disktab.asm'
+    tabf.write_text(mkatr.disktab(mkatr.layout({})))
+    first = {n: b.read_bytes() for n, b in pieces().items()}
+    tabf.write_text(mkatr.disktab(mkatr.layout(first)))
+    bins = pieces()
+    for n, b in bins.items():
+        if len(b.read_bytes()) != len(first[n]):
+            sys.exit(f'build_disk: {n} changed size with the real layout')
+        if n != 'HELLO':
+            mkatr.patch_piece(b, b.with_suffix('.lab'))
+    return make_disk(out, bins)
 
 
 def make_disk(out, bins):

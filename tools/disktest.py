@@ -28,6 +28,12 @@ def stub_disk():
                            {'RAM8': Path(f'{stub}.bin'), 'RAM16': Path(f'{stub}.bin')})
 
 
+def real_disk():
+    """build/diag-disk-fast.atr: the boot disk, FAST (no slow patterns)."""
+    import build
+    return build.build_disk(True)
+
+
 def sim(image, args, snaps):
     """Run the simulator; {time: screen text} for each snapshot time."""
     out = subprocess.run([sys.executable, str(TOOLS / 'sim.py'), str(image), *args,
@@ -53,6 +59,11 @@ CHECKS = {
     # a sector that won't read: red, the message, and a key reads it again
     'err': (stub_disk, ['--ram', '0xC000', '--diskerr', '6:2', '--key', '4,6'],
             [(3, 'COLBK $34'), (8, 'COLBK $C8')]),
+    # 16K and up: the one-part RAM test, its summary goes on by itself (the
+    # third code), to the menu's piece
+    'ram16': (real_disk, ['--xl', '--key', '12'],
+              [(30, '|LEFT ALONE, IT GOES ON AFTER 3 CODES'), (30, '#diag-disk#'),
+               (75, '|DISK ERROR. A KEY TRIES AGAIN')]),
 }
 
 

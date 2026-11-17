@@ -97,8 +97,9 @@ ch_line	sta WSYNC
 ; the copy to LOAD, so the copy is verified here. 16-bit sum of every image
 ; byte except the stored sum and what follows it (SELFCRC: CRCFIX, the
 ; ROM test's self-check). The page operand of ck_op changes as the loop
-; runs; mkcas.py allows for that.
-	lda #>LOAD
+; runs; mkcas.py allows for that. (ck_go: a boot disk's RAM piece run again
+; from the menu comes in here: it was just loaded again.)
+ck_go	lda #>LOAD
 	sta ck_op+2
 	ldx #0
 ck_lp

@@ -32,6 +32,9 @@ SKIPTO	= tomenu
 	.elseif .def ONE32
 SKIPKEY	= 1
 SKIPTO	= SYS32+6
+	.elseif .def DISK	; (the boot disk: the menu's piece)
+SKIPKEY	= 1
+SKIPTO	= ramhand
 	.endif
 	.ifdef ONE16
 RESTART	= 1			; report.asm: the end waits for START: again
@@ -46,6 +49,10 @@ XBANK	= $BFF0
 XREQ	= BSS+$FC
 STASH	= BSS+$E3		; (system/common.asm: the tests' results, kept
 KEEP	= BSS+$EB		; while the RAM test ran again)
+	.elseif .def DISK	; (the boot disk: in another piece, src/disk)
+GOMENU	= 1
+STASH	= BSS+$E3
+KEEP	= BSS+$EB
 	.endif
 	.if .def ONE32
 FONT	= $7800			; ROM font copy while the OS is out (above the
@@ -230,6 +237,8 @@ fin
 	lda #0			; the RAM test again)
 	.elseif .def ONE32
 	lda #0
+	.elseif .def DISK
+	lda #0
 	.elseif .def ONE16	; the 16k tape: the whole RAM test again (stage
 	lda #<S1AGAIN		; 1's again); the 8k tape: this stage's tests
 	sta RETESTV		; again (stage 1 is in RAM, its results in its
@@ -251,6 +260,13 @@ fin
 	lda #<[SYS32+6]		; START: on to the system tests, in this image
 	sta CONTVEC		; (they take the RAM results over as test 0)
 	lda #>[SYS32+6]
+	sta CONTVEC+1
+	lda #1			; the summary stays up till then
+	sta ENDING
+	.elseif .def DISK
+	lda #<ramhand		; START: on to the menu's piece
+	sta CONTVEC
+	lda #>ramhand
 	sta CONTVEC+1
 	lda #1			; the summary stays up till then
 	sta ENDING
@@ -573,6 +589,10 @@ puts_st	pha
 	icl '../common/bits.asm'
 	icl '../common/detail.asm'
 	icl '../common/xlram.asm'
+	.ifdef DISK
+	icl '../disk/dload.asm'
+	icl '../disk/ramhand.asm'
+	.endif
 	.ifdef ONE16
 	.ifndef ROM
 	icl '../common/pagetest.asm'

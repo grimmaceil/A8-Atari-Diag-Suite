@@ -3,6 +3,8 @@
 ; under it). One list for every program; build.py's defines pick the line.
 	.if .def ROM			; the cartridge
 s_hpre	dta d' DIAG-CART  ',$FF
+	.elseif .def DISK		; the boot disk, every piece
+s_hpre	dta d' DIAG-DISK  ',$FF
 	.elseif .def OWNTEST		; the memory test (tape2)
 	.if .def NOXL
 s_hpre	dta d' DIAG-8K-MEMTEST  ',$FF

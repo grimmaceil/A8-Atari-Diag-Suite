@@ -16,7 +16,9 @@ RPEND	= 1
 RPRAM	= 1
 	.ifdef ONE32		; AUTON: the RAM summary goes on by itself where
 RPAUTO	= 1			; the ROM test follows (the 32k+ image and the
-	.elseif .def ROM	; cartridge; not the 16k RAM tape)
+	.elseif .def ROM	; cartridge, the boot disk; not the 16k RAM tape)
+RPAUTO	= 1
+	.elseif .def DISK
 RPAUTO	= 1
 	.endif
 	.else

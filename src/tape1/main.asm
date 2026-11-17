@@ -23,6 +23,10 @@
 ;                                     at $A000 (cart/romsum.asm), BSS at
 ;                                     $0800; START at the summary goes to
 ;                                     the menu's bank
+;   DISK=1                            a boot disk's RAM piece (src/disk):
+;                                     at $0900, BSS at $0800 (the results
+;                                     page every piece shares); with ONE16
+;                                     RAM16 (16K and up), without it RAM8
 
 	icl '../common/hw.asm'
 	icl '../common/vars.asm'
@@ -33,10 +37,17 @@ SHLIB	= 1			; part's library (lib.asm)
 	.endif
 
 KEEP	= BSS+$EB		; (system/common.asm)
-	.ifdef ROM		; S skips the RAM test, on the cartridge and the
-SKIPKEY	= 1			; 32k+ tape and disk file (ramtest.asm looks at it
-	.elseif .def ONE32	; every page)
+	.ifdef ROM		; S skips the RAM test, on the cartridge, the boot
+SKIPKEY	= 1			; disk and the 32k+ tape and disk file (ramtest.asm
+	.elseif .def ONE32	; looks at it every page)
 SKIPKEY	= 1
+	.elseif .def DISK
+SKIPKEY	= 1
+	.endif
+	.ifdef ROM		; the long test's way back: no RAM test, the menu
+BACKMK	= 1
+	.elseif .def DISK
+BACKMK	= 1
 	.endif
 	opt h-
 	.ifdef ROM
@@ -45,15 +56,24 @@ LOAD	= $A000
 	jmp entry		; power-on
 	jmp again		; from the menu: the RAM test again
 	.else
+	.ifdef DISK
+LOAD	= $0900
+	.else
 LOAD	= $0800
+	.endif
 	org LOAD
 
 ; Cassette boot header. The OS reads NREC records to LOAD, then JSRs LOAD+6.
-; We never return, so CASINI and DOSVEC are never used.
+; We never return, so CASINI and DOSVEC are never used. (DISK: the same
+; header; the disk loader enters at LOAD+6, or LOAD+9 from the menu.)
 	.byte 0
 	.byte NREC
 	.word LOAD
 	.word init_rts
+	.ifdef DISK
+	jmp entry		; power-on, or back from the long test
+	jmp again		; from the menu: the RAM test again
+	.endif
 	.endif
 
 	icl '../common/boot.asm'
@@ -62,7 +82,7 @@ LOAD	= $0800
 	jsr ucsize		; the RAM under the cartridge, in the RAM count
 	.endif			; (even when the RAM test is skipped)
 	.ifdef SKIPKEY		; (the keyboard latch is on: boot.asm)
-	.ifdef ROM
+	.ifdef BACKMK
 	lda $07FE		; back from the long memory test (tape2's
 	cmp #$5A		; backcart): no RAM test, the menu
 	bne rt_nb
@@ -147,7 +167,11 @@ ag_n	inx
 	sta SPKPH
 	lda #C_GREEN
 	sta COLBK
+	.ifdef DISK
+	jmp ck_go		; (just loaded again: its sum first)
+	.else
 	jmp lowram
+	.endif
 	icl '../common/display.asm'
 
 ; ---------------------------------------------------------------------------
@@ -472,6 +496,13 @@ IMGEND
 BSS	= $0800			; in RAM: the page above low RAM
 TSTART	= [>BSS]+1
 	.else
+	.ifdef DISK		; (RAM8 must fit an 8K machine: $0900-$1BFF)
+	.ifndef ONE16
+	.if *>$1C00-2
+	.error "RAM8 is over $1BFF: it must fit an 8K machine"
+	.endif
+	.endif
+	.endif
 ; Pad to a whole page; the last two bytes hold the image sum (mkcas.py),
 ; or (ONE32) the last six: the sum, then CRCFIX, for the ROM test's check
 ; of the image from PAYAT on (stage 2, the system tests, the long test's
@@ -494,6 +525,9 @@ IMGEND
 NREC	= [IMGEND-LOAD]/128
 	.ifdef ONE32
 TSTART	= >IMGEND		; (BSS is the page in the image, above)
+	.elseif .def DISK
+BSS	= $0800			; (the results page every disk piece shares)
+TSTART	= >IMGEND
 	.else
 BSS	= IMGEND
 TSTART	= [>BSS]+1

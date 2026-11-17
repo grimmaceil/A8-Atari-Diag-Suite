@@ -25,7 +25,9 @@ P_SOUND	= 6
 P_VIDEO	= 7
 P_HELLO	= 8
 P_MEM	= 9
-XPWRON	= $80			; XREQ: the RAM piece's power-on hand-over
+XREQ	= BSS+$FC		; why a piece was loaded: 0 the menu, 1-7 that
+				; test, 8 the long test, 9 the results,
+XPWRON	= $80			; and the RAM piece's power-on hand-over
 
 DDEVIC	= $0300			; the OS's SIO control block (SIOV changes only
 DUNIT	= $0301			; DSTATS)
