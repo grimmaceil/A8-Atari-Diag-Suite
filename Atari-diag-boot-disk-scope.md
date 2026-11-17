@@ -76,7 +76,7 @@ Measured from the builds, 2026-11-16.
 | $0000-$07FF | 2K | low RAM: the OS, the stack, the boot loader in page 7 (tested first, non-destructively: every byte put back) |
 | $0800-$08FF | one page | the shared results page (BSS), as on the cartridge |
 | $0900-$1BFF | **4.75K** | the piece that is running |
-| $1C00-$1FFF | 1K | the screen (on bigger machines it may sit higher; no piece may load over it) |
+| $1C00-$1FFF | 1K | the screen (the disk's RAM pieces look for it from $1C00 up, never just above themselves as a tape does, so no later piece loads over it; on a bigger machine it may sit higher) |
 
 So a piece that must run on 8K is at most 4.75K, the same room the 8k
 tapes have ($0800-$1AFF there, with the results page after the program).
@@ -192,8 +192,10 @@ and the loader where the cartridge has `XBANK`.
 
 - **Line 9, the long RAM test,** needs 16K, as on the cartridge (the line
   says `NEEDS 16K` below that). It loads over everything, results page
-  included; a key at its end loads the menu again with the earlier
-  results gone, as the cartridge's does.
+  included. A key at its end does what the cartridge's does: it loads the
+  RAM piece's power-on entry with a "back from the long test" mark, which
+  does the start-up work again (low RAM, the display checks) but not the
+  RAM test, and goes to the menu, the earlier results gone.
 - **Item 7 of the POKEY test** ("hello") needs 16K for its 7.25K
   recording; with less it is left out, as on the 8k sound tape.
 
