@@ -876,9 +876,9 @@ menu.
    press of START runs everything.
 3. The results and the final code.
 4. The keys: START runs the highlighted line, SELECT moves down, OPTION
-   moves up, and the number keys run that test. After a test the next one
-   is highlighted, so pressing START again and again goes through them
-   all.
+   moves up, and the number keys run that test; a joystick works too
+   (fire runs, down and up move). After a test the next one is
+   highlighted, so pressing START again and again goes through them all.
 
 Running a test again replaces its old result.
 
@@ -906,9 +906,7 @@ One tape, one load, for any machine with 32K or more:
 3. The result and what's next.
 4. It goes on to the ROM test, then the menu: by itself after its code
    has played three times (row 22, `LEFT ALONE, IT GOES ON AFTER 3
-   CODES`), or at once on a key. T or OPTION stops the count. (The
-   picture is from before 0.9's last build: the two bottom lines now
-   read as described here.)
+   CODES`), or at once on a key. T or OPTION stops the count.
 
 5. The seven tests, with the menu:
 
@@ -921,7 +919,7 @@ One tape, one load, for any machine with 32K or more:
 2. The tests.
 3. All of them, in order.
 4. The results.
-5. The keys.
+5. The keys, joystick included, as on every menu.
 
 The results page (line 8) is the one shown under
 [The menu](#the-menu-diag-16k-02-system-and-diag-32k-xl-xe), with one more

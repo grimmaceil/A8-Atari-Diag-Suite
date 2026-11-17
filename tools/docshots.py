@@ -67,7 +67,7 @@ RUNS = {
         ('^R=RETEST  ANY OTHER KEY', 2, '16k-01-summary')]),
     '32k-sum': ('build/t32-fast', ['--xl', '--auto', '--basic', '@BASIC', '--key', '10',
                                    '--until', '600'], [   # (--auto: past stage 1's result;
-        ('^T=TONES  ANY OTHER KEY=GO ON', 0.1, '32k-01-summary')]),   # it goes on at +0.25 s)
+        ('^T=TONES AND WAIT', 0.1, '32k-01-summary')]),   # it goes on at +0.25 s)
     '32k': ('build/t32-fast', ['--xl', '--auto', '--basic', '@BASIC', '--key', '10',
                                '--until', '420'], [
         ('^START=RUN', 0.5, '32k-02-menu')]),   # (its results page: as the 16k tape's)
@@ -86,7 +86,7 @@ RUNS = {
 # The guide's callouts: picture -> [(first text row, last text row, number)].
 # Each is a bracket in the right border beside those rows, with its number.
 ANNOT = {
-    'cart-01-menu': [(4, 4, 1), (5, 11, 2), (12, 13, 3), (14, 14, 4), (18, 19, 5)],
+    'cart-01-menu': [(4, 4, 1), (5, 11, 2), (12, 13, 3), (14, 14, 4), (18, 20, 5)],
     'ram-02-testing': [(2, 3, 1), (5, 5, 2)],
     'ram-03-pass': [(4, 4, 1), (6, 9, 2), (20, 21, 3), (23, 23, 4)],
     'ram-04-summary': [(5, 6, 1), (7, 10, 2), (14, 16, 3)],
@@ -100,11 +100,11 @@ ANNOT = {
     'ports-02-paddles': [(5, 5, 1), (7, 7, 2), (8, 15, 3)],
     'av-01-pokey': [(5, 5, 1), (7, 7, 2), (8, 8, 3)],
     'av-02-gtia': [(3, 3, 1), (5, 7, 2), (9, 16, 3), (18, 21, 4), (23, 23, 5)],
-    'system-01-menu': [(4, 10, 1), (11, 11, 2), (12, 12, 3), (18, 19, 4)],
+    'system-01-menu': [(4, 10, 1), (11, 11, 2), (12, 12, 3), (18, 20, 4)],
     'system-02-results': [(4, 10, 1), (12, 16, 2)],
     '16k-01-summary': [(5, 6, 1), (7, 10, 2), (14, 16, 3), (23, 23, 4)],
-    '32k-01-summary': [(5, 6, 1), (7, 11, 2), (14, 16, 3), (23, 23, 4)],
-    '32k-02-menu': [(4, 4, 1), (5, 11, 2), (12, 12, 3), (13, 13, 4), (18, 19, 5)],
+    '32k-01-summary': [(5, 6, 1), (7, 11, 2), (14, 16, 3), (22, 23, 4)],
+    '32k-02-menu': [(4, 4, 1), (5, 11, 2), (12, 12, 3), (13, 13, 4), (18, 20, 5)],
     'memtest-01-running': [(5, 5, 1), (6, 6, 2), (8, 9, 3), (23, 23, 4)],
     'memtest-02-summary': [(5, 6, 1), (8, 9, 2)],
     'memtest-03-sweep': [(13, 13, 1)],
