@@ -49,6 +49,9 @@ BACKMK	= 1
 	.elseif .def DISK
 BACKMK	= 1
 	.endif
+	.ifdef DISK		; (display.asm, report.asm: a boot disk's RAM
+RAMPC	= 1			; piece, RAM8 or RAM16)
+	.endif
 	.ifdef ONE16		; where S and the long test's way back go on to:
 RAMEND	= PAYAT+6		; stage 2, in the image
 	.elseif .def DISK	; (RAM8: the menu's piece)

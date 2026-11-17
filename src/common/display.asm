@@ -151,7 +151,7 @@ fs_next	ldx CNT
 
 ; Candidates: just above the stage (fits an 8K 400), then the top 1K of
 ; each 16K bank.
-	.ifdef DISK		; the boot disk: where no later piece loads
+	.ifdef RAMPC		; a boot disk's RAM piece: where no later piece loads
 	.ifdef ONE16		; RAM16: the top of bank 1, above the pieces
 SCR1	= $3C			; and "hello" ($0900-$38FF)
 scrcand	.byte $3C, $7C, $BC, $3C

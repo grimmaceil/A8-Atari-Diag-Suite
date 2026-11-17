@@ -127,6 +127,49 @@ The long memory test is a file of its own on disk: it needs all the RAM,
 so it could never return to the menu. The design and its reasons:
 [Atari-diag-disk-scope.md](../Atari-diag-disk-scope.md).
 
+### The boot disk
+
+`disks/diag-disk.atr` (single density, 720 sectors) is the cartridge
+rebuilt for a disk: the same programs as its banks, each a "piece" loaded
+from the disk when it is needed. Design and reasons:
+[Atari-diag-boot-disk-scope.md](../Atari-diag-boot-disk-scope.md).
+
+| Piece | Built from | Load | Sectors (0.9) |
+|---|---|---|---|
+| boot | `src/disk/boot.asm` | $0600-$07FF | 1-4 |
+| RAM8 | tape 1's stage 1 with `DISK` (no ONE16): RAM above it, then its own RAM page by page (`ownram`) | $0900-$1BFF | 38 |
+| RAM16 | tape 1 with `ONE16` and `DISK` (`build_one16(disk=True)`) | $0900-$24FF | 56 |
+| MENU, ROM, INPUT, PORTS, SOUND, VIDEO | `src/system/main.asm` with `DISK` and the `WANT_*` of each (the menu: `MENUPC`) | $0900, at most $1BFF | 30-38 |
+| HELLO | `src/cart/audio/hello-15k.bin`, data | $1C00-$38FF | 58 |
+| MEM | tape 2 with `BOUNCE`, `CART` and `DISK` | $0800 | 60 |
+
+- Every piece but HELLO has the tape image's 6-byte header (mkatr reads
+  its record count and load page) and is entered at LOAD+6 (a RAM piece's
+  LOAD+9: the RAM test again from the menu). The results page (BSS) is
+  $0800 for all of them, as on the cartridge; the RAM pieces put the
+  screen where no later piece loads ($1C00 under 16K, $3C00 from 16K:
+  `RAMPC` in `display.asm`).
+- `src/disk/dload.asm`, in every piece: `dchain` (X = piece, A = entry
+  offset) and `dfetch` (load and come back: HELLO) set up the OS's SIO
+  control block, its VBI vectors and shadow registers, copy the loader to
+  page 7 and jump there; it reads the sectors with SIOV, turns the
+  interrupts off and enters the piece. A disk error waits for a key and
+  reads the sector again. `build/disktab.asm` (written by
+  `tools/mkatr.py`) gives each piece's first sector, count and load page.
+  `dsum`: a system piece's own sum, checked at its entry.
+- `XREQ` says why a piece was loaded, as on the cartridge (0 the menu, 1-7
+  that test, 8 the long test, 9 the results; $80 the RAM piece's power-on
+  hand-over, `src/disk/ramhand.asm`). In `system/main.asm`, `SPLIT` makes
+  the tests of other pieces thunks (`xgo`, `tpiece`); the menu screen and
+  the power-on start are only in the menu's piece (`MENUCODE`,
+  `NEEDTRUN`), the results page only in the ROM test's (`RESPAGE`).
+- `build_disk` builds every piece twice: the layout table's size is
+  fixed, so the second round, with the real table, settles it; then the
+  sums (`mkatr.patch_piece`) and the image.
+- The long test's way back is the cartridge's: the mark $5A $A5 at
+  $07FE, then the 16K+ RAM piece's power-on entry, which skips the RAM
+  test and goes to the menu.
+
 ### The cartridge
 
 `carts/diag-cart.car` is an AtariMax 128K (`.car` type 41: 16 banks of 8K
@@ -324,12 +367,13 @@ These came from the author's direction over the sessions:
 | `src/tape2/` | the memory test (`diag-8k-memtest`, `diag-16k-memtest`, the cartridge's) |
 | `src/system/` | tests 1-7: `main.asm` builds a program from the tests `WANT_*` picks; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia` and `t_gtia2`, its video modes page); `common.asm` the flow, the menu and the end of a tape; `tlist.asm` the order; `kbmap.asm` the keyboard map (`tools/gen_kbmap.py`) |
 | `src/cart/` | the cartridge: `romsum.asm` (bank layout, sums), `ldmem.asm` (the long test's loader), `undercart.asm` (the RAM under it), `hello.asm` and `audio/` (the sampled "hello", made by `tools/mkhello.py`) |
-| `src/disk/` | the disk files' guard and mover (`xexwrap.asm`) |
+| `src/disk/` | the disk files' guard and mover (`xexwrap.asm`); the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`) |
 | `src/basic/` | BASCRC: the BASIC listing and the disk file |
-| `tools/` | `build.py`, `mkcas.py`, `mkxex.py`, `mkcar.py`, `mkbasic.py`, `mkhello.py`, `sim.py`, `docshots.py`, `gen_kbmap.py` |
+| `tools/` | `build.py`, `mkcas.py`, `mkxex.py`, `mkcar.py`, `mkatr.py`, `mkbasic.py`, `mkhello.py`, `sim.py`, `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
 | `cassettes/`, `disks/`, `carts/` | the release files |
 | `Atari-diag-cassette-scope.md` | the design: constraints, feedback, sets, the ROM table, open items |
 | `Atari-diag-disk-scope.md` | the disk files' design |
+| `Atari-diag-boot-disk-scope.md` | the boot disk's design |
 
 ## The simulator
 
@@ -337,7 +381,10 @@ These came from the author's direction over the sessions:
 cycles a scan line and a floating bus. It models:
 - the cassette boot, and later stages read through a stand-in for SIOV;
   a `.xex` loaded as DOS loads it (`--memlo`); a `.car` (AtariMax 128K),
-  with the bank switches and the cartridge switching itself off
+  with the bank switches and the cartridge switching itself off; an `.atr`
+  (the OS's disk boot, disk reads through SIOV at an 810's pace, a sector
+  that fails with `--diskerr SECTOR[:TIMES]`, and the OS's own VBI doing
+  its shadow copies)
 - RAMTOP as the OS sizes it (`--ram`), XL/XE banking (`--xl`), the 130XE
   (`--xe`, `--xejunk` for extended RAM full of random bytes as at
   power-on), the self-test ROM
@@ -366,7 +413,14 @@ python tools/sim.py build/diag-8k-03-input.cas --auto --until 90
 python tools/sim.py build/diag-8k-01-ram.cas --stuck 2:5:1 --until 200
 python tools/sim.py build/diag-cart.car --ram 0xC000 --kb 3E:1 --snap 14 --until 14
 python tools/sim.py build/diag-32k-xl-xe-xex.xex --ram 0x4000 --until 4 --snap 3.5   # the guard
+python tools/sim.py build/diag-disk.atr --ram 0x2000 --auto --until 200
 ```
+
+`tools/disktest.py` runs the boot disk's checks (a fast build of it, in
+the simulator): the boot on 8K and 64K, a disk error, both RAM pieces and
+a fault in RAM8's own RAM, the menu, each test from it, all of them in
+order (`--menuall`), the results page, the long test and back, and 8K
+without the "hello". All of them take about an hour.
 
 ## Documentation pictures
 

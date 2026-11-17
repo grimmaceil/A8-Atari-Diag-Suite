@@ -439,12 +439,19 @@ mg_c2	sta PASSNO,x
 ; its power-on entry. Two bytes at the top of low RAM tell it to skip the
 ; RAM test and go to the menu: its low RAM test puts every byte back, and
 ; its own working storage (which this program has overwritten) is cleared.
+; (DISK, the boot disk: the same, with its 16K+ RAM piece loaded instead.)
 backcart lda #$5A
 	sta $07FE
 	lda #$A5
 	sta $07FF
+	.ifdef DISK
+	ldx #P_RAM16		; (the long test needs 16K)
+	lda #6
+	jmp dchain
+	.else
 	sta $D500		; bank 0
 	jmp $A000
+	.endif
 	.endif
 
 ; ---------------------------------------------------------------------------
@@ -1281,6 +1288,10 @@ s_nextbad dta d'FIX SOLID FIRST',$FF
 s_toggle2 dta d'T=TONES  ANY OTHER KEY=MENU',$FF
 	.else
 s_toggle2 dta d'R=RETEST  ANY OTHER KEY=TONES',$FF
+	.endif
+
+	.ifdef DISK		; (the boot disk: the way back, src/disk)
+	icl '../disk/dload.asm'
 	.endif
 
 	.ifdef BOUNCE

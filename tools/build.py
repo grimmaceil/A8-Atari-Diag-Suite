@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build the diag tapes, disk files and cartridge: assemble with MADS, wrap
-as .cas (mkcas.py), .xex (mkxex.py, XEXES) and .car (mkcar.py, CAR),
-optionally deploy.
+"""Build the diag tapes, disk files, boot disk and cartridge: assemble with
+MADS, wrap as .cas (mkcas.py), .xex (mkxex.py, XEXES), .atr (mkatr.py,
+build_disk) and .car (mkcar.py, CAR), optionally deploy.
 
   python tools/build.py                 normal tapes into build/
   python tools/build.py --fault 2,5     also tapes with an injected fault
@@ -322,7 +322,9 @@ def build_disk(fast, out=None):
                 'PORTS': system('PORTS', WANT_JOY=1, WANT_PAD=1),
                 'SOUND': system('SOUND', WANT_POK=1),
                 'VIDEO': system('VIDEO', WANT_GTIA=1),
-                'HELLO': hello}
+                'HELLO': hello,
+                'MEM': build_bounce('disk-mem', dict(XEXES[1][2], CART=1, DISK=1, **f),
+                                    '', 'img')[0]}
     tabf = BUILD / 'disktab.asm'
     tabf.write_text(mkatr.disktab(mkatr.layout({})))
     first = {n: b.read_bytes() for n, b in pieces().items()}
@@ -404,6 +406,7 @@ def main():
             f = f.replace(f.with_name(f'{name}.xex'))
             xexes.append(f)
     car = build_car(a.fast)
+    xexes.append(build_disk(a.fast))    # the boot disk (Atari-diag-boot-disk-scope.md)
     # BASCRC, the BASIC cartridge check (a BASIC program): a tape for
     # ENTER "C:" with the tapes, the listing for ENTER "D:" with the disks
     bas, lst = BUILD / 'diag-bascrc.cas', BUILD / 'bascrc.lst'

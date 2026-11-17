@@ -18,18 +18,22 @@ and goes on by itself, so a machine left alone runs on to the ROM test.
 
 ![The cartridge menu](docs/img/cart-01-menu.png)
 
-## Three ways to run it
+## Ways to run it
 
-All three show the same tests, screens, colours and beeps. **The cartridge
-is the best way:** no loading, every test on one menu, and it works on a
-machine whose RAM is too sick to load a program. The disk files and the
-cassettes are the alternatives that cost nothing (no flash cartridge to
-buy), and the way in when the cartridge port itself is bad.
+All of them show the same tests, screens, colours and beeps. **The
+cartridge is the best way:** no loading, every test on one menu, and it
+works on a machine whose RAM is too sick to load a program. **The boot
+disk is next:** it works like the cartridge (the same menu, keys and
+results), only each test loads from the disk when you pick it. The disk
+files and the cassettes are the other alternatives. All but the cartridge
+cost nothing (no flash cartridge to buy), and they are the way in when
+the cartridge port itself is bad.
 
 | | File | Needs | What it is |
 |---|---|---|---|
 | **Cartridge** | `carts/diag-cart.car` | any Atari (8K); a MiSTer or an AtariMax 128K flash cartridge | every test on one menu, run from ROM: no loading, and it works when the RAM is too sick to load a program into |
-| **Disk** | `disks/diag-32k-xl-xe.xex` | 32K; DOS, a PC link or a MiSTer | the RAM test, then every test with the menu, in one file |
+| **Boot disk** | `disks/diag-disk.atr` | any Atari with a disk drive, an SIO adapter or a MiSTer (8K) | the cartridge's menu from a disk you boot: no DOS; each test loads as you pick it; the long test and the "hello" with 16K |
+| **Disk files** | `disks/diag-32k-xl-xe.xex` | 32K; DOS, a PC link or a MiSTer | the RAM test, then every test with the menu, in one file |
 | | `disks/diag-16k-memtest.xex` | 16K | the long memory test |
 | | `disks/diag-bascrc.xex` | 16K and DOS, with the BASIC cartridge in | the check for a BASIC cartridge (BASCRC) |
 | **Cassette** | the 8k set: `diag-8k-01-ram` to `diag-8k-06-video` | 8K: every Atari | six small tapes, about 2 minutes each; long test `diag-8k-memtest` (400/800) |
@@ -52,9 +56,9 @@ title bar (`V0.9`). The names here leave the `-v0.9` out.
 ## Get started
 
 1. Pick a way: the cartridge if you have a flash cartridge or a MiSTer;
-   the disk file with a drive and 32K; otherwise the tapes for the
-   machine's RAM (a machine that won't get through its own set: the 8k
-   set). A tape that needs more RAM than the machine has stops at once:
+   the boot disk with a disk drive, an SIO adapter or a MiSTer; otherwise
+   the tapes for the machine's RAM (a machine that won't get through its
+   own set: the 8k set). A tape that needs more RAM than the machine has stops at once:
    red border, a low tone on and off.
 2. Take out any cartridge (BASIC too) and load it: for a tape, hold START,
    switch on, start the tape and press a key when it beeps.
@@ -87,7 +91,8 @@ Tried on the MiSTer's Atari800 core as a 400/800 and as an XL/XE (64K, and
 a 128K 130XE), with the tapes, the disk files and the cartridge; and on a
 real 800 and a real 800XL with the disk files over an SIO adapter, where
 the joystick and paddle ports get their real test. Not tried yet: the
-cassettes played into a real machine, and the paddles on a MiSTer (it
+boot disk (new: so far only in the project's simulator, 8K and 64K XL),
+the cassettes played into a real machine, and the paddles on a MiSTer (it
 needs a paddle adapter that works with it). Reports from other machines
 are welcome.
 
@@ -135,6 +140,11 @@ are welcome.
     (cartridge, disk file, `diag-16k-03-hello`), seven plays.
   - The keyboard test ends on any console key; the Atari key shows the
     logo on every machine.
+  - **The boot disk** (`diag-disk.atr`, new): the cartridge's menu from
+    a disk you boot, on any Atari with a drive, 8K and up, no DOS. The
+    RAM test is one part on every machine (it tests its own RAM page by
+    page, as the long test does); each test loads from the disk as you
+    pick it.
   - **Joystick as the console keys** (no keyboard): fire = START, down =
     SELECT, up = OPTION, in port 1 or 2: the menu, the yes/no questions,
     the end of the keyboard test and the console key test's "one dead"

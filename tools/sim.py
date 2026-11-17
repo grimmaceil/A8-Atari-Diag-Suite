@@ -860,7 +860,7 @@ def main():
     insert_at = to_line(a.insert[0]) if a.insert else None
     frame = 0
     auto = Auto(hw, [d for d in a.deny.split(',') if d], a.skip, a.menuwalk,
-                [0x32 if c == '0' else 0x35 if c == '8' else WALK[int(c) - 1]
+                [0x32 if c == '0' else 0x35 if c == '8' else 0x30 if c == '9' else WALK[int(c) - 1]
                  for c in a.walk] if a.walk else None,
                 a.skiponce, a.menuall) if a.auto else None
     next_auto = 0

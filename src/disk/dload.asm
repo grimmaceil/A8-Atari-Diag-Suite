@@ -39,8 +39,12 @@ DBYTLO	= $0308
 DAUX1	= $030A
 SIOV	= $E459
 SYSVBV	= $E45F			; the OS's own VBI routines (fixed jump-table
-XITVBV	= $E462			; addresses on every OS)
+	.ifndef XITVBV		; addresses on every OS; the long test has
+XITVBV	= $E462			; these two already)
+	.endif
+	.ifndef VVBLKI
 VVBLKI	= $0222
+	.endif
 VVBLKD	= $0224
 SDMCTL	= $022F			; the shadows the OS's VBI copies to the chips
 SDLSTL	= $0230

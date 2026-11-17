@@ -33,10 +33,8 @@ RPFOLD	= 1
 	.ifdef RESTART		; the end waits for START
 RPEND	= 1
 	.endif
-	.ifdef DISK		; the boot disk's RAM8: its results go on by
-	.ifndef SYSCODES	; themselves (AUTON)
-RPAUTO	= 1
-	.endif
+	.ifdef RAMPC		; the boot disk's RAM8: its results go on by
+RPAUTO	= 1			; themselves (AUTON)
 	.endif
 	.endif
 

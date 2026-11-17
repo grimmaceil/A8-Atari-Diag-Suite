@@ -6,7 +6,8 @@
 
 Each check boots a disk image with some simulator options and looks at the
 screen (and the border colour) every 2 s: each text must have been seen by
-its time. A failed check prints the last screen before that time. The plumbing checks use a stand-in
+its time ('!text': never seen by then). A failed check prints the last
+screen before that time. The plumbing checks use a stand-in
 piece (tools/disktest/stub.asm); the others the real disk from build/.
 """
 import subprocess
@@ -89,6 +90,14 @@ CHECKS = {
     # fails, D2, and the code is bank 1
     'ram8bad': (real_disk, ['--ram', '0x2000', '--stuck', '08D7-08D8:3:1'],
                 [(150, 'fail:#see#the#code'), (150, 'D2')]),
+    # 9 on the menu: the long test's piece; a key stops it, a key at its
+    # summary goes back: the start-up again without the RAM test (line 0
+    # SKIPPED), the menu
+    'mem': (real_disk, ['--xl', '--auto', '--walk', '9', '--key', '150'],
+            [(140, 'PASSES '), (400, ' 0 RAM              SKIPPED')]),
+    # 8K: test 6 without the "hello" recording (it needs 16K)
+    'hello8k': (real_disk, ['--ram', '0x2000', '--auto', '--walk', '6'],
+                [(300, 'TEST 6 PASS'), (300, '!HELLO 7 TIMES')]),
     # 8 on the menu: the results page, in the ROM test's piece
     'results': (real_disk, ['--xl', '--auto', '--walk', '8'],
                 [(150, '|NUMBERS AFTER FAIL = FAILED ITEMS')]),
@@ -107,12 +116,14 @@ def main():
         end = max(t for t, _ in want)
         screens, out = sim(image, args, list(range(STEP, end + 1, STEP)))
         seen = lambda t, text: any(text in sc for at, sc in screens.items() if at <= t)
-        miss = [(t, text) for t, text in want if not seen(t, text)]
+        miss = [(t, text) for t, text in want
+                if (seen(t, text[1:]) if text.startswith('!') else not seen(t, text))]
         print(f'{name}: {"PASS" if not miss else "FAIL"}')
         for t, text in miss:
             bad += 1
             last = max((at for at in screens if at <= t), default=None)
-            print(f'  by {t} s: never {text!r}; the screen at {last} s:')
+            print(f'  by {t} s: {"seen" if text.startswith("!") else "never"} {text!r}; '
+                  f'the screen at {last} s:')
             print(screens.get(last) or out[-2000:])
     sys.exit(1 if bad else 0)
 

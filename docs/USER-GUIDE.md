@@ -17,17 +17,21 @@ what doesn't, by colour and by beeps first, and with text on screen once
 the screen itself has been checked. So they're still useful when the
 picture is bad. Nothing moves on by itself: every result waits for you.
 
-You don't need to know any programming. There are three ways to run the
+You don't need to know any programming. There are four ways to run the
 tests, and they all show the same screens, colours and beeps. The
 cartridge is the best: no loading, every test on one menu, and it runs
-even when the RAM is too sick to load a program. The disk files and the
-cassettes are the alternatives that cost nothing (no flash cartridge to
-buy), and the way in when the cartridge port itself is bad:
+even when the RAM is too sick to load a program. The boot disk is next: it
+works like the cartridge, only each test loads from the disk. The boot
+disk, the disk files and the cassettes cost nothing (no flash cartridge to
+buy), and they are the way in when the cartridge port itself is bad:
 - **the cartridge** (`carts` folder): every test on one menu, run from
   ROM, on any Atari (see [From the cartridge](#from-the-cartridge));
+- **the boot disk** (`disks` folder, `.atr`): the cartridge's menu from a
+  disk you boot, on any Atari with a disk drive, an SIO adapter or a
+  MiSTer, 8K and up (see [From the boot disk](#from-the-boot-disk));
 - **disk files** (`disks` folder, `.xex`): the 32k+ program, the long
-  memory test and the BASIC cartridge check, for a machine with a disk
-  drive, a PC link or a MiSTer (see [From disk](#from-disk));
+  memory test and the BASIC cartridge check, to load from DOS, a PC link
+  or a MiSTer (see [From disk](#from-disk));
 - **cassettes** (`cassettes` folder, `.cas`): for every machine down to an
   8K 400, and for one too sick to boot a disk (see
   [Loading a tape](#loading-a-tape)).
@@ -67,23 +71,23 @@ The cartridge has every test on one menu:
 
 ![Cartridge menu](img/cart-01-menu.png)
 
-Each menu line is also on the disk files and the tapes. The columns are
-the RAM a file needs, and each cell lists the cartridge, then the disk
-files, then the tapes. A machine can use everything in its own column and
-in the columns to the left of it:
+Each menu line is also on the boot disk, the disk files and the tapes.
+The columns are the RAM a file needs, and each cell lists the cartridge,
+then the disks, then the tapes. A machine can use everything in its own
+column and in the columns to the left of it:
 
 | Line | Test | 8K+ | 16K+ | 32K+ |
 |---|---|---|---|---|
-| 0 | RAM | `diag-cart.car`, `diag-8k-01-ram.cas` | `diag-16k-01-ram.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 1 | ROMs (OS, BASIC, the program's self-check) | `diag-cart.car`, `diag-8k-02-rom.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 2 | keyboard | `diag-cart.car`, `diag-8k-03-input.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 3 | console keys | `diag-cart.car`, `diag-8k-03-input.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 4 | joysticks | `diag-cart.car`, `diag-8k-04-ports.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 5 | paddles | `diag-cart.car`, `diag-8k-04-ports.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 6 | POKEY (sound) | `diag-cart.car`\*, `diag-8k-05-sound.cas` | `diag-16k-02-system.cas`, `diag-16k-03-hello.cas`\* (the "hello" only) | `diag-32k-xl-xe.xex`\*, `diag-32k-xl-xe.cas` |
-| 7 | GTIA/ANTIC (video) | `diag-cart.car`, `diag-8k-06-video.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 8 | results and the final code | `diag-cart.car` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 9 | long RAM test | `diag-8k-memtest.cas` (400/800 only) | `diag-cart.car` (line 9 needs 16K), `diag-16k-memtest.xex`, `diag-16k-memtest.cas` | |
+| 0 | RAM | `diag-cart.car`, `diag-disk.atr`, `diag-8k-01-ram.cas` | `diag-16k-01-ram.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 1 | ROMs (OS, BASIC, the program's self-check) | `diag-cart.car`, `diag-disk.atr`, `diag-8k-02-rom.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 2 | keyboard | `diag-cart.car`, `diag-disk.atr`, `diag-8k-03-input.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 3 | console keys | `diag-cart.car`, `diag-disk.atr`, `diag-8k-03-input.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 4 | joysticks | `diag-cart.car`, `diag-disk.atr`, `diag-8k-04-ports.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 5 | paddles | `diag-cart.car`, `diag-disk.atr`, `diag-8k-04-ports.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 6 | POKEY (sound) | `diag-cart.car`\*, `diag-disk.atr` (\* with 16K), `diag-8k-05-sound.cas` | `diag-16k-02-system.cas`, `diag-16k-03-hello.cas`\* (the "hello" only) | `diag-32k-xl-xe.xex`\*, `diag-32k-xl-xe.cas` |
+| 7 | GTIA/ANTIC (video) | `diag-cart.car`, `diag-disk.atr`, `diag-8k-06-video.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 8 | results and the final code | `diag-cart.car`, `diag-disk.atr` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 9 | long RAM test | `diag-8k-memtest.cas` (400/800 only) | `diag-cart.car`, `diag-disk.atr` (line 9 needs 16K), `diag-16k-memtest.xex`, `diag-16k-memtest.cas` | |
 
 \* with the sampled "hello" (POKEY item 7); the others play every other
 sound but that one.
@@ -267,9 +271,54 @@ The `.cas` files can be turned into audio (a `.wav` file) with a CAS-to-WAV
 converter, and the audio recorded onto a tape for an Atari 410 or 1010
 recorder. This hasn't been tried with these tapes yet.
 
+### From the boot disk
+
+`disks/diag-disk-v0.9.atr` is a disk image you boot: switch on with it in
+drive 1 and it runs the way the cartridge does. There is no DOS on it and
+none is needed, and it works on any Atari with 8K or more.
+
+1. The RAM test starts at once. Its summary plays its code three times
+   and goes on by itself (a key goes on at once; T or OPTION stops the
+   count).
+2. The ROM test loads and runs, and waits on its result.
+3. The menu: the cartridge's, lines 0-9, with the same keys, joystick
+   included.
+
+The difference from the cartridge is the loading. Each test loads from the
+disk when you pick it, and the menu loads again after it: a few seconds
+each on an 810 or 1050. Row 23 says `LOADING...` meanwhile.
+
+- **The RAM test is one part** on every machine: it tests the RAM it runs
+  in too, page by page, as the long memory test does. With 16K or more it
+  is the 16k RAM tape's program, summary and all (the RAM under an
+  XL/XE's OS and a 130XE's banks included). Under 16K (only ever a 400 or
+  800) it is a smaller one, whose results have an `OWN RAM $0800-$1BFF`
+  line; a fault there beeps as bank 1.
+- **Line 9, the long RAM test,** needs 16K. A key at its end goes back to
+  the menu, through the start-up again without the RAM test (line 0 shows
+  `SKIPPED`); the other results are gone, as on the cartridge.
+- **The "hello"** (POKEY item 7) needs 16K; with less it is left out.
+- **A disk error** (a bad sector, the drive door open): red border, a low
+  tone and `DISK ERROR. A KEY TRIES AGAIN` on row 23. Any key, START or
+  fire reads it again.
+
+To use it:
+- **MiSTer:** mount the `.atr` as drive 1 in the core's menu, then reset
+  the core (a cold start) so it boots the disk.
+- **An SIO adapter** (AspeQt, RespeQt, SIO2SD, FujiNet): mount the `.atr`
+  as D1: and switch the Atari on.
+- **A real drive:** write the image to a single-density disk (90K, which
+  every drive reads: 810, 1050, XF551) with a PC tool or a disk copier.
+
+Take any cartridge out first (the disk boots with one in, but the RAM
+under a cartridge can't be tested). You don't need to hold OPTION on an
+XL/XE. The title bar says ` DIAG-DISK `, and the ROM test's self-check
+line `DIAG DISK`.
+
 ### From disk
 
-Three Atari binary files (`.xex`) are in the `disks` folder. They load in
+Three Atari binary files (`.xex`) are in the `disks` folder, for loading
+from DOS, a PC link or a MiSTer's XEX loader. They load in
 seconds, not minutes:
 
 | File | Same tests as | Needs |
@@ -307,7 +356,8 @@ the low tone on and off:
   the file loads into (SpartaDOS does). Use Atari DOS 2.0S or 2.5, MyDOS,
   or the MiSTer's loader.
 
-An 8K machine can't run a disk file at all; use the 8k tapes.
+An 8K machine can't run a disk file at all; use the boot disk or the 8k
+tapes.
 
 Once the file is running, DOS has been overwritten (the test checks that
 RAM too). Pressing RESET then starts the machine again, as if switched on.
@@ -1036,4 +1086,5 @@ The MiSTer's Atari800 core, as a 400/800 and as an XL/XE (64K and a 128K
 machines with the disk files over an SIO adapter, where the joystick and
 paddle ports get their real test. The paddle test can't be tried on a
 MiSTer without a paddle adapter that works with it. The cassettes haven't
-been played into a real machine yet.
+been played into a real machine yet, and the boot disk is new: so far it
+has run only in the project's simulator (8K and 64K XL).
