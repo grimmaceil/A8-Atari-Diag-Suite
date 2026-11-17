@@ -111,6 +111,7 @@ gm_cl	lda gmcols,x
 	lda #0
 	sta GPX
 	jsr waitrel
+	jsr joyc		; (a stick held now doesn't answer)
 gm_lp	lda VCOUNT		; GTIA 9, 10, 11: PRIOR and COLBK on the blank
 	cmp #GLINE/2-1		; line before each band, then off on the one
 	bne gm_lp		; after (VCOUNT counts line pairs: from the pair

@@ -217,7 +217,12 @@ rl_go	lda #LDRIDX
 	jsr skip2
 	.endif
 	jsr xebanks
-no_os	lda DISPOK
+no_os
+	.ifdef GOMENU		; the ROM test (or the menu) follows: the code
+	lda #3			; three times, then on by itself, for someone
+	sta AUTON		; who walked away (a press stops the count)
+	.endif
+	lda DISPOK
 	beq fin
 	jsr summary
 fin
@@ -505,6 +510,12 @@ su_dd	lda #16
 	jsr faildetail
 	PRINT 21, 0, s_nextbad
 su_end
+	.ifdef GOMENU
+	lda AUTON		; (gone after a press: OPTION's redraw)
+	beq su_na
+	PRINT 22, 0, s_auto
+su_na
+	.endif
 	PRINT 23, 0, s_toggle2
 	rts
 
@@ -604,7 +615,8 @@ s_nextok dta d'ALL PASSED. NEXT: DIAG-8K-02-ROM',$FF
 s_nextbad dta d'FIX THIS FIRST',$FF
 	.endif
 	.ifdef GOMENU
-s_toggle2 dta d'T=TONES  ANY OTHER KEY=GO ON',$FF
+s_toggle2 dta d'T=TONES AND WAIT  ANY OTHER KEY=GO ON',$FF
+s_auto	dta d'LEFT ALONE, IT GOES ON AFTER 3 CODES',$FF
 	.else
 s_toggle2 dta d'R=RETEST  ANY OTHER KEY=TONES',$FF
 	.endif

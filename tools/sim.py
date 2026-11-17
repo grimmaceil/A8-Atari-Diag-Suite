@@ -121,6 +121,13 @@ class Atari:
                 return (self.line % self.frame_lines) // 2
             if a == 0xD014:
                 return 0x01 if self.pal else 0x0F
+            if a == 0xD300:      # PORTA: sticks 1 and 2, 0 = pressed (--joy)
+                v = 0xFF
+                for bit in self.active('JOY'):
+                    v &= ~bit
+                return v & 0xFF
+            if a == 0xD010:      # TRIG0: fire on stick 1, 0 = pressed (--joy)
+                return 0 if self.active('FIRE') else 1
             if a == 0xD301:
                 if not self.regs.get(0xD303, 0x3C) & 4:
                     return self.ddrb     # PBCTL bit 2 = 0: the direction register
@@ -653,6 +660,8 @@ def main():
                     help='.car: the console key pressed at the menu, and when (s): START or SELECT')
     ap.add_argument('--con', default='',
                     help='console keys pressed, e.g. START:52,SELECT:60 (seconds)')
+    ap.add_argument('--joy', default='',
+                    help='joystick 1, e.g. DOWN:52,FIRE:60 (UP, DOWN, LEFT, RIGHT, FIRE; seconds[:hold])')
     ap.add_argument('--bss', type=lambda x: int(x, 0),
                     help='where the program keeps its BSS page, for the end report (the 32k+ image: its BSS label)')
     ap.add_argument('--events', help='write every logged register write (line, register, value) to this file')
@@ -781,6 +790,12 @@ def main():
     for kv in (x for x in a.con.split(',') if x):
         key, at, *h = kv.split(':')        # KEY:SECS[:HOLD]
         hw.press(to_line(at), 'CON', {'START': 1, 'SELECT': 2, 'OPTION': 4}[key.upper()],
+                 float(h[0]) if h else 0.25)
+    for kv in (x for x in a.joy.split(',') if x):
+        key, at, *h = kv.split(':')        # KEY:SECS[:HOLD]
+        key = key.upper()
+        hw.press(to_line(at), 'FIRE' if key == 'FIRE' else 'JOY',
+                 {'UP': 1, 'DOWN': 2, 'LEFT': 4, 'RIGHT': 8, 'FIRE': 1}[key],
                  float(h[0]) if h else 0.25)
     limit = None
     steps = 0

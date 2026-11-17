@@ -53,10 +53,14 @@ INV	= BSS+$32	; putc: $80 = inverse
 DVAL	= BSS+$33	; 2: putdec value
 RETESTV	= BSS+$35	; 2: where R in a result's pause goes (0 = nowhere): the
 		; test again (report.asm's hold)
+AUTON	= BSS+$37	; rounds of the code left before it goes on by itself (0 =
+		; it waits for a press): the RAM test's summary where the ROM
+		; test follows (report.asm, RPAUTO)
 ISPAL	= BSS+$38
 LEAD	= BSS+$39	; putdec: still in leading zeros
 SCRERR	= BSS+$3A	; 2: error count before a screen-block test
 RROW	= BSS+$3C	; results: current row
+JPREV	= BSS+$3D	; joyc: the joysticks at the last look (system/common.asm)
 HOLDC	= BSS+$3E	; hold: border color
 SCRON	= BSS+$3F	; nonzero while the text screen is on
 STACKOK	= BSS+$D0	; low RAM passed: stack/zero page usable, controls read

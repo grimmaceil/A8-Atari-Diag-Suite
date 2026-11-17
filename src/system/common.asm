@@ -139,9 +139,40 @@ vs_2	lda VCOUNT
 	bcs vs_2
 	rts
 
+	.ifdef NEEDJOY
+; joyc: a joystick in port 1 or 2 as the console keys, for a machine with
+; no keyboard (or a dead one): fire = START, down = SELECT, up = OPTION.
+; A = the ones pressed since the last look, as CONSOL's bits but 1 =
+; pressed (Z set: none), so one held down, or stuck, counts once; a caller
+; primes it (one call) where a held stick must not count. Left and right
+; are left out: they are the paddles' triggers. Keeps X.
+joyc	lda PORTA		; stick 1: bits 0-3, stick 2: 4-7 (0 = pressed)
+	sta INB
+	lsr
+	lsr
+	lsr
+	lsr
+	and INB			; either stick
+	and #3			; up, down
+	tay
+	lda TRIG0
+	and TRIG1
+	lsr			; C clear: fire
+	lda jc_map,y
+	bcs jc_nf
+	ora #1
+jc_nf	tay			; now
+	eor JPREV
+	sty JPREV
+	and JPREV		; changed, and pressed now
+	rts
+jc_map	.byte 6, 2, 4, 0	; down+up, down, up, neither (0 = pressed)
+	.endif
+
 	.ifdef NEEDYN
 ; yesno: wait for the answer, as long as it takes. C set: Y or START. C
-; clear: N or SELECT. Console keys too, so a dead keyboard can answer. The
+; clear: N or SELECT. Console keys too, so a dead keyboard can answer, and
+; a joystick (joyc: fire = START, down = SELECT). The
 ; border is purple while it waits, so a question shows without a picture.
 ; YNSND: the sound being asked about, repeated until the answer: 0 none,
 ; 1 POKEY voice YNV/2 (a scale, then noise: 1 s on, 0.2 s off), 2 the
@@ -152,6 +183,7 @@ YNSND	= BSS+$F4
 YNV	= BSS+$F5		; POKEY voice times 2 (its AUDF/AUDC offset)
 YNFRM	= BSS+$F6		; frame in the on/off cycle
 yesno	jsr waitrel
+	jsr joyc		; (a stick held now doesn't answer)
 	lda #C_PURPLE
 	sta COLBK
 	lda #$40		; the keyboard IRQ latch (the CPU masks the IRQ)
@@ -188,7 +220,12 @@ yn_k	lda IRQST		; a key since the last look?
 	beq yn_yes
 	cmp #$23		; N
 	beq yn_no
-yn_con	lda CONSOL
+yn_con	jsr joyc		; a joystick: fire = yes, down = no
+	lsr
+	bcs yn_yes
+	lsr
+	bcs yn_no
+	lda CONSOL
 	lsr			; START
 	bcc yn_yes
 	lsr			; SELECT
@@ -547,7 +584,8 @@ pt_lp	lda #50
 ; ---------------------------------------------------------------------------
 ; The test menu (16k and 32k+ tapes): every test on the tape with its state, then
 ; ALL (every test in order) and the results. START runs the highlighted
-; line, SELECT moves down, OPTION up; keys 1-7 run that test. After a test
+; line, SELECT moves down, OPTION up; keys 1-7 run that test. A joystick
+; works too (joyc): fire runs, down and up move. After a test
 ; it comes back here with the next one highlighted, so START, START...
 ; walks the tests forward. It waits as long as it takes: no timeouts.
 MSEL	= BSS+$EE		; highlighted line: a ttests index, MNT = ALL,
@@ -565,11 +603,15 @@ menu	lda #0
 	lda #C_BLACK		; a steady border, whatever the last test left
 	sta COLBK
 	jsr mdraw
+	jsr joyc		; (a stick held now doesn't count)
 mn_rel	jsr waitrel
 mn_lp	jsr vsync
+	jsr joyc		; a joystick as the console keys: fire runs,
+	sta MTMP		; down and up move
 	lda CONSOL
 	eor #7
 	and #7
+	ora MTMP
 	bne mn_con
 	lda SKSTAT		; a key: 1-7 runs that test
 	and #4
@@ -718,6 +760,7 @@ mdraw	jsr scr_on
 	jsr machinfo
 	PRINT 18, 0, s_m1
 	PRINT 19, 0, s_m2
+	PRINT 20, 0, s_m3
 ; mlines: the menu's lines, the highlighted one in inverse (over the old).
 mlines	ldx #0
 md_lp	stx CNT
@@ -885,6 +928,7 @@ s_notrun dta d'-',$FF
 s_mall	dta d'ALL OF THEM, IN ORDER',$FF
 s_mres	dta d'8 RESULTS AND THE FINAL CODE',$FF
 s_m1	dta d'START=RUN  SELECT=DOWN  OPTION=UP',$FF
+s_m3	dta d'OR A JOYSTICK: FIRE=RUN, DOWN, UP',$FF
 	.ifdef LONGT
 s_m2	dta d'OR PRESS 0-9 FOR THAT LINE',$FF
 s_mram	dta d'0 RAM',$FF
@@ -1010,8 +1054,14 @@ s_hres	dta d'RESULTS',$FF
 bitn	.byte 1, 2, 4, 8, 16, 32, 64, 128
 
 	.ifdef WANT_GTIA	; (test 7)
-; gans: the answer: A = 1 yes (Y, START), 2 no (N, SELECT), 0 none (Z set).
-gans	lda SKSTAT
+; gans: the answer: A = 1 yes (Y, START, fire), 2 no (N, SELECT, stick
+; down), 0 none (Z set). (The caller primes joyc first.)
+gans	jsr joyc
+	lsr
+	bcs ga_y
+	lsr
+	bcs ga_n
+	lda SKSTAT
 	and #4
 	bne ga_c
 	lda KBCODE

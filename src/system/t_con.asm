@@ -1,6 +1,6 @@
 ; Test 3: console keys and the speaker.
 ;   items 1-3: START, SELECT, OPTION not seen (it waits for all three, or for
-;              a keyboard key when one of them is dead)
+;              a keyboard key or joystick fire when one of them is dead)
 ;   item 4: the speaker tone not heard (it repeats until the answer)
 CONSEEN	= TSCR+$00		; console keys seen (CONSOL bits, 1 = seen)
 
@@ -15,6 +15,7 @@ t_con	lda #3
 	lda #0
 	sta CONSEEN
 	jsr waitrel
+	jsr joyc		; (a stick held now doesn't count)
 co_lp	jsr vsync
 	lda CONSOL		; seen = pressed at least once
 	eor #7
@@ -38,6 +39,9 @@ co_3	lda CONSEEN
 co_t	lda CONSEEN
 	cmp #7
 	beq co_spk
+	jsr joyc		; joystick fire: as a key (no keyboard)
+	lsr
+	bcs co_spk
 	lda SKSTAT		; a keyboard key: one of them is dead; X: skip
 	and #4			; the test (no result)
 	bne co_lp
@@ -80,6 +84,6 @@ lc_lp	lda (CUR),y
 lc_x	rts
 
 s_con1	dta d'PRESS START, SELECT, OPTION.',$FF
-s_con2	dta d'ONE DEAD? KEY=GO ON. X=SKIP',$FF
+s_con2	dta d'ONE DEAD? KEY/FIRE=GO ON. X=SKIP',$FF
 s_cons	dta d'START  SELECT  OPTION',$FF
 s_spk	dta d'LISTEN: THE CONSOLE SPEAKER',$FF

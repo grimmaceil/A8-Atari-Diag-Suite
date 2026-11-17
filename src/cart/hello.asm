@@ -51,6 +51,7 @@ hl_cl	lda hp_src,x
 	lda #$40		; the keyboard latch (the CPU masks the IRQ)
 	sta IRQEN
 hl_all	jsr waitrel
+	jsr joyc		; (a stick held now doesn't answer)
 	lda #0
 	sta DMACTL
 	sta HWHO
@@ -100,9 +101,15 @@ hl_got	tax
 	sta BADMASK+6
 hl_yes	jmp waitrel
 
-; hl_ans: A = 1 yes (Y, START), 2 no (N, SELECT), 0 none (Z set). Keeps X.
+; hl_ans: A = 1 yes (Y, START, fire), 2 no (N, SELECT, stick down), 0 none
+; (Z set). Keeps X.
 hl_ans	lda SLATCH		; START during a pause
 	bne an_y
+	jsr joyc		; a joystick (system/common.asm)
+	lsr
+	bcs an_y
+	lsr
+	bcs an_n
 	lda CONSOL
 	lsr
 	bcc an_y		; START

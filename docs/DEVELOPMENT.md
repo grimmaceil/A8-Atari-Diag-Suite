@@ -252,6 +252,23 @@ program (2: the final results, the charge twice). `QUIET`: once the
 picture is confirmed and the text is up, the border stays steady and a
 code plays once.
 
+One result goes on by itself: the RAM summary where the ROM test follows
+(the cartridge and the 32k+ image: stage 2's `GOMENU`). Stage 2 sets
+`AUTON` to 3; `pass` and `report` (`RPAUTO`, the shared library) count a
+round at each pause and, at the third, jump to `CONTVEC` as a press would.
+`waitrel` clears `AUTON`, so any press stops the count: T and OPTION then
+leave it waiting. The 8k and 16k RAM tapes never set it.
+
+**The joystick** (`joyc`, `src/system/common.asm`) stands in for the
+console keys where there is no keyboard: fire = START, down = SELECT, up =
+OPTION, in port 1 or 2 (left and right are the paddles' triggers). It
+reports only presses since the last look (`JPREV`), so a stuck stick counts
+once and never blocks `waitrel`; each place that polls it primes it first
+with one call. It is used by the menu, `yesno`, `gans` (test 7), the
+sampled "hello"'s answer, the end of the keyboard test and the console key
+test's "one dead" escape. The reporter reads only the fire buttons
+(`inputs`, bit 0), as before.
+
 ## Memory and byte budgets
 
 - **BSS** is one page right after the image (`src/common/vars.asm` has the
@@ -280,7 +297,9 @@ These came from the author's direction over the sessions:
   flash has a beep, so a result reads by eye or by ear.
 - **No timeouts and no timers** after boot: every question and every
   result waits for as long as it takes. A sound being asked about repeats
-  until the answer.
+  until the answer. The one exception (Mike's call, 2026-11-16): the RAM
+  summary where the ROM test comes next goes on after its code has played
+  three times, so a machine left alone runs on; a press stops the count.
 - **Two keys for everything:** each action has a console key and a
   keyboard key (R, T/SELECT, F/OPTION, any other key), so one dead key
   never traps you. "Any key" means any key, START included.
@@ -325,8 +344,8 @@ cycles a scan line and a floating bus. It models:
 - RAM faults: stuck bits (`--stuck`), flaky bits (`--flaky`), mirrored
   banks (`--mirror`)
 - the VBI, the keyboard (`--key SECS`, `--kb CODE:SECS[:HOLD]`), console
-  keys (`--con KEY:SECS[:HOLD]`), joysticks, paddles, POKEY's interrupt
-  latches
+  keys (`--con KEY:SECS[:HOLD]`), joystick 1 (`--joy UP|DOWN|LEFT|RIGHT|FIRE:SECS[:HOLD]`),
+  paddles, POKEY's interrupt latches
 - real OS and BASIC ROMs (`--osrom`, `--basic`), or made-up ROM bytes
   without them; `--forge` gives the made-up 400/800 OS chips chosen CRC32s
 

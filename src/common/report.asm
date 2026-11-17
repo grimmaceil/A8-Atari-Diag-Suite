@@ -14,6 +14,11 @@ RPSYS	= 1
 RPFOLD	= 1
 RPEND	= 1
 RPRAM	= 1
+	.ifdef ONE32		; AUTON: the RAM summary goes on by itself where
+RPAUTO	= 1			; the ROM test follows (the 32k+ image and the
+	.elseif .def ROM	; cartridge; not the 16k RAM tape)
+RPAUTO	= 1
+	.endif
 	.else
 	.ifdef SYSCODES		; the system tests (system/main.asm)
 RPSYS	= 1
@@ -245,6 +250,14 @@ rp_wait	lda #30
 	NCALL RET1, hold
 	lda HSEL		; SELECT: the code again
 	bne rp_rep
+	.ifdef RPAUTO
+	lda AUTON		; counting (the RAM summary, the ROM test next):
+	beq rp_q		; the third round goes on by itself
+	dec AUTON
+	bne rp_q
+	jmp (CONTVEC)
+rp_q
+	.endif
 	lda QUIET		; quiet: once was enough, wait on
 	bne rp_wait
 rp_rep	jmp rp_top
@@ -278,6 +291,8 @@ rq_x	rts
 ; screen can be read: every ~5 s one long green flash per bank tested,
 ; steady green between; quiet (see tone): steady green and silent. A key
 ; goes on (the continue vector; at the end of a tape: the tones again).
+; AUTON set (the RAM summary where the ROM test follows): after that many
+; rounds it goes on by itself, as report does; a press first stops the count.
 pass	lda #C_GREEN
 	sta COLBK
 	jsr arm
@@ -317,7 +332,17 @@ pa_hold	lda #50
 	sta HOLDC
 	NCALL RET1, hold
 	lda HSEL		; T, SELECT (or a key at the end): the charge
-	beq pa_top		; again
+	.ifdef RPAUTO		; again
+	bne pa_ch
+	lda AUTON		; counting (the RAM summary, the ROM test next):
+	beq pa_top		; the third round goes on by itself
+	dec AUTON
+	bne pa_top
+	jmp (CONTVEC)
+pa_ch
+	.else
+	beq pa_top
+	.endif
 	jmp pass
 
 ; hold: border = HOLDC for RCNT tenths of a second (set HOLDC before the
@@ -422,10 +447,14 @@ in_x	lda INB
 in_kc	.byte $2D, $38, $28	; T, F, R (KBCODE)
 in_kb	.byte 1, 2, 4, 8
 
-; waitrel: wait until every control is released.
+; waitrel: wait until every control is released. (RPAUTO: whatever was
+; pressed, someone is there: a count to going on by itself stops.)
 waitrel	jsr inputs
 	bne waitrel
 	sta SLATCH		; (0)
+	.ifdef RPAUTO
+	sta AUTON
+	.endif
 	rts
 
 ; scrtoggle: text results <-> full-screen flashes (ANTIC off, easier to

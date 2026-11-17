@@ -12,8 +12,9 @@ long memory test (burn-in) for faults that come and go.
 
 It reports by **border colour and beeps** first, so it works even when the
 picture doesn't. Text appears on screen once the screen itself has been
-checked. Nothing moves on by itself: every result waits for you, for as
-long as you like.
+checked. Every result waits for you, for as long as you like, except the
+RAM summary where the ROM test comes next: it plays its code three times
+and goes on by itself, so a machine left alone runs on to the ROM test.
 
 ![The cartridge menu](docs/img/cart-01-menu.png)
 
@@ -66,6 +67,9 @@ dead key never traps you: **R** re-test (where there is no menu to pick
 the test from again), **T** or SELECT the tones again, **F** or OPTION
 full-screen flashes, any other key (START, a joystick button) goes on.
 **S** skips the RAM test on the cartridge, the 32k+ tape and disk file.
+With no keyboard, a joystick in port 1 or 2 stands in for the console
+keys: fire = START, down = SELECT, up = OPTION (the menu, the questions,
+the end of the keyboard and console key tests).
 
 **Dirty contacts cause a lot of "faults".** An unpaid recommendation from
 the author: DeoxIT contact cleaner (CAIG Laboratories) on the cartridge
@@ -95,7 +99,10 @@ are welcome.
     console key and a keyboard key. S skips the RAM test on the cartridge,
     the 32k+ tape and the disk file; X skips the console key test.
   - **No timers:** no result moves on by itself any more (a pass used to
-    go on after 2 seconds). R works at the last screen of every tape
+    go on after 2 seconds), except the RAM summary where the ROM test
+    comes next (cartridge, 32k+ tape and disk file): after its code has
+    played three times it goes on, so a machine left alone runs on; any
+    key goes on at once, T or OPTION stops the count. R works at the last screen of every tape
     without a menu (all its tests again), at the RAM summaries and at the
     memory test's summary.
   - **The end of a tape without a menu:** a line for each of its tests and
@@ -128,6 +135,10 @@ are welcome.
     (cartridge, disk file, `diag-16k-03-hello`), seven plays.
   - The keyboard test ends on any console key; the Atari key shows the
     logo on every machine.
+  - **Joystick as the console keys** (no keyboard): fire = START, down =
+    SELECT, up = OPTION, in port 1 or 2: the menu, the yes/no questions,
+    the end of the keyboard test and the console key test's "one dead"
+    escape. A held or stuck stick counts once.
   - Documents: a keys section and a table of every test by file, the MIT
     license, and current pictures.
 - **0.8** (2026-11-15)

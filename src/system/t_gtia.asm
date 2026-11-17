@@ -81,6 +81,7 @@ gs_sz	lda #1			; players double width
 	lda #3
 	sta GRACTL
 	jsr waitrel
+	jsr joyc		; (a stick held now doesn't answer)
 
 gt_lp	lda VCOUNT		; luminance: 8 steps of 3 lines, rows 5-7. VCOUNT
 	cmp #[32+GL_ROW*8]/2-1	; counts line pairs: start a pair early

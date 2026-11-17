@@ -85,6 +85,7 @@ kb_go	lda #$80		; BREAK: latched by POKEY's IRQ status (masked)
 	lda #$FF
 	sta KACT
 	jsr waitrel
+	jsr joyc		; (a stick held now doesn't count)
 
 kb_lp	jsr vsync
 	jsr showleft
@@ -141,7 +142,10 @@ kb_brk	lda IRQST
 	lda #20
 	sta BRKT
 	jsr click
-kb_st	lda CONSOL		; any console key ends it (the keys are what is
+kb_st	jsr joyc		; joystick fire ends it too (no keyboard)
+	lsr
+	bcs kb_done
+	lda CONSOL		; any console key ends it (the keys are what is
 	and #7			; being tested)
 	cmp #7
 	bne kb_done
@@ -374,7 +378,7 @@ click	lda #F_SHORT		; (and on POKEY: one of the two may be dead)
 	icl 'kbmap.asm'
 kbrtab	.word kbrow0, kbrow1, kbrow2, kbrow3, kbrow4
 
-s_kb1	dta d'PRESS EVERY KEY. CONSOLE KEYS END IT.',$FF
+s_kb1	dta d'PRESS EVERY KEY. CONSOLE KEY/FIRE ENDS.',$FF
 s_logo	.byte $0F, $7C, $3C, $FF	; /|\ (three columns, as INV: same key cell)
 s_kb2	dta d'PLAIN=TO DO  INVERSE=DONE  BLINK=HELD',$FF
 s_kb3	dta d'INVERSE = PRESSED',$FF

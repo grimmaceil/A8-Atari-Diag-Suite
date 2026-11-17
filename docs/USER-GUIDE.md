@@ -45,10 +45,18 @@ you:
 | **F** or OPTION | full-screen flashes on and off: the whole screen flashes with the code, easier to see when the picture is garbled |
 | START, any other key, or a joystick button | go on: the next test, or back to the menu (where a test is simply picked again). At the end of a tape without a menu, where there is nothing to go on to: the tones again |
 
+**A joystick** in port 1 or 2 works as the console keys, for a machine
+with no keyboard (an XEGS without one, or a dead one): fire = START, stick
+down = SELECT, stick up = OPTION. A stick held down, or a stuck one, counts
+once, not over and over. Left and right do nothing: they are the paddles'
+triggers.
+
 Other keys:
-- questions: Y or START = yes, N or SELECT = no;
-- the keyboard test ends on any console key (the keys are what it tests),
-  and the console key test goes on with any key;
+- questions: Y, START or fire = yes; N, SELECT or stick down = no;
+- the menu: SELECT or stick down moves down, OPTION or stick up moves up,
+  START or fire runs the line;
+- the keyboard test ends on any console key or fire (the keys are what it
+  tests), and the console key test goes on with any key or fire;
 - S skips the RAM test on the cartridge, the 32k+ tape and the disk file
   (the menu shows it as `SKIPPED`), X the console key test;
 - the memory test stops after its pass on any key.
@@ -319,7 +327,9 @@ Atari, an 8K 400 included, and on a machine whose RAM is too sick to load
 a tape into. Switch on with the cartridge in:
 
 1. The RAM test starts at once (green border and a chirp, then yellow
-   while it tests), and ends on the RAM summary, which waits for a key.
+   while it tests), and ends on the RAM summary. It plays its code three
+   times and then goes on by itself, so you can walk away; any key goes
+   on at once, and T or OPTION stops the count (then it waits for you).
 2. The ROM test runs next and waits on its result. A key goes to the menu.
 
 **S skips the RAM test.** A tap is enough, any time from switching on: S
@@ -328,14 +338,16 @@ the disk file and the 32k+ tape too.
 
 ![Cartridge menu](img/cart-01-menu.png)
 
-1. `0 RAM`: the RAM test again; START at its summary comes back to the
-   menu. The other tests keep their results.
+1. `0 RAM`: the RAM test again; its summary comes back to the menu (by
+   itself after three codes, or at a key). The other tests keep their
+   results.
 2. Tests 1 to 7.
 3. All of them in order, and `8`, the results.
 4. `9 LONG RAM TEST`: the long memory test, pass after pass until a key
    is pressed. It needs 16K (the line says so on a smaller machine).
 5. The keys: START runs the highlighted line, SELECT and OPTION move it,
-   and 0-9 pick a line directly.
+   and 0-9 pick a line directly. A joystick works too: fire runs, down
+   and up move.
 
 A cartridge switches off the 8K of RAM it sits over ($A000-$BFFF), which
 is why a 48K machine with a BASIC cartridge shows 40K. This cartridge
@@ -465,8 +477,12 @@ failed. The results screen says `NUMBERS AFTER FAIL = ITEMS THAT FAILED`.
 See [Keys](#keys) at the start: R re-test, T or SELECT the tones, F or
 OPTION full-screen flashes, any other key goes on.
 
-No result moves on by itself: every one waits for a key, as long as you
-like, so you can read it, walk away, or press R. While a pass waits the
+Every result waits for a key, as long as you like, so you can read it,
+walk away, or press R, with one exception: the RAM summary where the ROM
+test comes next (the cartridge, the 32k+ tape and disk file). It plays its
+code three times, about half a minute, then goes on by itself, so a test
+left alone runs on to the ROM test; the summary's row 22 says so. Any key
+goes on at once; T or OPTION stops the count, and then it waits. While a pass waits the
 border is green (without the text screen it gives one long green flash
 every few seconds). Any other key goes on: to the next test, to the menu,
 or, on `diag-8k-01-ram` with 16K or more, to loading part 2. The end of a
@@ -482,7 +498,8 @@ tape:
   stays up, with what to load next. R runs the RAM test again.
 - the menu tapes (`diag-16k-02-system`, `diag-32k-xl-xe`): a key goes back
   to the menu
-- `diag-32k-xl-xe`'s RAM summary: a key goes on to the system tests
+- `diag-32k-xl-xe`'s RAM summary: on to the system tests, by itself after
+  its third code, or at a key
 
 No question has a time limit either: every question waits until you answer
 it, with a purple border, and a test that asks about a sound keeps playing
@@ -848,7 +865,7 @@ One tape, one load, for any machine with 32K or more:
 2. The program's own RAM, page by page: each page is moved into the screen
    (the top rows show a jumble for a moment), tested, and put back.
 3. On an XL/XE: the RAM under the OS and, on a 130XE, the four extra banks.
-4. The RAM summary, which waits for you:
+4. The RAM summary:
 
 ![32K RAM summary](img/32k-01-summary.png)
 
@@ -856,7 +873,11 @@ One tape, one load, for any machine with 32K or more:
 2. Every bank, the area the tape ran in, and here (an XL) the RAM under the
    OS as bank 4.
 3. The result and what's next.
-4. A key goes on: the ROM test, then the menu.
+4. It goes on to the ROM test, then the menu: by itself after its code
+   has played three times (row 22, `LEFT ALONE, IT GOES ON AFTER 3
+   CODES`), or at once on a key. T or OPTION stops the count. (The
+   picture is from before 0.9's last build: the two bottom lines now
+   read as described here.)
 
 5. The seven tests, with the menu:
 
@@ -864,8 +885,8 @@ One tape, one load, for any machine with 32K or more:
 
 1. `0 RAM`: the whole RAM test again from the start, with the RAM result
    so far beside it. Choose it with SELECT and START, or press 0. After
-   the RAM summary, a key brings you back to this menu, with the other
-   tests cleared to `-`.
+   the RAM summary (a key, or three codes) you are back at this menu, with
+   the other tests cleared to `-`.
 2. The tests.
 3. All of them, in order.
 4. The results.
