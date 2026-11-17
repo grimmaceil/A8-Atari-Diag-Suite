@@ -219,10 +219,14 @@ hd_ver	lda #<s_ver
 hd_x	lda #0
 	sta INV
 	rts
-	.if VMAJ>9 .or VMIN>9
-	.error 'the version is one digit, a point, one digit'
+	.if VMAJ>9 .or VMIN>99
+	.error 'the version is one digit, a point, one or two digits'
 	.endif
+	.if VMIN>9		; two digits take the blank after: the same length
+s_ver	dta d'V',[VMAJ+$10],d'.',[VMIN/10+$10],[VMIN-VMIN/10*10+$10],$FF
+	.else
 s_ver	dta d'V',[VMAJ+$10],d'.',[VMIN+$10],d' ',$FF
+	.endif
 VERLEN	= 5
 
 ; clrrow: blank row A.

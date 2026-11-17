@@ -20,20 +20,22 @@ and goes on by itself, so a machine left alone runs on to the ROM test.
 
 ## Ways to run it
 
-All of them show the same tests, screens, colours and beeps. **The
-cartridge is the best way:** no loading, every test on one menu, and it
-works on a machine whose RAM is too sick to load a program. **The boot
-disk is next:** it works like the cartridge (the same menu, keys and
-results), only each test loads from the disk when you pick it. The disk
-files and the cassettes are the other alternatives. All but the cartridge
-cost nothing (no flash cartridge to buy), and they are the way in when
-the cartridge port itself is bad.
+All of them show the same tests, screens, colours and beeps. **Start
+with the boot disk:** it is the most convenient. It boots on any Atari
+with 8K or more and a disk drive or an SIO adapter, with no DOS, and it
+works like the cartridge (the same menu, keys and results), only each test
+loads from the disk when you pick it. **The cartridge** needs no loading
+at all: it runs from ROM, so it works on a machine whose RAM is too sick
+to load a program, but it needs a flash cartridge. The disk files and the
+cassettes are the other alternatives; the cassettes need the least of the
+machine. All but the cartridge cost nothing (no flash cartridge to buy),
+and they are the way in when the cartridge port itself is bad.
 
 | | File | Needs | What it is |
 |---|---|---|---|
-| **Cartridge** | `carts/diag-cart.car` | any Atari (8K); a MiSTer or an AtariMax 128K flash cartridge | every test on one menu, run from ROM: no loading, and it works when the RAM is too sick to load a program into |
-| **Boot disk** | `disks/diag-disk.atr` | any Atari with a disk drive, an SIO adapter or a MiSTer (8K) | the cartridge's menu from a disk you boot: no DOS; each test loads as you pick it; the long test and the "hello" with 16K |
-| **Disk files** | `disks/diag-32k-xl-xe.xex` | 32K; DOS, a PC link or a MiSTer | the RAM test, then every test with the menu, in one file |
+| **Boot disk** | `disks/diag-disk.atr` | any Atari (8K) with a disk drive or an SIO adapter | the cartridge's menu from a disk you boot: no DOS; each test loads as you pick it; the long test and the "hello" with 16K |
+| **Cartridge** | `carts/diag-cart.car` | any Atari (8K); an AtariMax 128K flash cartridge | every test on one menu, run from ROM: no loading, and it works when the RAM is too sick to load a program into |
+| **Disk files** | `disks/diag-32k-xl-xe.xex` | 32K; DOS or a PC link | the RAM test, then every test with the menu, in one file |
 | | `disks/diag-16k-memtest.xex` | 16K | the long memory test |
 | | `disks/diag-bascrc.xex` | 16K and DOS, with the BASIC cartridge in | the check for a BASIC cartridge (BASCRC) |
 | **Cassette** | the 8k set: `diag-8k-01-ram` to `diag-8k-06-video` | 8K: every Atari | six small tapes, about 2 minutes each; long test `diag-8k-memtest` (400/800) |
@@ -49,19 +51,21 @@ slow (about 3K a minute), so the tapes come in sets by RAM size: the more
 RAM, the fewer tapes. A set works on every machine with at least that much
 RAM, newer models included.
 
-Version 0.9. Every file has its version in its name
-(`diag-32k-xl-xe-v0.9.xex`) and every screen shows it at the right of the
-title bar (`V0.9`). The names here leave the `-v0.9` out.
+Version 0.10. Every file has its version in its name
+(`diag-disk-v0.10.atr`) and every screen shows it at the right of the
+title bar (`V0.10`). The names here leave the `-v0.10` out.
 
 ## Get started
 
-1. Pick a way: the cartridge if you have a flash cartridge or a MiSTer;
-   the boot disk with a disk drive, an SIO adapter or a MiSTer; otherwise
-   the tapes for the machine's RAM (a machine that won't get through its
-   own set: the 8k set). A tape that needs more RAM than the machine has stops at once:
-   red border, a low tone on and off.
-2. Take out any cartridge (BASIC too) and load it: for a tape, hold START,
-   switch on, start the tape and press a key when it beeps.
+1. Pick a way: the boot disk if you have a disk drive or an SIO adapter
+   (any Atari with 8K or more); the cartridge if you have a flash
+   cartridge, or the RAM is too sick to load anything; otherwise the tapes
+   for the machine's RAM (a machine that won't get through its own set:
+   the 8k set). A tape that needs more RAM than the machine has stops at
+   once: red border, a low tone on and off.
+2. Take out any cartridge (BASIC too) and load it: for the boot disk, put
+   it in drive 1 (or mount it as D1:) and switch on; for a tape, hold
+   START, switch on, start the tape and press a key when it beeps.
 3. Watch and listen: green is good, red plus beeps is a fault. Long beeps
    say where (the RAM bank or the test), short beeps say what (the data
    bit or the item).
@@ -70,7 +74,8 @@ Keys at every result, each with a console key and a keyboard key so one
 dead key never traps you: **R** re-test (where there is no menu to pick
 the test from again), **T** or SELECT the tones again, **F** or OPTION
 full-screen flashes, any other key (START, a joystick button) goes on.
-**S** skips the RAM test on the cartridge, the 32k+ tape and disk file.
+**S** skips the RAM test on the boot disk, the cartridge, the 32k+ tape
+and disk file.
 With no keyboard, a joystick in port 1 or 2 stands in for the console
 keys: fire = START, down = SELECT, up = OPTION (the menu, the questions,
 the end of the keyboard and console key tests).
@@ -82,32 +87,44 @@ an 800's RAM and OS board edges. Clean, reseat, and test again before
 blaming a chip.
 
 **[The user guide](docs/USER-GUIDE.md)** explains every screen, the colours
-and beeps, loading from a PC or a MiSTer, and what to do when something
+and beeps, loading from a disk drive or a PC, and what to do when something
 fails. It starts with a table of every test and the files that have it.
 
 ## Status
 
-Tried on the MiSTer's Atari800 core as a 400/800 and as an XL/XE (64K, and
-a 128K 130XE), with the tapes, the disk files and the cartridge; and on a
-real 800 and a real 800XL with the disk files over an SIO adapter, where
-the joystick and paddle ports get their real test. Not tried yet: the
-boot disk (new: so far only in the project's simulator, 8K and 64K XL),
-the cassettes played into a real machine, and the paddles on a MiSTer (it
-needs a paddle adapter that works with it). Reports from other machines
-are welcome.
+Tried on a real 800 and a real 800XL with the disk files over an SIO
+adapter, where the joystick and paddle ports get their real test. Every
+format, the boot disk included, has also run on the author's development
+set-up, the MiSTer's Atari800 core, as a 400/800 and as an XL/XE (64K, and
+a 128K 130XE). Not tried on a real machine yet: the boot disk, the
+cartridge and the cassettes. Reports from other machines are welcome.
 
 ## Versions
 
+- **0.10** (2026-11-17), against 0.9:
+  - **The boot disk** (`diag-disk.atr`, new), the place to start: the
+    cartridge's menu from a disk you boot, on any Atari with a disk drive
+    or an SIO adapter, 8K and up, no DOS. The RAM test is one part on
+    every machine (it tests its own RAM page by page, as the long test
+    does); each test loads from the disk as you pick it.
+  - **The RAM summary goes on by itself** where the ROM test comes next
+    (the boot disk, the cartridge, the 32k+ tape and disk file): after its
+    code has played three times, so a machine left alone runs on to the
+    ROM test. Any key goes on at once; T or OPTION stops the count.
+  - **Joystick as the console keys** (no keyboard): fire = START, down =
+    SELECT, up = OPTION, in port 1 or 2: the menu, the yes/no questions,
+    the end of the keyboard test and the console key test's "one dead"
+    escape. A held or stuck stick counts once.
+  - The title bar's version has room for two digits after the point.
+  - Documents: start with the boot disk; the MiSTer is named only as the
+    development set-up, not as a machine to test.
 - **0.9** (2026-11-15), against 0.8:
   - **Keys:** R re-test, T or SELECT the tones, F or OPTION full-screen
     flashes, any other key goes on, at every result; every action has a
     console key and a keyboard key. S skips the RAM test on the cartridge,
     the 32k+ tape and the disk file; X skips the console key test.
   - **No timers:** no result moves on by itself any more (a pass used to
-    go on after 2 seconds), except the RAM summary where the ROM test
-    comes next (cartridge, 32k+ tape and disk file): after its code has
-    played three times it goes on, so a machine left alone runs on; any
-    key goes on at once, T or OPTION stops the count. R works at the last screen of every tape
+    go on after 2 seconds). R works at the last screen of every tape
     without a menu (all its tests again), at the RAM summaries and at the
     memory test's summary.
   - **The end of a tape without a menu:** a line for each of its tests and
@@ -140,15 +157,6 @@ are welcome.
     (cartridge, disk file, `diag-16k-03-hello`), seven plays.
   - The keyboard test ends on any console key; the Atari key shows the
     logo on every machine.
-  - **The boot disk** (`diag-disk.atr`, new): the cartridge's menu from
-    a disk you boot, on any Atari with a drive, 8K and up, no DOS. The
-    RAM test is one part on every machine (it tests its own RAM page by
-    page, as the long test does); each test loads from the disk as you
-    pick it.
-  - **Joystick as the console keys** (no keyboard): fire = START, down =
-    SELECT, up = OPTION, in port 1 or 2: the menu, the yes/no questions,
-    the end of the keyboard test and the console key test's "one dead"
-    escape. A held or stuck stick counts once.
   - Documents: a keys section and a table of every test by file, the MIT
     license, and current pictures.
 - **0.8** (2026-11-15)

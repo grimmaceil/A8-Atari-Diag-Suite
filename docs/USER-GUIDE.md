@@ -4,12 +4,12 @@ By **Michael Grimm**, written with Claude (Anthropic's AI). Free to use,
 copy, change and share under the [MIT license](../LICENSE); please keep
 the credit when you pass it on.
 
-Version 0.9
+Version 0.10
 
-Every file has its version in its name (`diag-32k-xl-xe-v0.9.cas`), and
-every screen shows it at the right of the title bar (`V0.9`). If the two
+Every file has its version in its name (`diag-disk-v0.10.atr`), and
+every screen shows it at the right of the title bar (`V0.10`). If the two
 don't match, or a screen shows no version, you are running an older file.
-This guide leaves the `-v0.9` out of the names.
+This guide leaves the `-v0.10` out of the names.
 
 These programs test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
 800XL, 65XE, 800XE, 130XE and XE Game System. They tell you what works and
@@ -18,20 +18,21 @@ the screen itself has been checked. So they're still useful when the
 picture is bad. Nothing moves on by itself: every result waits for you.
 
 You don't need to know any programming. There are four ways to run the
-tests, and they all show the same screens, colours and beeps. The
-cartridge is the best: no loading, every test on one menu, and it runs
-even when the RAM is too sick to load a program. The boot disk is next: it
-works like the cartridge, only each test loads from the disk. The boot
-disk, the disk files and the cassettes cost nothing (no flash cartridge to
-buy), and they are the way in when the cartridge port itself is bad:
+tests, and they all show the same screens, colours and beeps. **Start with
+the boot disk:** it is the most convenient, and it works like the
+cartridge, only each test loads from the disk. The cartridge needs no
+loading at all and runs even when the RAM is too sick to load a program,
+but it needs a flash cartridge. The boot disk, the disk files and the
+cassettes cost nothing (no flash cartridge to buy), and they are the way
+in when the cartridge port itself is bad:
+- **the boot disk** (`disks` folder, `.atr`): the cartridge's menu from a
+  disk you boot, on any Atari with a disk drive or an SIO adapter, 8K and
+  up (see [From the boot disk](#from-the-boot-disk));
 - **the cartridge** (`carts` folder): every test on one menu, run from
   ROM, on any Atari (see [From the cartridge](#from-the-cartridge));
-- **the boot disk** (`disks` folder, `.atr`): the cartridge's menu from a
-  disk you boot, on any Atari with a disk drive, an SIO adapter or a
-  MiSTer, 8K and up (see [From the boot disk](#from-the-boot-disk));
 - **disk files** (`disks` folder, `.xex`): the 32k+ program, the long
-  memory test and the BASIC cartridge check, to load from DOS, a PC link
-  or a MiSTer (see [From disk](#from-disk));
+  memory test and the BASIC cartridge check, to load from DOS or a PC
+  link (see [From disk](#from-disk));
 - **cassettes** (`cassettes` folder, `.cas`): for every machine down to an
   8K 400, and for one too sick to boot a disk (see
   [Loading a tape](#loading-a-tape)).
@@ -61,8 +62,8 @@ Other keys:
   START or fire runs the line;
 - the keyboard test ends on any console key or fire (the keys are what it
   tests), and the console key test goes on with any key or fire;
-- S skips the RAM test on the cartridge, the 32k+ tape and the disk file
-  (the menu shows it as `SKIPPED`), X the console key test;
+- S skips the RAM test on the boot disk, the cartridge, the 32k+ tape and
+  the disk file (the menu shows it as `SKIPPED`), X the console key test;
 - the memory test stops after its pass on any key.
 
 ## Every test, and where to find it
@@ -119,9 +120,9 @@ the tape to depend on. So it runs on the smallest machine there is, a 400
 with 8K, and on a machine too sick to boot a disk. Each tape loads into the
 bottom of RAM and tests everything else from there.
 
-**Disk and cartridge too.** The disk files load in seconds on a machine
-with a working drive (or a PC link, or a MiSTer), and the cartridge needs
-no loading at all. The cassettes stay the version for low-spec and failing
+**Disk and cartridge too.** The boot disk and the disk files load in
+seconds on a machine with a working drive or a PC link, and the cartridge
+needs no loading at all. The cassettes stay the version for low-spec and failing
 machines.
 
 **Several sets, because tape is slow.** A cassette loads at 600 baud:
@@ -224,12 +225,6 @@ again: turn the Atari off, rewind or reload the tape, and start over. A
 load that works on the second try is fine; the tape is good. Only a load
 that fails every time, at the same point, means something is wrong.
 
-### On a MiSTer (Atari800 core)
-
-Put the `.cas` files on the MiSTer's storage (for example in
-`games/ATARI800/_diag`). Load the tape in the core's menu, then do the
-cassette boot above.
-
 ### From a PC: USB-SIO interface and AspeQt
 
 A USB-to-SIO interface (an "SIO2PC" cable; for example the SIO2PC-USB) plugs
@@ -273,7 +268,7 @@ recorder. This hasn't been tried with these tapes yet.
 
 ### From the boot disk
 
-`disks/diag-disk-v0.9.atr` is a disk image you boot: switch on with it in
+`disks/diag-disk-v0.10.atr` is a disk image you boot: switch on with it in
 drive 1 and it runs the way the cartridge does. There is no DOS on it and
 none is needed, and it works on any Atari with 8K or more.
 
@@ -303,8 +298,6 @@ each on an 810 or 1050. Row 23 says `LOADING...` meanwhile.
   fire reads it again.
 
 To use it:
-- **MiSTer:** mount the `.atr` as drive 1 in the core's menu, then reset
-  the core (a cold start) so it boots the disk.
 - **An SIO adapter** (AspeQt, RespeQt, SIO2SD, FujiNet): mount the `.atr`
   as D1: and switch the Atari on.
 - **A real drive:** write the image to a single-density disk (90K, which
@@ -318,7 +311,7 @@ line `DIAG DISK`.
 ### From disk
 
 Three Atari binary files (`.xex`) are in the `disks` folder, for loading
-from DOS, a PC link or a MiSTer's XEX loader. They load in
+from DOS or a PC link. They load in
 seconds, not minutes:
 
 | File | Same tests as | Needs |
@@ -332,8 +325,6 @@ the menu's program included, so it couldn't come back to the menu anyway.
 
 To load one:
 
-- **MiSTer:** load the `.xex` from the core's menu (its XEX loader). No
-  cassette boot and no DOS disk needed.
 - **A DOS disk** (Atari DOS 2.0S or 2.5, or MyDOS): copy the file onto it,
   boot DOS, and load it with the binary load option (`L` in the DOS 2
   menu).
@@ -353,8 +344,8 @@ the low tone on and off:
 - `NEEDS 32K RAM. THIS MACHINE HAS 16K.`: too little RAM. Use the tapes
   for a smaller machine.
 - `DOS IS IN THE WAY: USE DOS 2 OR MYDOS`: this DOS takes up the memory
-  the file loads into (SpartaDOS does). Use Atari DOS 2.0S or 2.5, MyDOS,
-  or the MiSTer's loader.
+  the file loads into (SpartaDOS does). Use Atari DOS 2.0S or 2.5, or
+  MyDOS.
 
 An 8K machine can't run a disk file at all; use the boot disk or the 8k
 tapes.
@@ -365,12 +356,8 @@ RAM too). Pressing RESET then starts the machine again, as if switched on.
 ### From the cartridge
 
 `diag-cart.car`, in the `carts` folder, holds all the tests. It is an
-AtariMax 128K cartridge image (`.car` type 41):
-
-- **MiSTer:** load it from the core's cartridge menu, then reset the
-  machine.
-- **A real Atari:** write it to an AtariMax 128K flash cartridge (its own
-  flasher does this).
+AtariMax 128K cartridge image (`.car` type 41): write it to an AtariMax
+128K flash cartridge (its own flasher does this).
 
 The tests run from the cartridge itself, not from RAM, so it works on any
 Atari, an 8K 400 included, and on a machine whose RAM is too sick to load
@@ -667,10 +654,10 @@ programs. BASCRC is a short Atari BASIC program that is: it works out the
 CRC32 of the cartridge ($A000-$BFFF) with a little machine code (2-3
 seconds) and names the revision.
 
-The easiest way, with a disk drive or a MiSTer and 16K or more: the disk
-file `disks/diag-bascrc` (`.xex`), the same check in machine code. With
-the cartridge in, boot DOS, type `DOS`, then `L` and the file's name (or
-load it as an `.xex` on a MiSTer). It prints the CRC32, the revision byte
+The easiest way, with a disk drive and 16K or more: the disk file
+`disks/diag-bascrc` (`.xex`), the same check in machine code. With the
+cartridge in, boot DOS, type `DOS`, then `L` and the file's name. It
+prints the CRC32, the revision byte
 and `REV A: GOOD` (or B, C), or `NO MATCH`; a key goes back to DOS. On an
 XL/XE it switches the built-in BASIC in itself if it is off.
 
@@ -685,13 +672,7 @@ Or the BASIC program:
      about a minute, stopping between blocks.
 
      The tape has to be at its start for every try: after an error, or
-     after a CLOAD, rewind it. On a **MiSTer**: type `ENTER "C:"` and
-     RETURN first; at the beep, mount the tape with **Load Tape** in the
-     core's menu (not Boot Tape: that boots it as a machine-code tape,
-     which this isn't, and it crashes), then press RETURN. The MiSTer
-     can't rewind a tape: after a failed try, load the `.cas` again from
-     the menu (that starts it from the beginning; Backspace in the tape
-     menu unmounts it if the Atari's SIO seems stuck).
+     after a CLOAD, rewind it.
    - **Disk:** copy `disks/bascrc` (`.lst`) onto a DOS disk as
      `BASCRC.LST`, then `ENTER "D:BASCRC.LST"`.
    - **Type it in** (below). Line 40 catches a typing mistake in the
@@ -1063,7 +1044,7 @@ fallback. See [Why cassette, and why several sets](#why-cassette-and-why-several
 A disk needs a working drive and more of the machine before anything can
 run. The cassette tapes are for the machines that can't manage that: an
 8K 400, or a machine that fails to boot a disk. The cartridge needs no
-loading, but an AtariMax flash cartridge (or a MiSTer) to put it on.
+loading, but an AtariMax flash cartridge to put it on.
 
 ### Is this a substitute for the memory test?
 
@@ -1081,10 +1062,9 @@ a BASIC cartridge).
 
 ### What has it been tried on?
 
-The MiSTer's Atari800 core, as a 400/800 and as an XL/XE (64K and a 128K
-130XE), with tapes, disk files and the cartridge; and real 800 and 800XL
-machines with the disk files over an SIO adapter, where the joystick and
-paddle ports get their real test. The paddle test can't be tried on a
-MiSTer without a paddle adapter that works with it. The cassettes haven't
-been played into a real machine yet, and the boot disk is new: so far it
-has run only in the project's simulator (8K and 64K XL).
+Real 800 and 800XL machines, with the disk files over an SIO adapter,
+where the joystick and paddle ports get their real test. Every format,
+the boot disk included, has also run on the author's development set-up,
+the MiSTer's Atari800 core, as a 400/800 and as an XL/XE (64K and a 128K
+130XE). Not tried on a real machine yet: the boot disk, the cartridge and
+the cassettes.

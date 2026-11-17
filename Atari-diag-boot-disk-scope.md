@@ -3,9 +3,10 @@
 By **Michael Grimm**, written with Claude (Anthropic's AI). MIT license
 (see [LICENSE](LICENSE)).
 
-Status: built 2026-11-16 (version 0.9), run in the project's simulator
-(tools/disktest.py: 8K and 64K XL, every piece, a disk error); not yet on a
-real machine. The plan: docs/superpowers/plans/2026-11-16-boot-disk.md.
+Status: built 2026-11-16, released in version 0.10 (2026-11-17) as the
+place to start. Run in the project's simulator (tools/disktest.py: 8K and
+64K XL, every piece, a disk error) and on the MiSTer (the development
+set-up); not yet on a real machine. The plan: docs/superpowers/plans/2026-11-16-boot-disk.md.
 Where the build settled a point differently from the text below: the boot
 is sectors 1-4 at $0600-$07FF (its loader already in place at $0700); the
 menu piece is 3.75K (30 sectors); the disk error has no status number and
@@ -16,7 +17,7 @@ runs on an 8K machine.
 
 ## 1. What this is, and why
 
-One disk image, `diag-disk-v0.9.atr`, that you boot by switching on with
+One disk image, `diag-disk-v0.10.atr`, that you boot by switching on with
 it in drive 1. No DOS. It runs the whole suite the way the cartridge does,
 on any Atari with a disk drive: 400, 800, XL or XE, 8K of RAM or more.
 
@@ -24,8 +25,10 @@ Mike, 2026-11-16: the 8k tapes showed the tests can be split into small
 pieces; a disk can hold all the pieces and chain them ("a boot sequence
 between programs ram > rom > menu > other, each piece as a separate file
 on the same disk"), and the RAM test should be one part, as the long RAM
-test already is. The cartridge is still the best way; this is the free
-way for anyone with a drive, an SIO adapter or a MiSTer, and a way to
+test already is. (Written when the cartridge was the first choice; since
+0.10 the documents put this disk first: the most convenient, the likely
+start for most people.) This is the free way for anyone with a drive or an
+SIO adapter, and a way to
 test a machine whose cartridge port is bad. Mike can test it himself on
 the real 800 and 800XL over his SIO adapter, which plays disks but not
 tapes.
@@ -232,4 +235,5 @@ and the loader where the cartridge has `XBANK`.
 7. The long test needs 16K and clears the other results, as on the
    cartridge.
 8. The `.xex` files stay as they are.
-9. Title bar `DIAG-DISK`, file `disks/diag-disk-v0.9.atr`, version 0.9.
+9. Title bar `DIAG-DISK`, file `disks/diag-disk-v0.10.atr`, version 0.10
+   (the design said 0.9; it shipped as 0.10).

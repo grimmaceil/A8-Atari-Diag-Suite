@@ -44,7 +44,9 @@ How a change is tested:
   more than they caught.
 - **The author's MiSTer** (Atari800 core): every build is copied to its
   share at once (see [Building](#building)), in the order cartridge, disk
-  file, tape (the cartridge is quickest to try).
+  file, tape (the cartridge is quickest to try). It is the development
+  set-up, not a machine anyone diagnoses: the user documents name only
+  real machines as ways to run the tests.
 - **Real hardware:** an 800 and an 800XL, with the disk files over an SIO
   adapter (the cassettes can't be played in that way). The joystick and
   paddle ports get their real test there; the MiSTer has no working
@@ -75,9 +77,10 @@ python tools/build.py --fast       # skip the $55/$AA march pass (quicker simula
 ```
 
 The version is `VERSION` in `tools/build.py`. It goes into every release
-file's name (`cassettes/diag-...-v0.9.cas`; `build/` keeps the plain names,
+file's name (`cassettes/diag-...-v0.10.cas`; `build/` keeps the plain names,
 which the simulator examples below use) and onto every title bar
-(`screen.asm`'s header). A build removes the release files of other
+(`screen.asm`'s header: one digit before the point, one or two after,
+in the same five columns). A build removes the release files of other
 versions.
 
 Every build copies the release files that changed to the share (`SHARE`
@@ -134,7 +137,7 @@ rebuilt for a disk: the same programs as its banks, each a "piece" loaded
 from the disk when it is needed. Design and reasons:
 [Atari-diag-boot-disk-scope.md](../Atari-diag-boot-disk-scope.md).
 
-| Piece | Built from | Load | Sectors (0.9) |
+| Piece | Built from | Load | Sectors (0.10) |
 |---|---|---|---|
 | boot | `src/disk/boot.asm` | $0600-$07FF | 1-4 |
 | RAM8 | tape 1's stage 1 with `DISK` (no ONE16): RAM above it, then its own RAM page by page (`ownram`) | $0900-$1BFF | 38 |
