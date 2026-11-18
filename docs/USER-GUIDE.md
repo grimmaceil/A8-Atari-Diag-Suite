@@ -94,8 +94,21 @@ none is needed, and it works on any Atari with 8K or more.
    and goes on by itself (a key goes on at once; T or OPTION stops the
    count).
 2. The ROM test loads and runs, and waits on its result.
-3. The menu: the cartridge's, lines 0-9, with the same keys, joystick
-   included.
+3. The menu, lines 0-9, the same as the cartridge's:
+
+![Boot disk menu](img/disk-01-menu.png)
+
+1. `0 RAM`: the RAM test again; its summary comes back to the menu (by
+   itself after three codes, or at a key). The other tests keep their
+   results.
+2. Tests 1 to 7.
+3. All of them in order, and `8`, the results.
+4. `9 LONG RAM TEST`: the long memory test, pass after pass until a key
+   is pressed. It needs 16K (the line says so on a smaller machine).
+5. The keys: START runs the highlighted line, SELECT and OPTION move it,
+   and 0-9 pick a line directly. A joystick works too: fire runs, down
+   and up move. After a test the next line is highlighted (here test 2,
+   after the RAM and ROM tests at start-up).
 
 The difference from the cartridge is the loading. Each test loads from the
 disk when you pick it, and the menu loads again after it: a few seconds
@@ -144,20 +157,12 @@ a tape into. Switch on with the cartridge in:
 
 **S skips the RAM test.** A tap is enough, any time from switching on: S
 goes on to the ROM test (line 0 shows `SKIPPED`), then the menu. S works on
-the disk file and the 32k+ tape too.
+the boot disk, the disk file and the 32k+ tape too.
+
+The menu is the boot disk's, with `DIAG-CART` in the title bar (the
+numbers are explained under [From the boot disk](#from-the-boot-disk)):
 
 ![Cartridge menu](img/cart-01-menu.png)
-
-1. `0 RAM`: the RAM test again; its summary comes back to the menu (by
-   itself after three codes, or at a key). The other tests keep their
-   results.
-2. Tests 1 to 7.
-3. All of them in order, and `8`, the results.
-4. `9 LONG RAM TEST`: the long memory test, pass after pass until a key
-   is pressed. It needs 16K (the line says so on a smaller machine).
-5. The keys: START runs the highlighted line, SELECT and OPTION move it,
-   and 0-9 pick a line directly. A joystick works too: fire runs, down
-   and up move.
 
 A cartridge switches off the 8K of RAM it sits over ($A000-$BFFF), which
 is why a 48K machine with a BASIC cartridge shows 40K. This cartridge
@@ -197,11 +202,12 @@ other tape, the disks and the cartridge do.
 
 ## Every test, and where to find it
 
-The cartridge has every test on one menu:
+The boot disk and the cartridge have every test on one menu (the boot
+disk's here):
 
-![Cartridge menu](img/cart-01-menu.png)
+![Boot disk menu](img/disk-01-menu.png)
 
-Each menu line is also on the boot disk, the disk files and the tapes.
+Each menu line is also on the disk files and the tapes.
 The columns are the RAM a file needs, and each cell lists the cartridge,
 then the disks, then the tapes. A machine can use everything in its own
 column and in the columns to the left of it:
@@ -234,11 +240,13 @@ differ a little.
 
 ### The top of every screen
 
-The bar along the top names **the tape** you loaded, then the test on
-screen: for example `DIAG-16K-02-SYSTEM  2 KEYBOARD`. That's the tape's
-name, not what it found out about your machine.
+The bar along the top names **what you loaded**, then the screen: for
+example `DIAG-DISK  MENU` on the boot disk, `DIAG-CART  MENU` on the
+cartridge, or a tape's own name (`DIAG-16K-02-SYSTEM  2 KEYBOARD`). The
+version is at the right (`V0.11`). That's the program's name, not what it
+found out about your machine.
 
-What the tape **found** is on the line below it: `FOUND:`, then the machine
+What the program **found** is on the line below it: `FOUND:`, then the machine
 type (400/800 or XL/XE), all the RAM it found (an 800XL shows 64K, a 130XE
 128K), and PAL or NTSC. So the
 32k+ tape on a 130XE shows `DIAG-32K-XL-XE` on top and
@@ -370,6 +378,15 @@ it until you answer.
 
 ## The tests, screen by screen
 
+The pictures here come from the cartridge and the tapes, but the boot
+disk, the cartridge, the disk files and the tapes all show the same test
+screens: only the name in the title bar changes. The RAM test is where they
+differ most. The boot disk on 16K or more runs the 16k tape's one-load
+test (below); on less, a smaller one (see
+[From the boot disk](#from-the-boot-disk)). The boot disk and the
+cartridge both end it on a summary like the 32k+ tape's, which goes on to
+the ROM test by itself (see [The 32k+ tape](#the-32k-tape-diag-32k-xl-xe)).
+
 ### RAM test (line 0)
 
 There is no separate video check. The RAM result screen is the picture
@@ -381,7 +398,7 @@ machine with a lot of RAM this takes a few minutes.
 
 ![RAM test running](img/ram-02-testing.png)
 
-1. What the tape found.
+1. What the program found.
 2. The bank being tested now.
 
 **Result** (the 8k tape and the 32k+ tape, after the main RAM; the 16k

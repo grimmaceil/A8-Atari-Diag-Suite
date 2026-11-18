@@ -16,7 +16,7 @@ checked. Every result waits for you, for as long as you like, except the
 RAM summary where the ROM test comes next: it plays its code three times
 and goes on by itself, so a machine left alone runs on to the ROM test.
 
-![The cartridge menu](docs/img/cart-01-menu.png)
+![The boot disk's menu](docs/img/disk-01-menu.png)
 
 ## Ways to run it
 

@@ -57,6 +57,10 @@ RUNS = {
     'cart': ('diag-cart.car', ['--ram', '0x4000', '--con', 'START:8:0.4,START:22:0.4',
                                '--until', '32'], [   # (no --auto: it would run ALL)
         ('^START=RUN', 1, 'cart-01-menu')]),
+    # the boot disk's menu (--walk 8: --auto's first press at the menu is a
+    # second after it shows, and runs line 8, not ALL)
+    'disk': ('diag-disk.atr', ['--ram', '0x4000', '--auto', '--walk', '8', '--until', '200'], [
+        ('^START=RUN', 0.5, 'disk-01-menu')]),
     # the menu runs: tests 1-6 by their keys, then 8, the results (test 7's
     # video modes page can't be read in the simulator, so --auto can't answer it)
     'menu': ('diag-16k-02-system', ['--ram', '0x8000', '--auto', '--walk', '1234568',
@@ -87,6 +91,7 @@ RUNS = {
 # Each is a bracket in the right border beside those rows, with its number.
 ANNOT = {
     'cart-01-menu': [(4, 4, 1), (5, 11, 2), (12, 13, 3), (14, 14, 4), (18, 20, 5)],
+    'disk-01-menu': [(4, 4, 1), (5, 11, 2), (12, 13, 3), (14, 14, 4), (18, 20, 5)],
     'ram-02-testing': [(2, 3, 1), (5, 5, 2)],
     'ram-03-pass': [(4, 4, 1), (6, 9, 2), (20, 21, 3), (23, 23, 4)],
     'ram-04-summary': [(5, 6, 1), (7, 10, 2), (14, 16, 3)],
@@ -153,7 +158,7 @@ def run(name, sysroms, palette):
     osrom = OSXL if '--xl' in args or '--xe' in args else OS800
     args = [str(sysroms / BASIC) if x == '@BASIC' else x.replace('@RAW', str(RAW))
             for x in args]
-    cas = (CAS / tape if tape.endswith('.car') else
+    cas = (CAS / tape if tape.endswith(('.car', '.atr')) else
            ROOT / f'{tape}.cas' if '/' in tape else CAS / f'{tape}.cas')
     cmd = [sys.executable, str(ROOT / 'tools' / 'sim.py'), str(cas),
            '--osrom', str(sysroms / osrom), '--palette', str(palette),

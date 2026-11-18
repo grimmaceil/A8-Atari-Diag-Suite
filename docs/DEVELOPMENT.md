@@ -447,10 +447,12 @@ fails. All of them take about an hour.
 
 ## Documentation pictures
 
-`python tools/docshots.py` runs the simulator on the release builds and
-saves the screens in `docs/img/`. It needs real ROMs (`--sysroms`) for the
-font and the ROM names, and the MiSTer core's palette (`--palette`,
-`ntsc.act`), so the colours are the core's. Neither is in this repository.
+`python tools/docshots.py` runs the simulator on the release builds (the
+tapes, the cartridge, and for its menu picture the boot disk,
+`build/diag-disk.atr`) and saves the screens in `docs/img/`. It needs
+real ROMs (`--sysroms`) for the font and the ROM names, and the MiSTer
+core's palette (`--palette`, `ntsc.act`), so the colours are the core's.
+Neither is in this repository.
 
 Each scenario in `RUNS` takes a picture a set time after some text first
 shows on screen; a trigger that starts with `^` must start a screen row
