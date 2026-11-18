@@ -118,7 +118,11 @@ def main():
         seen = lambda t, text: any(text in sc for at, sc in screens.items() if at <= t)
         miss = [(t, text) for t, text in want
                 if (seen(t, text[1:]) if text.startswith('!') else not seen(t, text))]
-        print(f'{name}: {"PASS" if not miss else "FAIL"}')
+        mute = [ln for ln in out.splitlines() if ln.startswith('POKEY: voice')]
+        print(f'{name}: {"PASS" if not miss and not mute else "FAIL"}')
+        for ln in mute:                  # a voice the hardware would keep silent
+            bad += 1
+            print(' ', ln)
         for t, text in miss:
             bad += 1
             last = max((at for at in screens if at <= t), default=None)

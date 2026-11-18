@@ -59,6 +59,9 @@ class Atari:
         self.carlog = []         # (line, 'bank n' / 'off')
         self.ddrb = 0xFF if xl else 0x00   # PIA port B direction, as the OS sets it
         self.busnoise = False    # an idle bus reads back anything (a real 800)
+        self.skctl = 0x13        # SKCTL as an OS load leaves it (main: 3 for a .car)
+        self.mute34 = []         # (line, AUDC, value): voice 3 or 4 turned on while
+                                 # SKCTL bit 4 (async receive) holds it silent
 
     def _carsel(self, a):
         """AtariMax: an access to $D500-$D50F selects bank n, $D510-$D51F
@@ -207,6 +210,12 @@ class Atari:
                 self.stimer = self.line
             if a in (0xD01D, 0xD407):
                 self.pm[a] = v
+            if a == 0xD20F:
+                self.skctl = v
+            # POKEY's async receive mode (SKCTL bit 4, as SIO leaves it) holds
+            # timers 3 and 4 until a start bit: those voices make no sound
+            if a in (0xD205, 0xD207) and v & 0x0F and self.skctl & 0x10:
+                self.mute34.append((self.line, a, v))
             if 0xD500 <= a < 0xD600:
                 self._carsel(a)
             if a == 0xD301 and not self.regs.get(0xD303, 0x3C) & 4:
@@ -470,6 +479,7 @@ def siov(mpu, hw, stream, disk=None, diskerr=None):
     ($90, the drive's error). Both need interrupts running (VBI timers,
     serial IRQs). Anything else is a timeout ($8A)."""
     m = hw.ram
+    hw.skctl = 0x13          # the OS's SIO ends in its receive mode, SKCTL $13
     irq_ok = not mpu.p & mpu.INTERRUPT and hw.regs.get(0xD40E, 0) & 0x40
     if disk is not None and m[0x300] == 0x31:
         sec = m[0x30A] | m[0x30B] << 8
@@ -773,6 +783,8 @@ def main():
     snaps = sorted(to_line(t) for t in a.snap.split(',') if t)
     hw = Atari(a.ram, stuck, a.mirror, a.xl or a.xe, a.pal, keys, a.xe, xstuck)
     hw.busnoise = a.busnoise
+    if car is not None:
+        hw.skctl = 0x03                    # no SIO before a cartridge: the OS's 3
     for k in (x for x in a.kb.split(',') if x):
         c, t, *h = k.split(':')
         hw.press(to_line(t), 'KB', int(c, 16), float(h[0]) if h else 0.25)
@@ -928,6 +940,11 @@ def main():
 
     if a.events:
         Path(a.events).write_text(''.join(f'{ln} {r:04X} {v:02X}\n' for ln, r, v in hw.events))
+    if hw.mute34:
+        ln, r, v = hw.mute34[0]
+        print(f'POKEY: voice {(r - 0xD201) // 2 + 1} turned on (AUDC ${v:02X}) at '
+              f'{ln / LINES_PER_MS / 1000:.1f} s while SKCTL is ${hw.skctl:02X} or like it: '
+              f'held silent ({len(hw.mute34)} times in all)')
     ts = tones(hw.events)
     if a.v:
         for t in ts:

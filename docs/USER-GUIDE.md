@@ -30,7 +30,7 @@ in when the cartridge port itself is bad:
   up (see [From the boot disk](#from-the-boot-disk));
 - **the cartridge** (`carts` folder): every test on one menu, run from
   ROM, on any Atari (see [From the cartridge](#from-the-cartridge));
-- **disk files** (`disks` folder, `.xex`): the 32k+ program, the long
+- **disk files** (`xex` folder, `.xex`): the 32k+ program, the long
   memory test and the BASIC cartridge check, to load from DOS or a PC
   link (see [From disk](#from-disk));
 - **cassettes** (`cassettes` folder, `.cas`): for every machine down to an
@@ -310,7 +310,7 @@ line `DIAG DISK`.
 
 ### From disk
 
-Three Atari binary files (`.xex`) are in the `disks` folder, for loading
+Three Atari binary files (`.xex`) are in the `xex` folder, for loading
 from DOS or a PC link. They load in
 seconds, not minutes:
 
@@ -655,7 +655,7 @@ CRC32 of the cartridge ($A000-$BFFF) with a little machine code (2-3
 seconds) and names the revision.
 
 The easiest way, with a disk drive and 16K or more: the disk file
-`disks/diag-bascrc` (`.xex`), the same check in machine code. With the
+`xex/diag-bascrc` (`.xex`), the same check in machine code. With the
 cartridge in, boot DOS, type `DOS`, then `L` and the file's name. It
 prints the CRC32, the revision byte
 and `REV A: GOOD` (or B, C), or `NO MATCH`; a key goes back to DOS. On an
@@ -673,7 +673,7 @@ Or the BASIC program:
 
      The tape has to be at its start for every try: after an error, or
      after a CLOAD, rewind it.
-   - **Disk:** copy `disks/bascrc` (`.lst`) onto a DOS disk as
+   - **Disk:** copy `xex/bascrc` (`.lst`) onto a DOS disk as
      `BASCRC.LST`, then `ENTER "D:BASCRC.LST"`.
    - **Type it in** (below). Line 40 catches a typing mistake in the
      numbers before anything runs.

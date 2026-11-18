@@ -35,14 +35,14 @@ and they are the way in when the cartridge port itself is bad.
 |---|---|---|---|
 | **Boot disk** | `disks/diag-disk.atr` | any Atari (8K) with a disk drive or an SIO adapter | the cartridge's menu from a disk you boot: no DOS; each test loads as you pick it; the long test and the "hello" with 16K |
 | **Cartridge** | `carts/diag-cart.car` | any Atari (8K); an AtariMax 128K flash cartridge | every test on one menu, run from ROM: no loading, and it works when the RAM is too sick to load a program into |
-| **Disk files** | `disks/diag-32k-xl-xe.xex` | 32K; DOS or a PC link | the RAM test, then every test with the menu, in one file |
-| | `disks/diag-16k-memtest.xex` | 16K | the long memory test |
-| | `disks/diag-bascrc.xex` | 16K and DOS, with the BASIC cartridge in | the check for a BASIC cartridge (BASCRC) |
+| **Disk files** | `xex/diag-32k-xl-xe.xex` | 32K; DOS or a PC link | the RAM test, then every test with the menu, in one file |
+| | `xex/diag-16k-memtest.xex` | 16K | the long memory test |
+| | `xex/diag-bascrc.xex` | 16K and DOS, with the BASIC cartridge in | the check for a BASIC cartridge (BASCRC) |
 | **Cassette** | the 8k set: `diag-8k-01-ram` to `diag-8k-06-video` | 8K: every Atari | six small tapes, about 2 minutes each; long test `diag-8k-memtest` (400/800) |
 | | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, `diag-16k-03-hello` | 16K | about 3.5 minutes each; long test `diag-16k-memtest` |
 | | `diag-32k-xl-xe` | 32K | one tape, about 6 minutes: the RAM test, then every test with the menu |
 | | `diag-controls` | 16K | keyboard, joysticks and paddles only: goes with Atari's SALT disks, no test harness needed |
-| | `diag-bascrc` | BASIC cartridge in | BASCRC as a BASIC listing (`ENTER "C:"`); also `disks/bascrc.lst` for `ENTER "D:"` |
+| | `diag-bascrc` | BASIC cartridge in | BASCRC as a BASIC listing (`ENTER "C:"`); also `xex/bascrc.lst` for `ENTER "D:"` |
 
 **Why cassette:** a cassette boot needs the least of the machine: no disk
 drive, no DOS, just the computer, its OS and the first few K of RAM. So it
@@ -118,6 +118,10 @@ cartridge and the cassettes. Reports from other machines are welcome.
   - The title bar's version has room for two digits after the point.
   - Documents: start with the boot disk; the MiSTer is named only as the
     development set-up, not as a machine to test.
+  - Fixed after release: on the boot disk, test 6's voices 3 and 4 were
+    silent (each disk load left POKEY in the serial mode that holds them).
+  - The DOS files (`.xex`, BASCRC's `.lst`) moved to `xex/`: `disks/` holds
+    only the boot disk.
 - **0.9** (2026-11-15), against 0.8:
   - **Keys:** R re-test, T or SELECT the tones, F or OPTION full-screen
     flashes, any other key goes on, at every result; every action has a

@@ -234,6 +234,7 @@ and the loader where the cartridge has `XBANK`.
 6. The results page lives in the ROM piece (it has the ROM names).
 7. The long test needs 16K and clears the other results, as on the
    cartridge.
-8. The `.xex` files stay as they are.
+8. The `.xex` files stay as they are (since moved to `xex/`: `disks/` holds
+   only the boot disk).
 9. Title bar `DIAG-DISK`, file `disks/diag-disk-v0.10.atr`, version 0.10
    (the design said 0.9; it shipped as 0.10).

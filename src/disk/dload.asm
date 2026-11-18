@@ -178,6 +178,9 @@ dl_s2	dec DLDR+[dl_cnt-dl_src]
 	lda #0
 	sta NMIEN
 	sta IRQEN
+	sta SKCTL		; POKEY out of SIO's receive mode, which holds
+	lda #3			; voices 3 and 4 silent (as boot.asm, l2stop)
+	sta SKCTL
 	lda DLDR+[dl_vec-dl_src]
 	cmp #$FF
 	bne dl_go
@@ -202,7 +205,7 @@ dl_wp	jsr DLDR+[dl_in-dl_src]
 	sta AUDC1
 	lda #C_YELLOW
 	sta COLOR4
-	bne dl_new
+	jmp DLDR+[dl_new-dl_src]
 
 ; dl_in: A nonzero (Z clear) while START, fire or a key is down.
 dl_in	lda SKSTAT		; bit 2: 0 while a key is down

@@ -26,7 +26,8 @@ sys.path.insert(0, str(ROOT / 'tools'))
 MADS = ROOT / 'tools' / 'bin' / 'mads.exe'
 BUILD = ROOT / 'build'          # everything the assembler makes (not in git)
 CASSETTES = ROOT / 'cassettes'  # the release tapes (in git): what users load
-DISKS = ROOT / 'disks'          # the release disk files (.xex, in git)
+DISKS = ROOT / 'disks'          # the release boot disk (.atr, in git): only it
+XEXDIR = ROOT / 'xex'           # the files loaded from DOS (.xex, BASCRC's .lst; in git)
 CARTS = ROOT / 'carts'          # the release cartridge (.car, in git)
 SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTer Atari800 core's folder
 # The version: in every release file's name (diag-...-v0.8.cas) and at the
@@ -406,9 +407,9 @@ def main():
             f = f.replace(f.with_name(f'{name}.xex'))
             xexes.append(f)
     car = build_car(a.fast)
-    xexes.append(build_disk(a.fast))    # the boot disk (Atari-diag-boot-disk-scope.md)
+    atr = build_disk(a.fast)            # the boot disk (Atari-diag-boot-disk-scope.md)
     # BASCRC, the BASIC cartridge check (a BASIC program): a tape for
-    # ENTER "C:" with the tapes, the listing for ENTER "D:" with the disks
+    # ENTER "C:" with the tapes, the listing for ENTER "D:" with the DOS files
     bas, lst = BUILD / 'diag-bascrc.cas', BUILD / 'bascrc.lst'
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkbasic.py'),
                     str(ROOT / 'src' / 'basic' / 'bascrc.bas'), str(lst), str(bas)], check=True)
@@ -423,7 +424,7 @@ def main():
     if a.fast:                      # FAST builds skip test patterns: not for use,
         return                      # so they stay in build/
     rel = []                        # the release files, named with the version
-    for folder, files in ((CASSETTES, cas), (DISKS, xexes), (CARTS, [car])):
+    for folder, files in ((CASSETTES, cas), (DISKS, [atr]), (XEXDIR, xexes), (CARTS, [car])):
         folder.mkdir(exist_ok=True)
         for f in files:
             if 'FAULT' in f.name:   # fault-injection builds stay in build/

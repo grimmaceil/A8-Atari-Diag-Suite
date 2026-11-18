@@ -6,7 +6,7 @@ the credit when you pass it on.
 
 This is for anyone who wants to build the programs from source, change
 them, or check how they work. To test a machine you only need the release
-files (`carts/`, `disks/`, `cassettes/`) and the [user guide](USER-GUIDE.md).
+files (`carts/`, `disks/`, `xex/`, `cassettes/`) and the [user guide](USER-GUIDE.md).
 
 ## Contents
 
@@ -70,7 +70,7 @@ How a change is tested:
 ## Building
 
 ```
-python tools/build.py              # everything: build/ (all output), and the releases in cassettes/, disks/, carts/
+python tools/build.py              # everything: build/ (all output), and the releases in cassettes/, disks/, xex/, carts/
 python tools/build.py --nodeploy   # the same, without copying the changed files to the MiSTer share
 python tools/build.py --fault 2,5  # extra builds with a stuck bit 5 in bank 2, to hear a fail code
 python tools/build.py --fast       # skip the $55/$AA march pass (quicker simulator runs); build/ only
@@ -206,12 +206,12 @@ CRC32 at $BFF6, and the cartridge header.
 
 `src/basic/bascrc.bas` is the author's BASIC program that checks a BASIC
 cartridge (the programs don't read a 400/800's cartridge). `tools/mkbasic.py`
-makes it an ATASCII listing (`disks/bascrc.lst`) and a tape for `ENTER
+makes it an ATASCII listing (`xex/bascrc.lst`) and a tape for `ENTER
 "C:"` (`cassettes/diag-bascrc`: the cassette handler's $FC/$FA/$FE records,
 a 20 s leader and 3 s gaps, as `LIST "C:"` writes them; the handler stops
 the motor between records when BASIC reads that way).
 `src/basic/bascrc.asm` is the same check as a disk file
-(`disks/diag-bascrc.xex`, at $2000): it prints through the OS screen editor
+(`xex/diag-bascrc.xex`, at $2000): it prints through the OS screen editor
 and returns to DOS.
 
 ## How a program runs
@@ -373,7 +373,7 @@ These came from the author's direction over the sessions:
 | `src/disk/` | the disk files' guard and mover (`xexwrap.asm`); the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`) |
 | `src/basic/` | BASCRC: the BASIC listing and the disk file |
 | `tools/` | `build.py`, `mkcas.py`, `mkxex.py`, `mkcar.py`, `mkatr.py`, `mkbasic.py`, `mkhello.py`, `sim.py`, `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
-| `cassettes/`, `disks/`, `carts/` | the release files |
+| `cassettes/`, `disks/` (the boot disk), `xex/` (the DOS files), `carts/` | the release files |
 | `Atari-diag-cassette-scope.md` | the design: constraints, feedback, sets, the ROM table, open items |
 | `Atari-diag-disk-scope.md` | the disk files' design |
 | `Atari-diag-boot-disk-scope.md` | the boot disk's design |
