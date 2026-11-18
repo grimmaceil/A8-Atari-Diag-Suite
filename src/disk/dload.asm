@@ -207,17 +207,22 @@ dl_wp	jsr DLDR+[dl_in-dl_src]
 	sta COLOR4
 	jmp DLDR+[dl_new-dl_src]
 
-; dl_in: A nonzero (Z clear) while START, fire or a key is down.
-dl_in	lda SKSTAT		; bit 2: 0 while a key is down
+; dl_in: A nonzero (Z clear) while a key is down, or when START or fire
+; (either stick) has just gone down: those only as a new press, so a stuck
+; one (a short) never holds this up.
+dl_in	lda TRIG0		; bit 0: 0 while fire or START is down
+	and TRIG1
+	and CONSOL
+	and #1
+	tax
+	eor #1			; down now,
+	and DLDR+[dl_fup-dl_src]	; and up at the last look
+	stx DLDR+[dl_fup-dl_src]
+	bne dl_ix		; a new press
+	lda SKSTAT		; bit 2: 0 while a key is down
 	and #4
 	eor #4
-	sta DLDR+[dl_tmp-dl_src]
-	lda TRIG0		; bit 0: 0 while fire is down,
-	and CONSOL		; or START
-	eor #1
-	and #1
-	ora DLDR+[dl_tmp-dl_src]
-	rts
+dl_ix	rts
 
 ; dl_msg: the text at dl_txt+X ($FF ends) on row 23, blanks after it.
 dl_msg	lda DLPTR+1
@@ -242,7 +247,7 @@ dl_sec	.word 0			; the next sector
 dl_cnt	.byte 0			; sectors left
 dl_buf	.word 0			; where it goes
 dl_vec	.word 0			; the entry ($FF: come back)
-dl_tmp	.byte 0
+dl_fup	.byte 0			; dl_in: 1 if fire and START were up at the last look
 dl_end
 DLLEN	= dl_end-dl_src
 	.if DLLEN>DMARK-DLDR

@@ -141,36 +141,6 @@ vs_2	lda VCOUNT
 	bcs vs_2
 	rts
 
-	.ifdef NEEDJOY
-; joyc: a joystick in port 1 or 2 as the console keys, for a machine with
-; no keyboard (or a dead one): fire = START, down = SELECT, up = OPTION.
-; A = the ones pressed since the last look, as CONSOL's bits but 1 =
-; pressed (Z set: none), so one held down, or stuck, counts once; a caller
-; primes it (one call) where a held stick must not count. Left and right
-; are left out: they are the paddles' triggers. Keeps X.
-joyc	lda PORTA		; stick 1: bits 0-3, stick 2: 4-7 (0 = pressed)
-	sta INB
-	lsr
-	lsr
-	lsr
-	lsr
-	and INB			; either stick
-	and #3			; up, down
-	tay
-	lda TRIG0
-	and TRIG1
-	lsr			; C clear: fire
-	lda jc_map,y
-	bcs jc_nf
-	ora #1
-jc_nf	tay			; now
-	eor JPREV
-	sty JPREV
-	and JPREV		; changed, and pressed now
-	rts
-jc_map	.byte 6, 2, 4, 0	; down+up, down, up, neither (0 = pressed)
-	.endif
-
 	.ifdef NEEDYN
 ; yesno: wait for the answer, as long as it takes. C set: Y or START. C
 ; clear: N or SELECT. Console keys too, so a dead keyboard can answer, and

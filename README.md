@@ -44,16 +44,15 @@ and they are the way in when the cartridge port itself is bad.
 | | `diag-controls` | 16K | keyboard, joysticks and paddles only: goes with Atari's SALT disks, no test harness needed |
 | | `diag-bascrc` | BASIC cartridge in | BASCRC as a BASIC listing (`ENTER "C:"`); also `xex/bascrc.lst` for `ENTER "D:"` |
 
-**Why cassette:** a cassette boot needs the least of the machine: no disk
-drive, no DOS, just the computer, its OS and the first few K of RAM. So it
-runs on an 8K Atari 400 and on machines too sick to boot a disk. Tape is
-slow (about 3K a minute), so the tapes come in sets by RAM size: the more
-RAM, the fewer tapes. A set works on every machine with at least that much
-RAM, newer models included.
+**Cassettes too:** a cassette boot needs the least of the machine: no disk
+drive, no DOS, just the computer, its OS and the first few K of RAM. So the
+tapes are there for a machine with only a recorder, or one too sick to boot
+a disk. Tape is slow (about 3K a minute), so they come in sets by RAM
+size: the more RAM, the fewer tapes.
 
-Version 0.10. Every file has its version in its name
-(`diag-disk-v0.10.atr`) and every screen shows it at the right of the
-title bar (`V0.10`). The names here leave the `-v0.10` out.
+Version 0.11. Every file has its version in its name
+(`diag-disk-v0.11.atr`) and every screen shows it at the right of the
+title bar (`V0.11`). The names here leave the `-v0.11` out.
 
 ## Get started
 
@@ -77,8 +76,9 @@ full-screen flashes, any other key (START, a joystick button) goes on.
 **S** skips the RAM test on the boot disk, the cartridge, the 32k+ tape
 and disk file.
 With no keyboard, a joystick in port 1 or 2 stands in for the console
-keys: fire = START, down = SELECT, up = OPTION (the menu, the questions,
-the end of the keyboard and console key tests).
+keys on every screen: fire = START, down = SELECT, up = OPTION. A stuck
+joystick (a short) gets a buzz and blue sparks at switch-on, and is then
+ignored: only a new press counts.
 
 **Dirty contacts cause a lot of "faults".** An unpaid recommendation from
 the author: DeoxIT contact cleaner (CAIG Laboratories) on the cartridge
@@ -101,6 +101,23 @@ cartridge and the cassettes. Reports from other machines are welcome.
 
 ## Versions
 
+- **0.11** (2026-11-17), against 0.10:
+  - **The joystick on every screen:** fire goes on, down plays the tones
+    again (SELECT), up switches the flashes (OPTION), at every result as
+    well as on the menu and the questions. Only a new press counts, so a
+    held or stuck stick never holds a screen up (in 0.10 a stuck button
+    froze the result screens). `diag-8k-memtest` takes fire only (no room).
+  - **A stuck joystick shows at switch-on:** a direction or the button in
+    port 1 or 2 already active (a short) gets about a second of buzz and
+    crackle, the screen near black and flashing blue, before the green
+    chirp. Every tape, the disks and the cartridge, but `diag-8k-memtest`.
+  - Boot disk: test 6's voices 3 and 4 were silent (each disk load left
+    POKEY in the serial mode that holds them). The disk error screen takes
+    START and fire as a new press only.
+  - `disks/` holds only the boot disk; the DOS files (`.xex`, BASCRC's
+    `.lst`) are in `xex/`.
+  - The user guide starts with the boot disk and the cartridge; the disk
+    files and the cassettes follow, as the other ways in.
 - **0.10** (2026-11-17), against 0.9:
   - **The boot disk** (`diag-disk.atr`, new), the place to start: the
     cartridge's menu from a disk you boot, on any Atari with a disk drive
@@ -118,10 +135,6 @@ cartridge and the cassettes. Reports from other machines are welcome.
   - The title bar's version has room for two digits after the point.
   - Documents: start with the boot disk; the MiSTer is named only as the
     development set-up, not as a machine to test.
-  - Fixed after release: on the boot disk, test 6's voices 3 and 4 were
-    silent (each disk load left POKEY in the serial mode that holds them).
-  - The DOS files (`.xex`, BASCRC's `.lst`) moved to `xex/`: `disks/` holds
-    only the boot disk.
 - **0.9** (2026-11-15), against 0.8:
   - **Keys:** R re-test, T or SELECT the tones, F or OPTION full-screen
     flashes, any other key goes on, at every result; every action has a

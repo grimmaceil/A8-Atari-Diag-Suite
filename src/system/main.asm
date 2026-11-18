@@ -112,17 +112,6 @@ NEEDYN	= 1
 	.elseif .def WANT_POK
 NEEDYN	= 1
 	.endif
-	.ifdef MENU		; common.asm's joyc: a joystick as the console
-NEEDJOY	= 1			; keys (the menu, the Y/N answers, the end of
-	.elseif .def NEEDYN	; the keyboard test)
-NEEDJOY	= 1
-	.elseif .def WANT_GTIA
-NEEDJOY	= 1
-	.elseif .def WANT_KB
-NEEDJOY	= 1
-	.elseif .def SAMPLED
-NEEDJOY	= 1
-	.endif
 	.ifdef WANT_ROM		; the ROM test checks this program's own copy too
 	.ifndef ROM		; (t_rom.asm's selfchk): a tape or disk file on its
 	.ifndef CHAIN		; own ends in CRCFIX (mkcas.py), from CRCAT = LOAD;

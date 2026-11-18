@@ -77,7 +77,7 @@ python tools/build.py --fast       # skip the $55/$AA march pass (quicker simula
 ```
 
 The version is `VERSION` in `tools/build.py`. It goes into every release
-file's name (`cassettes/diag-...-v0.10.cas`; `build/` keeps the plain names,
+file's name (`cassettes/diag-...-v0.11.cas`; `build/` keeps the plain names,
 which the simulator examples below use) and onto every title bar
 (`screen.asm`'s header: one digit before the point, one or two after,
 in the same five columns). A build removes the release files of other
@@ -137,7 +137,7 @@ rebuilt for a disk: the same programs as its banks, each a "piece" loaded
 from the disk when it is needed. Design and reasons:
 [Atari-diag-boot-disk-scope.md](../Atari-diag-boot-disk-scope.md).
 
-| Piece | Built from | Load | Sectors (0.10) |
+| Piece | Built from | Load | Sectors (0.11) |
 |---|---|---|---|
 | boot | `src/disk/boot.asm` | $0600-$07FF | 1-4 |
 | RAM8 | tape 1's stage 1 with `DISK` (no ONE16): RAM above it, then its own RAM page by page (`ownram`) | $0900-$1BFF | 38 |
@@ -305,15 +305,29 @@ round at each pause and, at the third, jump to `CONTVEC` as a press would.
 `waitrel` clears `AUTON`, so any press stops the count: T and OPTION then
 leave it waiting. The 8k and 16k RAM tapes never set it.
 
-**The joystick** (`joyc`, `src/system/common.asm`) stands in for the
-console keys where there is no keyboard: fire = START, down = SELECT, up =
+**The joystick** (`joyc`, `src/common/report.asm`, in every build) stands
+in for the console keys on every screen: fire = START, down = SELECT, up =
 OPTION, in port 1 or 2 (left and right are the paddles' triggers). It
 reports only presses since the last look (`JPREV`), so a stuck stick counts
 once and never blocks `waitrel`; each place that polls it primes it first
-with one call. It is used by the menu, `yesno`, `gans` (test 7), the
-sampled "hello"'s answer, the end of the keyboard test and the console key
-test's "one dead" escape. The reporter reads only the fire buttons
-(`inputs`, bit 0), as before.
+with one call. `inputs` (every result, `waitrel`, the memory test's stop
+check) ORs it into its bits, so the reporter takes down and up as SELECT
+and OPTION too, and `rpkey` keeps a press it doesn't act on (one seen
+after a tone) in `SLATCH` for the next pause: a stick's press is only seen
+once. The menu, `yesno`, `gans` (test 7), the "hello"'s answer and the
+keyboard and console key tests call `joyc` directly. `inputs` now uses Y,
+so the memory test's raw NMI (`nmiraw`, OS switched out) saves X and Y.
+The boot disk's loader (`dl_in`) takes fire and START as a new press the
+same way. `FIREONLY` (`diag-8k-memtest`, no room for `joyc`): `inputs`
+takes fire only, also as a new press.
+
+**The short check** (`src/common/boot.asm`, right after the hardware is
+reset, in every build's start): a joystick line in port 1 or 2 already
+active at power-on is stuck (a switch shorts its line to ground). About a
+second of `RANDOM` steps, one value in both COLBK and AUDC1: near black
+with a quiet poly buzz, or a blue spark with loud noise. Registers only:
+no RAM has been tested yet. Nothing is stored; `joyc` keeps the line from
+blocking anything. `NOSHORT` leaves it out (`diag-8k-memtest`: no room).
 
 ## Memory and byte budgets
 
@@ -330,7 +344,9 @@ test's "one dead" escape. The reporter reads only the fire buttons
   that; `display.asm`'s `.error` stops the build when one is over. Ways
   that have made room: shorter strings, inlining a routine called once,
   tail calls (`jmp` for `jsr`/`rts`), and leaving out of a format what it
-  can't use.
+  can't use. `diag-8k-memtest` is the fullest: it builds with `FIREONLY`
+  and `NOSHORT`. The boot disk's RAM8 ($0900-$1BFF) and the page-7 loader
+  (250 of its 254 bytes) are close too.
 - **The 130XE window:** a 130XE switches its extra banks in at
   $4000-$7FFF, so the code and BSS that test them must be below $4000.
 - **The XL/XE self-test ROM** appears at $5000-$57FF when PORTB bit 7 is 0:
@@ -422,8 +438,12 @@ python tools/sim.py build/diag-disk.atr --ram 0x2000 --auto --until 200
 `tools/disktest.py` runs the boot disk's checks (a fast build of it, in
 the simulator): the boot on 8K and 64K, a disk error, both RAM pieces and
 a fault in RAM8's own RAM, the menu, each test from it, all of them in
-order (`--menuall`), the results page, the long test and back, and 8K
-without the "hello". All of them take about an hour.
+order (`--menuall`), the results page, the long test and back, 8K
+without the "hello", a joystick button stuck from power-on (`stuckfire`)
+and stick up on a result (`stickup`). A check can ask for text between
+two times (`(after, by, text)`), and any run where the simulator reports
+a POKEY voice 3 or 4 turned on while SKCTL's serial mode holds it silent
+fails. All of them take about an hour.
 
 ## Documentation pictures
 

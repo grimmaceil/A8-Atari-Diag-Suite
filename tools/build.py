@@ -34,7 +34,7 @@ SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTe
 # right of every screen's title bar, so a file and what it shows can be
 # matched. One digit before the point, one or two after (screen.asm).
 # build/ keeps the plain names.
-VERSION = '0.10'
+VERSION = '0.11'
 VDEFS = dict(zip(('VMAJ', 'VMIN'), VERSION.split('.')))
 
 # Each tape: source dir, name, stages (first = boot), defines. A later stage
@@ -68,7 +68,8 @@ TAPES = [('tape1', 'diag-8k-01-ram', ['main.asm', 'stage2.asm'], {'NORAMK': 1}),
          ('one32', 'diag-32k-xl-xe', [], {'NEEDPG': '$80'}),
          ('system', 'diag-controls', ['main.asm'],
           dict(N16, SETNO=3, WANT_KB=1, WANT_JOY=1, WANT_PAD=1, BIGSTAGE=1)),
-         ('tape2', 'diag-8k-memtest', ['main.asm'], {'OWNTEST': 1, 'NOXL': 1, 'NORAMK': 1, 'NOFONT': 1}),
+         ('tape2', 'diag-8k-memtest', ['main.asm'], {'OWNTEST': 1, 'NOXL': 1, 'NORAMK': 1, 'NOFONT': 1,
+                                                  'FIREONLY': 1, 'NOSHORT': 1}),   # (8K: no room)
          ('bounce', 'diag-16k-memtest', [], dict(N16, BOUNCE=1, BIGSTAGE=1, OWNTEST=1))]
 # The disk files (Atari-diag-disk-scope.md): the same programs as these
 # tapes, built with XEX (their own title bar, no NEEDPG: the wrapper's guard

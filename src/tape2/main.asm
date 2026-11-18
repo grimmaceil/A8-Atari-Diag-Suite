@@ -456,17 +456,28 @@ backcart lda #$5A
 
 ; ---------------------------------------------------------------------------
 ; The clock. vbios is the OS immediate VBI (VVBLKI); nmiraw is the NMI
-; vector itself while the OS is switched out (xlram.asm). Both only touch A.
+; vector itself while the OS is switched out (xlram.asm). tick uses A, X
+; and Y (inputs): the OS saves them for vbios, nmiraw saves them itself.
 vbios	jsr tick
 	jmp XITVBV
+	.ifndef NOXL		; (only xlram.asm switches the OS out)
 nmiraw	pha
+	txa
+	pha
+	tya
+	pha
 	sta NMIRES
 	jsr tick
 	pla
+	tay
+	pla
+	tax
+	pla
 	rti
+	.endif
 
 ; tick: one frame. Also latches a stop press (after a release, so a stuck
-; key doesn't stop it). Uses A only.
+; key doesn't stop it). Uses A, X, Y.
 tick	dec TFRM
 	bne tk_in
 	lda FPSV

@@ -52,7 +52,7 @@ def sim(image, args, snaps):
 
 
 # name: (image maker, simulator options, [(time s, text that must be on the
-# screen or its header line)])
+# screen or its header line by then)]; (after s, time s, text): seen between)
 CHECKS = {
     # the boot loads the RAM piece for this machine and enters it
     'stub': (stub_disk, ['--ram', '0xC000'], [(3, 'COLBK $C8')]),
@@ -101,6 +101,14 @@ CHECKS = {
     # 8 on the menu: the results page, in the ROM test's piece
     'results': (real_disk, ['--xl', '--auto', '--walk', '8'],
                 [(150, '|NUMBERS AFTER FAIL = FAILED ITEMS')]),
+    # a joystick button stuck from power-on (a short): it holds nothing up,
+    # the keys still go on from the ROM test's result to the menu
+    'stuckfire': (real_disk, ['--xl', '--auto', '--joy', 'FIRE:0:9999'],
+                  [(110, '|START=RUN'), (110, ' 1 ROMS  ')]),
+    # the stick as the console keys on a result screen too: up = OPTION,
+    # the full-screen flashes (the ROM test's result waits from ~75 s)
+    'stickup': (real_disk, ['--xl', '--key', '12', '--joy', 'UP:85:0.5'],
+                [(80, '#1#roms#'), (85, 90, '(ANTIC DMA off)')]),
 }
 
 
@@ -112,12 +120,13 @@ def main():
     bad = 0
     for name in names:
         make, args, want = CHECKS[name]
+        want = [w if len(w) == 3 else (0, *w) for w in want]   # (after, by, text)
         image = make()
-        end = max(t for t, _ in want)
+        end = max(t for _, t, _ in want)
         screens, out = sim(image, args, list(range(STEP, end + 1, STEP)))
-        seen = lambda t, text: any(text in sc for at, sc in screens.items() if at <= t)
-        miss = [(t, text) for t, text in want
-                if (seen(t, text[1:]) if text.startswith('!') else not seen(t, text))]
+        seen = lambda t0, t, text: any(text in sc for at, sc in screens.items() if t0 < at <= t)
+        miss = [(t, text) for t0, t, text in want
+                if (seen(t0, t, text[1:]) if text.startswith('!') else not seen(t0, t, text))]
         mute = [ln for ln in out.splitlines() if ln.startswith('POKEY: voice')]
         print(f'{name}: {"PASS" if not miss and not mute else "FAIL"}')
         for ln in mute:                  # a voice the hardware would keep silent

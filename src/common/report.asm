@@ -269,7 +269,8 @@ rp_rep	jmp rp_top
 
 ; rpkey: the controls, after a tone (JSR: only once STACKOK is set). A
 ; press of START, a key or fire, after all were seen released, goes on to
-; CONTVEC (if one is set) and doesn't come back.
+; CONTVEC (if one is set) and doesn't come back. The others wait in SLATCH
+; for the next pause (hold): a stick's press is only seen once.
 rpkey	jsr inputs
 	ldx HARMED
 	bne rq_in
@@ -280,6 +281,7 @@ rpkey	jsr inputs
 	inc HARMED
 	rts
 rq_in	ora SLATCH
+	sta SLATCH
 	lsr
 	bcc rq_x
 	ldx CONTVEC+1
@@ -421,15 +423,32 @@ arm	lda #0
 	inc HARMED
 am_x	rts
 
-; inputs: A = bit 0 go on (START, a key, fire 0/1), bit 1 SELECT or T,
-; bit 2 OPTION or F, bit 3 R. Zero (Z set) when nothing is pressed.
-inputs	lda CONSOL		; 0 = pressed
+; inputs: A = bit 0 go on (START, a key, fire), bit 1 SELECT, T or stick
+; down, bit 2 OPTION, F or stick up, bit 3 R. Zero (Z set) when nothing is
+; pressed. The console keys and the keyboard count while held, a joystick
+; only as a new press (joyc): a stuck one (a short) holds nothing up.
+; Uses A, X, Y. FIREONLY (the 8K memtest: no room for joyc): fire only,
+; also only as a new press.
+	.ifdef FIREONLY
+inputs	lda TRIG0
+	and TRIG1
+	and #1			; 1: no fire now
+	tay
+	eor #1			; down now,
+	and JPREV		; and up at the last look
+	sty JPREV
+	.else
+inputs	jsr joyc
+	.endif
+	sta INB
+	lda CONSOL		; 0 = pressed
 	eor #7
 	and #7
+	ora INB
 	sta INB
 	lda SKSTAT		; bit 2 = 0 while a key is held
 	and #4
-	bne in_tr
+	bne in_x
 	lda KBCODE
 	and #$3F
 	ldx #3
@@ -440,17 +459,40 @@ in_k	cmp in_kc-1,x		; T, F, R
 in_kx	lda in_kb,x		; (X = 0: another key: go on)
 	ora INB
 	sta INB
-in_tr	lda TRIG0
-	and TRIG1
-	and #1
-	bne in_x
-	lda INB
-	ora #1
-	sta INB
 in_x	lda INB
 	rts
 in_kc	.byte $2D, $38, $28	; T, F, R (KBCODE)
 in_kb	.byte 1, 2, 4, 8
+
+; joyc: a joystick in port 1 or 2 as the console keys, on every screen,
+; for a machine with no keyboard (or a dead one): fire = START, down =
+; SELECT, up = OPTION. A = the ones pressed since the last look, as
+; CONSOL's bits but 1 = pressed (Z set: none), so one held down, or stuck
+; (boot.asm's short check), counts once; a caller primes it (one call)
+; where a held stick must not count. Left and right are left out: they are
+; the paddles' triggers. Keeps X.
+	.ifndef FIREONLY
+joyc	lda PORTA		; stick 1: bits 0-3, stick 2: 4-7 (0 = pressed)
+	lsr
+	lsr
+	lsr
+	lsr
+	and PORTA		; either stick
+	and #3			; up, down
+	tay
+	lda TRIG0
+	and TRIG1
+	lsr			; C clear: fire
+	lda jc_map,y
+	bcs jc_nf
+	ora #1
+jc_nf	tay			; now
+	eor JPREV
+	sty JPREV
+	and JPREV		; changed, and pressed now
+	rts
+jc_map	.byte 6, 2, 4, 0	; down+up, down, up, neither (0 = pressed)
+	.endif
 
 ; waitrel: wait until every control is released. (RPAUTO: whatever was
 ; pressed, someone is there: a count to going on by itself stops.)

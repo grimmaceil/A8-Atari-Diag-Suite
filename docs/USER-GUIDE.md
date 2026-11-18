@@ -4,12 +4,12 @@ By **Michael Grimm**, written with Claude (Anthropic's AI). Free to use,
 copy, change and share under the [MIT license](../LICENSE); please keep
 the credit when you pass it on.
 
-Version 0.10
+Version 0.11
 
-Every file has its version in its name (`diag-disk-v0.10.atr`), and
-every screen shows it at the right of the title bar (`V0.10`). If the two
+Every file has its version in its name (`diag-disk-v0.11.atr`), and
+every screen shows it at the right of the title bar (`V0.11`). If the two
 don't match, or a screen shows no version, you are running an older file.
-This guide leaves the `-v0.10` out of the names.
+This guide leaves the `-v0.11` out of the names.
 
 These programs test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
 800XL, 65XE, 800XE, 130XE and XE Game System. They tell you what works and
@@ -19,23 +19,35 @@ picture is bad. Nothing moves on by itself: every result waits for you.
 
 You don't need to know any programming. There are four ways to run the
 tests, and they all show the same screens, colours and beeps. **Start with
-the boot disk:** it is the most convenient, and it works like the
-cartridge, only each test loads from the disk. The cartridge needs no
-loading at all and runs even when the RAM is too sick to load a program,
-but it needs a flash cartridge. The boot disk, the disk files and the
-cassettes cost nothing (no flash cartridge to buy), and they are the way
-in when the cartridge port itself is bad:
-- **the boot disk** (`disks` folder, `.atr`): the cartridge's menu from a
-  disk you boot, on any Atari with a disk drive or an SIO adapter, 8K and
-  up (see [From the boot disk](#from-the-boot-disk));
-- **the cartridge** (`carts` folder): every test on one menu, run from
-  ROM, on any Atari (see [From the cartridge](#from-the-cartridge));
-- **disk files** (`xex` folder, `.xex`): the 32k+ program, the long
-  memory test and the BASIC cartridge check, to load from DOS or a PC
-  link (see [From disk](#from-disk));
-- **cassettes** (`cassettes` folder, `.cas`): for every machine down to an
-  8K 400, and for one too sick to boot a disk (see
-  [Loading a tape](#loading-a-tape)).
+one of these two:**
+- **the boot disk** (`disks` folder, `.atr`): switch on with it in drive 1,
+  on any Atari with a disk drive or an SIO adapter (SIO2PC, SIO2SD,
+  FujiNet), 8K and up, no DOS. Free, and the most convenient: each test
+  loads from the disk as you pick it. See
+  [From the boot disk](#from-the-boot-disk).
+- **the cartridge** (`carts` folder, `.car`): every test on one menu, run
+  from ROM, on any Atari. Nothing to load, and it runs even when the RAM is
+  too sick to load a program; it needs an AtariMax 128K flash cartridge.
+  See [From the cartridge](#from-the-cartridge).
+
+The other two are for the cases those don't cover (see
+[Other ways to run it](#other-ways-to-run-it)):
+- **disk files** (`xex` folder, `.xex`): to load from DOS or a PC link,
+  BASCRC (the BASIC cartridge check) among them;
+- **cassettes** (`cassettes` folder, `.cas`): they need the least of the
+  machine, only a cassette recorder (or a PC playing the tape), and still
+  load on a machine too sick to boot a disk.
+
+## Contents
+
+1. [Keys](#keys)
+2. [Starting up: the boot disk, the cartridge, a stuck joystick](#starting-up)
+3. [Every test, and where to find it](#every-test-and-where-to-find-it)
+4. [Reading the results: the screen, colours, beeps, keys](#reading-the-results)
+5. [The tests, screen by screen](#the-tests-screen-by-screen)
+6. [When something fails](#when-something-fails)
+7. [Other ways to run it: disk files and cassettes](#other-ways-to-run-it)
+8. [Questions](#questions)
 
 ## Keys
 
@@ -46,15 +58,19 @@ you:
 | Key | Does |
 |---|---|
 | **R** | re-test, wherever there is no menu to pick the test again from: on the last screen of every tape without a menu (all its tests again, no reloading after a slip), at the RAM tapes' summary (the whole RAM test again) and at the memory tests' summary (tape and disk) |
-| **T** or SELECT | the tones (the beep code, or the pass tune) again |
-| **F** or OPTION | full-screen flashes on and off: the whole screen flashes with the code, easier to see when the picture is garbled |
+| **T**, SELECT or stick down | the tones (the beep code, or the pass tune) again |
+| **F**, OPTION or stick up | full-screen flashes on and off: the whole screen flashes with the code, easier to see when the picture is garbled |
 | START, any other key, or a joystick button | go on: the next test, or back to the menu (where a test is simply picked again). At the end of a tape without a menu, where there is nothing to go on to: the tones again |
 
-**A joystick** in port 1 or 2 works as the console keys, for a machine
-with no keyboard (an XEGS without one, or a dead one): fire = START, stick
-down = SELECT, stick up = OPTION. A stick held down, or a stuck one, counts
-once, not over and over. Left and right do nothing: they are the paddles'
-triggers.
+**A joystick** in port 1 or 2 works as the console keys on every screen,
+for a machine with no keyboard (an XEGS without one, or a dead one): fire
+= START, stick down = SELECT, stick up = OPTION. So on a result fire goes
+on, down plays the tones again and up switches the flashes; on a question
+fire is yes and down is no; on the menu down and up move and fire runs.
+Only a new press counts: a stick held down, or a stuck one, counts once
+and never holds anything up (see [A stuck joystick](#a-stuck-joystick)).
+Left and right do nothing: they are the paddles' triggers.
+`diag-8k-memtest` takes fire only (no room for more).
 
 Other keys:
 - questions: Y, START or fire = yes; N, SELECT or stick down = no;
@@ -66,209 +82,11 @@ Other keys:
   the disk file (the menu shows it as `SKIPPED`), X the console key test;
 - the memory test stops after its pass on any key.
 
-## Every test, and where to find it
-
-The cartridge has every test on one menu:
-
-![Cartridge menu](img/cart-01-menu.png)
-
-Each menu line is also on the boot disk, the disk files and the tapes.
-The columns are the RAM a file needs, and each cell lists the cartridge,
-then the disks, then the tapes. A machine can use everything in its own
-column and in the columns to the left of it:
-
-| Line | Test | 8K+ | 16K+ | 32K+ |
-|---|---|---|---|---|
-| 0 | RAM | `diag-cart.car`, `diag-disk.atr`, `diag-8k-01-ram.cas` | `diag-16k-01-ram.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 1 | ROMs (OS, BASIC, the program's self-check) | `diag-cart.car`, `diag-disk.atr`, `diag-8k-02-rom.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 2 | keyboard | `diag-cart.car`, `diag-disk.atr`, `diag-8k-03-input.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 3 | console keys | `diag-cart.car`, `diag-disk.atr`, `diag-8k-03-input.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 4 | joysticks | `diag-cart.car`, `diag-disk.atr`, `diag-8k-04-ports.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 5 | paddles | `diag-cart.car`, `diag-disk.atr`, `diag-8k-04-ports.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 6 | POKEY (sound) | `diag-cart.car`\*, `diag-disk.atr` (\* with 16K), `diag-8k-05-sound.cas` | `diag-16k-02-system.cas`, `diag-16k-03-hello.cas`\* (the "hello" only) | `diag-32k-xl-xe.xex`\*, `diag-32k-xl-xe.cas` |
-| 7 | GTIA/ANTIC (video) | `diag-cart.car`, `diag-disk.atr`, `diag-8k-06-video.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 8 | results and the final code | `diag-cart.car`, `diag-disk.atr` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
-| 9 | long RAM test | `diag-8k-memtest.cas` (400/800 only) | `diag-cart.car`, `diag-disk.atr` (line 9 needs 16K), `diag-16k-memtest.xex`, `diag-16k-memtest.cas` | |
-
-\* with the sampled "hello" (POKEY item 7); the others play every other
-sound but that one.
-
-Not on the menu: `diag-bascrc.xex` and `diag-bascrc.cas` (16K+), the check
-for a BASIC cartridge (see [BASIC cartridges](#basic-cartridges-bascrc)).
-
-Pictures in this guide come from the project's simulator, using the MiSTer
-Atari800 core's NTSC palette and a real Atari OS font. The colours and
-their RGB values are what the MiSTer core shows; a real TV or monitor may
-differ a little.
-
-## Contents
-
-1. [Why cassette, and why several sets](#why-cassette-and-why-several-sets)
-2. [Which tapes for which machine](#which-tapes-for-which-machine)
-3. [Loading a tape](#loading-a-tape)
-4. [Reading the results: the screen, colours, beeps, keys](#reading-the-results)
-5. [The tapes, screen by screen](#the-tapes-screen-by-screen)
-6. [When something fails](#when-something-fails)
-7. [Questions](#questions)
-
-## Why cassette, and why several sets
-
-**Cassette, because it needs the least of the machine.** A cassette boot
-needs only the computer, its OS ROM, the first few K of RAM and the SIO
-port. There's no disk drive to work, no DOS to load, and nothing else for
-the tape to depend on. So it runs on the smallest machine there is, a 400
-with 8K, and on a machine too sick to boot a disk. Each tape loads into the
-bottom of RAM and tests everything else from there.
-
-**Disk and cartridge too.** The boot disk and the disk files load in
-seconds on a machine with a working drive or a PC link, and the cartridge
-needs no loading at all. The cassettes stay the version for low-spec and failing
-machines.
-
-**Several sets, because tape is slow.** A cassette loads at 600 baud:
-about 3K a minute. So the tests are split by how much RAM the machine has,
-and the more RAM, the fewer tapes:
-- **8K or more:** the 8k set, six small tapes of about 2 minutes each.
-- **16K or more:** the 16k set, two tapes of about 3.5 minutes each.
-- **32K or more:** the 32k+ tape, one tape of about 6 minutes.
-
-A set works on every machine with at least that much RAM, whatever the
-model. So any Atari can run the 8k set, and a 130XE can run all three.
-The bigger set is just quicker to get through.
-
-Within each set, every tape only relies on what an earlier one proved. For
-example, RAM is tested before anything else runs from it, and the keyboard
-is tested before a test asks you a yes/no question.
-
-## Which tapes for which machine
-
-**Pick by RAM.** Use the biggest set your machine has the RAM for:
-
-| RAM | Tapes, in this order | Long test (optional) |
-|---|---|---|
-| 8K or more | the 8k set: `diag-8k-01-ram`, `-02-rom`, `-03-input`, `-04-ports`, `-05-sound`, `-06-video` | `diag-8k-memtest` (400/800) |
-| 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system` (and `diag-16k-03-hello`, the sampled sound) | `diag-16k-memtest` |
-| 32K or more | the 32k+ tape: `diag-32k-xl-xe` | `diag-16k-memtest` |
-
-For the keyboard, joysticks and paddles only: `diag-controls` (16K or more).
-
-How much RAM the models came with (an upgraded machine counts what it
-has now):
-
-| Model | RAM |
-|---|---|
-| 400 | 8K or 16K |
-| 800 | 8K to 48K |
-| 600XL | 16K, or 64K with a 1064 memory module |
-| 1200XL, 800XL, 65XE, 800XE, XE Game System | 64K |
-| 130XE | 128K |
-
-Not sure how much RAM there is? Load `diag-8k-01-ram`: it runs on every
-Atari and shows the RAM it found. Or just try a bigger tape: one that needs
-more RAM than the machine has stops at once with a red border and a low
-tone, on and off (see [Colours](#colours)).
-
-**When a machine won't get through its own set**, use the 8k set: it
-needs only the first 8K of RAM to work, so it's the fallback for every
-machine.
-
-All the tapes:
-
-| Tape | Needs | Load time | Tests |
-|---|---|---|---|
-| `diag-8k-01-ram` | 8K | 2 min, then 1.5 min for part 2 | the display checks and all the RAM. Part 2 (machines with 16K or more): the RAM the tape itself used, the RAM under an XL/XE's OS and a 130XE's extra RAM |
-| `diag-8k-02-rom` | 8K | 2 min | test 1, the ROMs |
-| `diag-8k-03-input` | 8K | 2 min | tests 2 and 3, the keyboard and the console keys |
-| `diag-8k-04-ports` | 8K | 2 min | tests 4 and 5, the joysticks and the paddles |
-| `diag-8k-05-sound` | 8K | 1.5 min | test 6, the sound (POKEY) |
-| `diag-8k-06-video` | 8K | 2 min | test 7, the video (GTIA/ANTIC), both pages |
-| `diag-8k-memtest` | 8K | 2 min | the memory test, until you stop it (a 400/800's RAM; on an XL/XE it stops at once: use `diag-16k-memtest`) |
-| `diag-16k-01-ram` | 16K | 3.5 min | the whole RAM test in one load: all the RAM, the tape's own, under an XL/XE's OS, and a 130XE's extra RAM |
-| `diag-16k-02-system` | 16K | 3.5 min | tests 1-7, with a menu |
-| `diag-16k-03-hello` | 16K | 3.5 min | the sampled "hello" (POKEY item 7), as the cartridge plays it: too big for 8K |
-| `diag-32k-xl-xe` | 32K | 6 min | the whole RAM test, then tests 1-7 with a menu, in one load |
-| `diag-16k-memtest` | 16K | 2.5 min | the memory test, until you stop it (all the RAM) |
-| `diag-controls` | 16K | 2 min | tests 2, 4 and 5 only: keyboard, joysticks, paddles |
-
-`diag-controls` is a companion to Atari's SALT diagnostic disks: their
-controller tests need a test harness plugged in, and this tape doesn't.
-
-`diag-8k-01-ram-part2` is the second part of the 8k RAM tape as a file of
-its own. A machine with 8K never loads it (the screen says
-`STAGE 2: 16K ONLY. NEXT: DIAG-8K-02-ROM`); a bigger machine running the
-8k set does. You only need it with a player that can't wait between the
-two parts (see [AspeQt](#from-a-pc-usb-sio-interface-and-aspeqt)).
-
-On an XL/XE, `diag-8k-01-ram`'s first part shows `RAM 48K`: the main RAM
-it tests. The RAM under the OS and a 130XE's extra RAM are part 2's, on a
-machine with 16K or more.
-
-## Loading a tape
-
-### Starting the machine for a cassette boot
-
-1. Turn the Atari off.
-2. **Take out any cartridge**, BASIC included. On a 400/800 a cassette
-   won't boot with a cartridge in at all (a disk will). And a cartridge
-   covers 8K of RAM, so the RAM test couldn't reach it: a 48K 800 with
-   BASIC in shows `RAM 40K`.
-   An XL or XE's built-in BASIC doesn't matter: the tapes switch it off
-   themselves.
-3. Hold **START** and turn the Atari on, still holding START. It beeps once.
-4. Start the tape, then press any key on the Atari.
-
-When the tape has loaded, the border turns green and you hear a rising
-chirp: the machine is running the test.
-
-If a load fails (BOOT ERROR, or a crash before the green chirp), load it
-again: turn the Atari off, rewind or reload the tape, and start over. A
-load that works on the second try is fine; the tape is good. Only a load
-that fails every time, at the same point, means something is wrong.
-
-### From a PC: USB-SIO interface and AspeQt
-
-A USB-to-SIO interface (an "SIO2PC" cable; for example the SIO2PC-USB) plugs
-into the Atari's SIO port (the one the disk drive and cassette recorder use)
-and into a PC's USB port. On the PC it shows up as a COM port. The free
-program [AspeQt](https://sourceforge.net/projects/aspeqt/) can then play a
-`.cas` file into the Atari as if it came from a cassette recorder.
-
-Setting up AspeQt (Tools > Options):
-- **Serial port:** the COM port the interface uses (Windows Device Manager
-  shows it).
-- **Handshake:** the method your interface uses (its manual says which).
-- **Cassette speed:** leave "Use custom baud rate for cassette emulation"
-  off: the tapes are 600 baud, the normal speed.
-
-AspeQt's manual recommends interfaces built on an FTDI USB chip, and says
-the AtariMax "SIO2PC Universal Interface USB Edition" isn't supported.
-
-To play a tape:
-1. In AspeQt, choose **File > Playback cassette image** and pick the `.cas`
-   file (or drag the file onto AspeQt). A dialog with instructions appears.
-2. Do the cassette boot on the Atari (hold START, power on, wait for the
-   beep).
-3. Press a key on the Atari and confirm AspeQt's dialog at about the same
-   time. The tape plays.
-
-AspeQt can't rewind or pause a tape. On a machine with 16K or more,
-`diag-8k-01-ram` is a **two-part tape**: the first part runs its RAM test
-for a few minutes before it asks for part two, and by then AspeQt has
-played past it. The screen then says `STAGE 2: NOT ON TAPE` or
-`STAGE 2: ERROR` and a number.
-When that happens, play `diag-8k-01-ram-part2.cas` and press a key on the
-Atari: it tries again. Every other tape is a single part and doesn't
-have this problem.
-
-### From a real cassette recorder
-
-The `.cas` files can be turned into audio (a `.wav` file) with a CAS-to-WAV
-converter, and the audio recorded onto a tape for an Atari 410 or 1010
-recorder. This hasn't been tried with these tapes yet.
+## Starting up
 
 ### From the boot disk
 
-`disks/diag-disk-v0.10.atr` is a disk image you boot: switch on with it in
+`disks/diag-disk-v0.11.atr` is a disk image you boot: switch on with it in
 drive 1 and it runs the way the cartridge does. There is no DOS on it and
 none is needed, and it works on any Atari with 8K or more.
 
@@ -307,51 +125,6 @@ Take any cartridge out first (the disk boots with one in, but the RAM
 under a cartridge can't be tested). You don't need to hold OPTION on an
 XL/XE. The title bar says ` DIAG-DISK `, and the ROM test's self-check
 line `DIAG DISK`.
-
-### From disk
-
-Three Atari binary files (`.xex`) are in the `xex` folder, for loading
-from DOS or a PC link. They load in
-seconds, not minutes:
-
-| File | Same tests as | Needs |
-|---|---|---|
-| `diag-32k-xl-xe.xex` | everything in one file: the RAM test and tests 1-7 with the menu | 32K |
-| `diag-16k-memtest.xex` | the `diag-16k-memtest` tape: the long memory test | 16K |
-| `diag-bascrc.xex` | a BASIC cartridge's check (see [BASIC cartridges](#basic-cartridges-bascrc)) | 16K, DOS |
-
-The long memory test is a file of its own on disk: it needs all the RAM,
-the menu's program included, so it couldn't come back to the menu anyway.
-
-To load one:
-
-- **A DOS disk** (Atari DOS 2.0S or 2.5, or MyDOS): copy the file onto it,
-  boot DOS, and load it with the binary load option (`L` in the DOS 2
-  menu).
-- **A PC or FujiNet:** AspeQt, SIO2SD and FujiNet can boot an `.xex`
-  straight from their own menus.
-
-Take any cartridge out first, as for a tape (a disk does boot with one
-in, unlike a tape, but the 8K of RAM under the cartridge can't be tested
-then: a 48K 800 shows `RAM 40K`). BASCRC is the exception: it needs its
-BASIC cartridge in. You don't need to hold OPTION: the tests switch an XL
-or XE's BASIC off themselves. Everything on screen is the same as on the
-tape, except the title bar: ` DIAG-32K-XEX ` and ` DIAG-16K-MEMTEST-XEX `.
-
-If the file can't run, it says so before it loads, with a red border and
-the low tone on and off:
-
-- `NEEDS 32K RAM. THIS MACHINE HAS 16K.`: too little RAM. Use the tapes
-  for a smaller machine.
-- `DOS IS IN THE WAY: USE DOS 2 OR MYDOS`: this DOS takes up the memory
-  the file loads into (SpartaDOS does). Use Atari DOS 2.0S or 2.5, or
-  MyDOS.
-
-An 8K machine can't run a disk file at all; use the boot disk or the 8k
-tapes.
-
-Once the file is running, DOS has been overwritten (the test checks that
-RAM too). Pressing RESET then starts the machine again, as if switched on.
 
 ### From the cartridge
 
@@ -403,6 +176,59 @@ In the ROM test the `DIAG CART` line is the cartridge checking itself:
 each of its three program banks against the CRC32 stored in it. On an
 XL/XE the built-in BASIC is checked as well: the cartridge switches itself
 off for the moment it takes to read it.
+
+### A stuck joystick
+
+A joystick switch connects its line to ground, so a switch that sticks, a
+pinched cable or a bad port pin reads as a press that never ends. Every
+program looks for that as it starts, before anything else: if a direction
+or the button in port 1 or 2 is already active, you get about a second of
+low buzz and loud cracks, the screen near black and flashing blue, like a
+short circuit, before the usual green chirp. Then the tests run as normal.
+A stuck line is ignored everywhere (only a new press counts), so it can't
+hold up a screen; the keyboard, the console keys and the rest of the stick
+still work. Test 4 (joysticks) shows which line it is: it stays inverse
+with your hands off, and the test fails with that port's number.
+
+Don't hold a stick while switching on: that sets it off too, and so does a
+controller that holds a line by itself (a driving controller, a
+trackball). `diag-8k-memtest` doesn't have the check (no room); every
+other tape, the disks and the cartridge do.
+
+## Every test, and where to find it
+
+The cartridge has every test on one menu:
+
+![Cartridge menu](img/cart-01-menu.png)
+
+Each menu line is also on the boot disk, the disk files and the tapes.
+The columns are the RAM a file needs, and each cell lists the cartridge,
+then the disks, then the tapes. A machine can use everything in its own
+column and in the columns to the left of it:
+
+| Line | Test | 8K+ | 16K+ | 32K+ |
+|---|---|---|---|---|
+| 0 | RAM | `diag-cart.car`, `diag-disk.atr`, `diag-8k-01-ram.cas` | `diag-16k-01-ram.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 1 | ROMs (OS, BASIC, the program's self-check) | `diag-cart.car`, `diag-disk.atr`, `diag-8k-02-rom.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 2 | keyboard | `diag-cart.car`, `diag-disk.atr`, `diag-8k-03-input.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 3 | console keys | `diag-cart.car`, `diag-disk.atr`, `diag-8k-03-input.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 4 | joysticks | `diag-cart.car`, `diag-disk.atr`, `diag-8k-04-ports.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 5 | paddles | `diag-cart.car`, `diag-disk.atr`, `diag-8k-04-ports.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 6 | POKEY (sound) | `diag-cart.car`\*, `diag-disk.atr` (\* with 16K), `diag-8k-05-sound.cas` | `diag-16k-02-system.cas`, `diag-16k-03-hello.cas`\* (the "hello" only) | `diag-32k-xl-xe.xex`\*, `diag-32k-xl-xe.cas` |
+| 7 | GTIA/ANTIC (video) | `diag-cart.car`, `diag-disk.atr`, `diag-8k-06-video.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 8 | results and the final code | `diag-cart.car`, `diag-disk.atr` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.xex`, `diag-32k-xl-xe.cas` |
+| 9 | long RAM test | `diag-8k-memtest.cas` (400/800 only) | `diag-cart.car`, `diag-disk.atr` (line 9 needs 16K), `diag-16k-memtest.xex`, `diag-16k-memtest.cas` | |
+
+\* with the sampled "hello" (POKEY item 7); the others play every other
+sound but that one.
+
+Not on the menu: `diag-bascrc.xex` and `diag-bascrc.cas` (16K+), the check
+for a BASIC cartridge (see [BASIC cartridges](#basic-cartridges-bascrc)).
+
+Pictures in this guide come from the project's simulator, using the MiSTer
+Atari800 core's NTSC palette and a real Atari OS font. The colours and
+their RGB values are what the MiSTer core shows; a real TV or monitor may
+differ a little.
 
 ## Reading the results
 
@@ -542,9 +368,9 @@ No question has a time limit either: every question waits until you answer
 it, with a purple border, and a test that asks about a sound keeps playing
 it until you answer.
 
-## The tapes, screen by screen
+## The tests, screen by screen
 
-### RAM test (`-01-ram`, and the start of `diag-32k-xl-xe`)
+### RAM test (line 0)
 
 There is no separate video check. The RAM result screen is the picture
 check: its code keeps flashing and beeping until you press a key (or
@@ -603,7 +429,7 @@ moment), testing it and putting it back. The summary waits for you:
    address and bits, with a hint (one bit: one RAM chip).
 4. R runs the whole RAM test again; any other key plays the tones again.
 
-### ROMs (`diag-8k-02-rom`; test 1 on the system tapes)
+### ROMs (test 1)
 
 The test reads every ROM chip and works out its CRC32 checksum, then looks
 it up in a table of known Atari ROMs.
@@ -720,7 +546,7 @@ OPTION not held), though the ROM test already does that.
 The reference CRCs are MAME's (`hash/a800.xml`): A `4BEC4DE2`, B
 `F0202FB3`, C `7D684184`.
 
-### Keyboard and console keys (`diag-8k-03-input`; tests 2 and 3)
+### Keyboard and console keys (tests 2 and 3)
 
 **Keyboard.** Press every key. Each key on the map shows one of three
 states, without needing colour, so this works on a black-and-white screen
@@ -759,7 +585,7 @@ plays a tone over and over until you answer.
 3. The question about the speaker, answered with Y or START (yes) or N or
    SELECT (no). The border is purple while it waits.
 
-### Joysticks and paddles (`diag-8k-04-ports`; tests 4 and 5)
+### Joysticks and paddles (tests 4 and 5)
 
 **Joysticks.** Move each joystick and press its button. Each direction and
 the button show inverse while active. START (or any key) ends the test.
@@ -794,7 +620,7 @@ menu ends this way:
 2. What to load next. R runs the tape's tests again; any other key plays
    the tones again. Nothing needs a press: you can leave it here.
 
-### Sound and video (`diag-8k-05-sound`, `diag-8k-06-video`; tests 6 and 7)
+### Sound and video (tests 6 and 7)
 
 **POKEY.** The sound chip's timer and random-number generator are checked
 automatically. Then each of its four voices plays, one voice at a time,
@@ -863,7 +689,7 @@ text above it saying what it is:
 
 Answer whether it all looks right (item 2).
 
-### The menu (`diag-16k-02-system` and `diag-32k-xl-xe`)
+### The tapes' menu (`diag-16k-02-system`, `diag-32k-xl-xe`)
 
 On machines with 16K or more, all seven tests are on one tape, with a
 menu.
@@ -887,7 +713,7 @@ Running a test again replaces its old result.
 1. Every test: PASS, FAIL and its items, or `-` if not run. Here test 7
    wasn't run, so the final result is yellow (nothing failed, but not
    everything was tested) with the start-up chirp.
-2. The ROMs (see [ROMs](#roms-diag-8k-02-rom-test-1-on-the-system-tapes)).
+2. The ROMs (see [ROMs](#roms-test-1)).
 
 ### The 32k+ tape (`diag-32k-xl-xe`)
 
@@ -922,7 +748,7 @@ One tape, one load, for any machine with 32K or more:
 5. The keys, joystick included, as on every menu.
 
 The results page (line 8) is the one shown under
-[The menu](#the-menu-diag-16k-02-system-and-diag-32k-xl-xe), with one more
+[The menu](#the-tapes-menu-diag-16k-02-system-diag-32k-xl-xe), with one more
 line on top: test 0, the RAM. FAIL there lists the bad banks, and the
 final code plays one long beep, then short × bank.
 
@@ -937,7 +763,7 @@ and up, with nothing else: no menu, no RAM or ROM test. They run in order,
 and at the end R runs them again. Use it alongside Atari's SALT
 diagnostic disks, whose controller tests need a test harness.
 
-### Memory test (`diag-16k-memtest`, `diag-8k-memtest`)
+### Memory test (line 9)
 
 The memory test (a burn-in) repeats the RAM tests until you press a key:
 leave it running for an hour or a day to catch faults that only show when
@@ -956,7 +782,10 @@ What each one covers:
   a 400/800 has. An XL/XE has more (the RAM under the OS, a 130XE's extra
   RAM) that this tape can't reach, so on an XL/XE it stops at once rather
   than run an incomplete test: yellow border, and the bottom line says
-  `XL/XE: USE DIAG-16K-MEMTEST`.
+  `XL/XE: USE DIAG-16K-MEMTEST`. With no room to spare in 8K, it takes
+  only fire from a joystick (not down or up), and it has no
+  [stuck joystick](#a-stuck-joystick) check; a stuck one still can't hold
+  it up.
 
 ![The 8K memory test on an XL/XE](img/memtest-04-xl.png)
 
@@ -1028,6 +857,214 @@ blaming a chip.
   load it again (one failed load means nothing). If it fails every time,
   it points at the first part of RAM, or the cassette or SIO connection.
 
+## Other ways to run it
+
+The boot disk and the cartridge do everything on every machine. The disk
+files are for loading from DOS or a PC link, and BASCRC is one of them.
+The cassettes need the least of the machine: no disk drive and no flash
+cartridge, only a cassette recorder (or a PC playing the tape) on the SIO
+port.
+
+### From disk
+
+Three Atari binary files (`.xex`) are in the `xex` folder, for loading
+from DOS or a PC link. They load in
+seconds, not minutes:
+
+| File | Same tests as | Needs |
+|---|---|---|
+| `diag-32k-xl-xe.xex` | everything in one file: the RAM test and tests 1-7 with the menu | 32K |
+| `diag-16k-memtest.xex` | the `diag-16k-memtest` tape: the long memory test | 16K |
+| `diag-bascrc.xex` | a BASIC cartridge's check (see [BASIC cartridges](#basic-cartridges-bascrc)) | 16K, DOS |
+
+The long memory test is a file of its own on disk: it needs all the RAM,
+the menu's program included, so it couldn't come back to the menu anyway.
+
+To load one:
+
+- **A DOS disk** (Atari DOS 2.0S or 2.5, or MyDOS): copy the file onto it,
+  boot DOS, and load it with the binary load option (`L` in the DOS 2
+  menu).
+- **A PC or FujiNet:** AspeQt, SIO2SD and FujiNet can boot an `.xex`
+  straight from their own menus.
+
+Take any cartridge out first, as for a tape (a disk does boot with one
+in, unlike a tape, but the 8K of RAM under the cartridge can't be tested
+then: a 48K 800 shows `RAM 40K`). BASCRC is the exception: it needs its
+BASIC cartridge in. You don't need to hold OPTION: the tests switch an XL
+or XE's BASIC off themselves. Everything on screen is the same as on the
+tape, except the title bar: ` DIAG-32K-XEX ` and ` DIAG-16K-MEMTEST-XEX `.
+
+If the file can't run, it says so before it loads, with a red border and
+the low tone on and off:
+
+- `NEEDS 32K RAM. THIS MACHINE HAS 16K.`: too little RAM. Use the tapes
+  for a smaller machine.
+- `DOS IS IN THE WAY: USE DOS 2 OR MYDOS`: this DOS takes up the memory
+  the file loads into (SpartaDOS does). Use Atari DOS 2.0S or 2.5, or
+  MyDOS.
+
+An 8K machine can't run a disk file at all; use the boot disk or the 8k
+tapes.
+
+Once the file is running, DOS has been overwritten (the test checks that
+RAM too). Pressing RESET then starts the machine again, as if switched on.
+
+### Why cassette, and why several sets
+
+**Cassette, because it needs the least of the machine.** A cassette boot
+needs only the computer, its OS ROM, the first few K of RAM and the SIO
+port. There's no disk drive to work, no DOS to load, and nothing else for
+the tape to depend on. So it runs on the smallest machine there is, a 400
+with 8K, and on a machine too sick to boot a disk. Each tape loads into the
+bottom of RAM and tests everything else from there.
+
+**When to use them.** The boot disk and the cartridge are quicker and do
+everything the tapes do, on every machine down to an 8K 400. Use the
+tapes when there's only a cassette recorder (or a PC playing the tape),
+or when the machine is too sick to boot a disk.
+
+**Several sets, because tape is slow.** A cassette loads at 600 baud:
+about 3K a minute. So the tests are split by how much RAM the machine has,
+and the more RAM, the fewer tapes:
+- **8K or more:** the 8k set, six small tapes of about 2 minutes each.
+- **16K or more:** the 16k set, two tapes of about 3.5 minutes each.
+- **32K or more:** the 32k+ tape, one tape of about 6 minutes.
+
+A set works on every machine with at least that much RAM, whatever the
+model. So any Atari can run the 8k set, and a 130XE can run all three.
+The bigger set is just quicker to get through.
+
+Within each set, every tape only relies on what an earlier one proved. For
+example, RAM is tested before anything else runs from it, and the keyboard
+is tested before a test asks you a yes/no question.
+
+### Which tapes for which machine
+
+**Pick by RAM.** Use the biggest set your machine has the RAM for:
+
+| RAM | Tapes, in this order | Long test (optional) |
+|---|---|---|
+| 8K or more | the 8k set: `diag-8k-01-ram`, `-02-rom`, `-03-input`, `-04-ports`, `-05-sound`, `-06-video` | `diag-8k-memtest` (400/800) |
+| 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system` (and `diag-16k-03-hello`, the sampled sound) | `diag-16k-memtest` |
+| 32K or more | the 32k+ tape: `diag-32k-xl-xe` | `diag-16k-memtest` |
+
+For the keyboard, joysticks and paddles only: `diag-controls` (16K or more).
+
+How much RAM the models came with (an upgraded machine counts what it
+has now):
+
+| Model | RAM |
+|---|---|
+| 400 | 8K or 16K |
+| 800 | 8K to 48K |
+| 600XL | 16K, or 64K with a 1064 memory module |
+| 1200XL, 800XL, 65XE, 800XE, XE Game System | 64K |
+| 130XE | 128K |
+
+Not sure how much RAM there is? Load `diag-8k-01-ram`: it runs on every
+Atari and shows the RAM it found. Or just try a bigger tape: one that needs
+more RAM than the machine has stops at once with a red border and a low
+tone, on and off (see [Colours](#colours)).
+
+**When a machine won't get through its own set**, use the 8k set: it
+needs only the first 8K of RAM to work, so it's the fallback for every
+machine.
+
+All the tapes:
+
+| Tape | Needs | Load time | Tests |
+|---|---|---|---|
+| `diag-8k-01-ram` | 8K | 2 min, then 1.5 min for part 2 | the display checks and all the RAM. Part 2 (machines with 16K or more): the RAM the tape itself used, the RAM under an XL/XE's OS and a 130XE's extra RAM |
+| `diag-8k-02-rom` | 8K | 2 min | test 1, the ROMs |
+| `diag-8k-03-input` | 8K | 2 min | tests 2 and 3, the keyboard and the console keys |
+| `diag-8k-04-ports` | 8K | 2 min | tests 4 and 5, the joysticks and the paddles |
+| `diag-8k-05-sound` | 8K | 1.5 min | test 6, the sound (POKEY) |
+| `diag-8k-06-video` | 8K | 2 min | test 7, the video (GTIA/ANTIC), both pages |
+| `diag-8k-memtest` | 8K | 2 min | the memory test, until you stop it (a 400/800's RAM; on an XL/XE it stops at once: use `diag-16k-memtest`) |
+| `diag-16k-01-ram` | 16K | 3.5 min | the whole RAM test in one load: all the RAM, the tape's own, under an XL/XE's OS, and a 130XE's extra RAM |
+| `diag-16k-02-system` | 16K | 3.5 min | tests 1-7, with a menu |
+| `diag-16k-03-hello` | 16K | 3.5 min | the sampled "hello" (POKEY item 7), as the cartridge plays it: too big for 8K |
+| `diag-32k-xl-xe` | 32K | 6 min | the whole RAM test, then tests 1-7 with a menu, in one load |
+| `diag-16k-memtest` | 16K | 2.5 min | the memory test, until you stop it (all the RAM) |
+| `diag-controls` | 16K | 2 min | tests 2, 4 and 5 only: keyboard, joysticks, paddles |
+
+`diag-controls` is a companion to Atari's SALT diagnostic disks: their
+controller tests need a test harness plugged in, and this tape doesn't.
+
+`diag-8k-01-ram-part2` is the second part of the 8k RAM tape as a file of
+its own. A machine with 8K never loads it (the screen says
+`STAGE 2: 16K ONLY. NEXT: DIAG-8K-02-ROM`); a bigger machine running the
+8k set does. You only need it with a player that can't wait between the
+two parts (see [AspeQt](#from-a-pc-usb-sio-interface-and-aspeqt)).
+
+On an XL/XE, `diag-8k-01-ram`'s first part shows `RAM 48K`: the main RAM
+it tests. The RAM under the OS and a 130XE's extra RAM are part 2's, on a
+machine with 16K or more.
+
+### Loading a tape
+
+#### Starting the machine for a cassette boot
+
+1. Turn the Atari off.
+2. **Take out any cartridge**, BASIC included. On a 400/800 a cassette
+   won't boot with a cartridge in at all (a disk will). And a cartridge
+   covers 8K of RAM, so the RAM test couldn't reach it: a 48K 800 with
+   BASIC in shows `RAM 40K`.
+   An XL or XE's built-in BASIC doesn't matter: the tapes switch it off
+   themselves.
+3. Hold **START** and turn the Atari on, still holding START. It beeps once.
+4. Start the tape, then press any key on the Atari.
+
+When the tape has loaded, the border turns green and you hear a rising
+chirp: the machine is running the test.
+
+If a load fails (BOOT ERROR, or a crash before the green chirp), load it
+again: turn the Atari off, rewind or reload the tape, and start over. A
+load that works on the second try is fine; the tape is good. Only a load
+that fails every time, at the same point, means something is wrong.
+
+#### From a PC: USB-SIO interface and AspeQt
+
+A USB-to-SIO interface (an "SIO2PC" cable; for example the SIO2PC-USB) plugs
+into the Atari's SIO port (the one the disk drive and cassette recorder use)
+and into a PC's USB port. On the PC it shows up as a COM port. The free
+program [AspeQt](https://sourceforge.net/projects/aspeqt/) can then play a
+`.cas` file into the Atari as if it came from a cassette recorder.
+
+Setting up AspeQt (Tools > Options):
+- **Serial port:** the COM port the interface uses (Windows Device Manager
+  shows it).
+- **Handshake:** the method your interface uses (its manual says which).
+- **Cassette speed:** leave "Use custom baud rate for cassette emulation"
+  off: the tapes are 600 baud, the normal speed.
+
+AspeQt's manual recommends interfaces built on an FTDI USB chip, and says
+the AtariMax "SIO2PC Universal Interface USB Edition" isn't supported.
+
+To play a tape:
+1. In AspeQt, choose **File > Playback cassette image** and pick the `.cas`
+   file (or drag the file onto AspeQt). A dialog with instructions appears.
+2. Do the cassette boot on the Atari (hold START, power on, wait for the
+   beep).
+3. Press a key on the Atari and confirm AspeQt's dialog at about the same
+   time. The tape plays.
+
+AspeQt can't rewind or pause a tape. On a machine with 16K or more,
+`diag-8k-01-ram` is a **two-part tape**: the first part runs its RAM test
+for a few minutes before it asks for part two, and by then AspeQt has
+played past it. The screen then says `STAGE 2: NOT ON TAPE` or
+`STAGE 2: ERROR` and a number.
+When that happens, play `diag-8k-01-ram-part2.cas` and press a key on the
+Atari: it tries again. Every other tape is a single part and doesn't
+have this problem.
+
+#### From a real cassette recorder
+
+The `.cas` files can be turned into audio (a `.wav` file) with a CAS-to-WAV
+converter, and the audio recorded onto a tape for an Atari 410 or 1010
+recorder. This hasn't been tried with these tapes yet.
+
 ## Questions
 
 ### Why the different sets?
@@ -1039,10 +1076,10 @@ fallback. See [Why cassette, and why several sets](#why-cassette-and-why-several
 
 ### Why cassette at all, now there are disk files and a cartridge?
 
-A disk needs a working drive and more of the machine before anything can
-run. The cassette tapes are for the machines that can't manage that: an
-8K 400, or a machine that fails to boot a disk. The cartridge needs no
-loading, but an AtariMax flash cartridge to put it on.
+The boot disk needs a disk drive or an SIO adapter, and the cartridge an
+AtariMax flash cartridge to put it on. A cassette boot needs the least of
+the machine: a recorder, or a PC playing the tape. And a machine too sick
+to boot a disk may still load a tape.
 
 ### Is this a substitute for the memory test?
 
