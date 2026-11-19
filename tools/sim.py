@@ -11,6 +11,9 @@ Real hardware faults can be simulated, independent of the FAULT build flag:
   --stuck LO-HI:BIT:LEVEL  e.g. 0200-0400:1:1 = D0 stuck high in $0200-$03FF
   --stuck xN:BIT:LEVEL     the same in 130XE extended bank N (0-3, --xe)
   --mirror                 bank 3 aliases bank 2 (a missing address line)
+  --leak LO-HI:SECS        e.g. 8000-9000:3 = a refresh fault: a page there
+                           forgets (reads $00) once SECS pass with no CPU
+                           access to it (any access refreshes its row)
 """
 import argparse
 import struct
@@ -35,6 +38,8 @@ class Atari:
         self.xstuck = xstuck     # (bank, andmask, ormask) in extended RAM
         self.xealias = False
         self.flaky = None        # (lo, hi, mask, probability)
+        self.leak = None         # (lo, hi, lines): --leak, a refresh fault
+        self.ltouch = {}         # --leak: page -> the line of its last access
         self.nmis = 0
         self.irqen, self.irqen_line = 0, 0
         self.stimer = None
@@ -199,6 +204,8 @@ class Atari:
                 v = (v & self.xstuck[1]) | self.xstuck[2]
             return v
         a = self._map(a)
+        if self.leak:
+            self._leak(a)
         v = self.ram[a]
         if self.stuck and self.stuck[0] <= a < self.stuck[1]:
             v = (v & self.stuck[2]) | self.stuck[3]
@@ -247,7 +254,21 @@ class Atari:
         if x is not None:
             self.ext[x] = v
             return
+        if self.leak:
+            self._leak(self._map(a))
         self.ram[self._map(a)] = v
+
+    def _leak(self, a):
+        """--leak: a page in the range that no CPU access touched for too
+        long has lost its contents (refresh never reached its row). ANTIC's
+        reads aren't modelled: keep the screen block out of the range."""
+        lo, hi, n = self.leak
+        if lo <= a < hi:
+            p, ln = a >> 8, self.line
+            last = self.ltouch.get(p)
+            if last is not None and ln - last > n:
+                self.ram[p << 8:(p + 1) << 8] = bytes(256)
+            self.ltouch[p] = ln
 
     def _ext(self, a):
         pb = self.regs.get(0xD301, 0xFF)
@@ -703,6 +724,8 @@ def main():
     ap.add_argument('--palette', default='//TRUENAS/Media/games/ATARI800/ntsc.act',
                     help='768-byte RGB palette for --shot (the MiSTer core palette)')
     ap.add_argument('--flaky', help='BANK:BIT:P  a bit that reads wrong with chance P per read')
+    ap.add_argument('--leak', help='LO-HI:SECS  a refresh fault: a page there reads $00 once '
+                    'SECS pass with no CPU access to it')
     ap.add_argument('--insert', nargs=2, metavar=('SECONDS', 'CAS'),
                     help='start playing another tape (e.g. a -part2.cas) at that time')
     ap.add_argument('--auto', action='store_true', help='answer tape 3 prompts')
@@ -823,6 +846,10 @@ def main():
         random.seed(1)
         hw.flaky = ((int(bank) - 1) * 0x4000, int(bank) * 0x4000, 1 << (int(bit) - 1),
                     float(prob))
+    if a.leak:
+        where, secs = a.leak.split(':')
+        lo, hi = (int(x, 16) for x in where.split('-'))
+        hw.leak = (lo, hi, to_line(secs))
     for i in range(0x800):                 # OS state that must survive
         hw.ram[i] = (i * 7 + 3) & 0xFF
     # RAMTOP ($6A), as the OS sized it at power-on: the RAM, up to $C000,

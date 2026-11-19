@@ -280,6 +280,13 @@ xw_by	jsr xe_val
 	lda XEBANK
 	cmp #4
 	bne xw_bank
+	.ifdef XSWEEP		; the long test: its refresh check here too, in
+	lda #>LOAD		; copy A's half (tape 2's rwait), on the values
+	cmp #$08		; just written: the extended banks' own chips
+	bne xw_nr
+	jsr rwait
+xw_nr
+	.endif
 	inc INAIA
 	lda #0
 	sta XEBANK

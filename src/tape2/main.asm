@@ -24,7 +24,12 @@
 ;     tape's RAM), and beep as bank 1.
 ;   NOXL (diag-8k-burnin): no RAM under the OS, no 130XE banks (an 8K
 ;     machine is never an XL), which leaves the room for OWNTEST.
-;   BOUNCE (diag-burnin, 16K and up): two copies take turns. Copy A runs at
+;   BOUNCE (diag-16k-memtest, the cartridge's and the boot disk's long
+;     test): one march over all the RAM it reaches (XSWEEP), then in copy
+;     A's half the refresh check (retain): the RAM filled, a few seconds
+;     with the screen off and the CPU idle so only ANTIC's refresh keeps
+;     it, read back ($00, then $FF; the 130XE banks with their cross-bank
+;     values). Two copies take turns. Copy A runs at
 ;     $0800; at the end of each pass the running copy writes the other one
 ;     BOFF pages away (A up, B back down), adds BOFF to every byte the
 ;     bitmap at BMAP marks (the high bytes of its own addresses; build.py
@@ -300,7 +305,11 @@ ps_one	lda #<s_main
 	ldy #>s_main
 	jsr step
 	jsr march2
-	lda OSRAM
+	lda #>LOAD		; the refresh check: in copy A's half (once a
+	cmp #$08		; pass: a refresh fault takes whole rows of the
+	bne ps_nr		; chips, so it shows wherever the check looks)
+	jsr retain
+ps_nr	lda OSRAM
 	cmp #2
 	bne ps_xl
 	jsr osin
@@ -538,6 +547,76 @@ tk_dn	lda TARM
 	beq tk_x
 	inc STOPREQ
 tk_x	rts
+
+	.ifdef BOUNCE
+; ---------------------------------------------------------------------------
+; retain: the refresh check, over the march's range list (the RAM under an
+; XL/XE's OS too): all of it $00, rwait, read back; then the same with $FF
+; (a cell can fade to 0 or to 1). Errors go to each range's bank.
+retain	lda #$00
+	jsr rt_one
+	lda #$FF
+rt_one	sta MWRITE
+	sta MREAD
+	lda #$40		; write only
+	sta MFLAGS
+	jsr elem_up
+	jsr rwait
+	lda #$80		; read only
+	sta MFLAGS
+	jmp elem_up
+
+; rwait: about RWSECS seconds with the screen off and no interrupts, the CPU
+; in this loop alone: only ANTIC's refresh keeps the RAM. (Any other read or
+; write refreshes the row it touches, so the march itself can't see a
+; refresh fault; the screen's DMA would refresh the rows it reads.) A stop
+; press is still seen: START, SELECT, OPTION or fire after a release, as
+; tick takes it; a key, POKEY latches. The clock gets the time after.
+; Also the 130XE banks' (xlram.asm).
+RWSECS	= 5
+rwait	lda #<s_ref
+	ldy #>s_ref
+	jsr step
+	lda #0
+	sta NMIEN
+	sta DMACTL
+	ldy #RWSECS
+rw_s	ldx FPSV
+rw_f	lda VCOUNT		; a frame: VCOUNT through 0
+	bne rw_f
+rw_z	lda VCOUNT
+	beq rw_z
+	lda TARM
+	beq rw_n
+	lda TRIG0
+	and TRIG1
+	beq rw_st
+	lda CONSOL
+	and #7
+	cmp #7
+	beq rw_n
+rw_st	lda #1
+	sta STOPREQ
+rw_n	dex
+	bne rw_f
+	dey
+	bne rw_s
+	lda SCRON		; the screen back ($22; 0 if it was off)
+	sta DMACTL
+	lda #$40
+	sta NMIEN
+	ldx #RWSECS		; the clock, a second at a time (tick uses X)
+rw_t	txa
+	pha
+	lda #1
+	sta TFRM
+	jsr tick
+	pla
+	tax
+	dex
+	bne rw_t
+	rts
+	.endif
 
 ; ---------------------------------------------------------------------------
 ; logpass: put this pass's bad bits in the log.
@@ -1288,6 +1367,7 @@ s_now	dta d'NOW: ',$FF
 s_low	dta d'LOW RAM',$FF
 	.ifdef BOUNCE
 s_main	dta d'ALL THE RAM, ONE MARCH',$FF
+s_ref	dta d'REFRESH CHECK: THE SCREEN GOES OFF',$FF
 	.else
 s_bank	dta d'BANK ',$FF
 s_aia	dta d'ADDRESSES',$FF

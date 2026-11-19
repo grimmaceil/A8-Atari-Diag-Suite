@@ -141,6 +141,14 @@ cartridge and the cassettes. Reports from other machines are welcome.
     values freeze).
   - **The video modes page's VSCROL line moves a scan line at a time,**
     up and down: 0.12's jumped 7 lines at the top of its swing.
+  - **The long memory test checks the refresh** (16K and up: the
+    cartridge, the boot disk, `diag-16k-memtest`): once a pass it fills
+    the RAM, switches the screen off and leaves the RAM alone for 5
+    seconds, twice ($00, then $FF), so only ANTIC's refresh keeps it,
+    then reads it back. The march can't see a refresh fault, since every
+    access refreshes the row it touches: for example a replacement RAM
+    chip that needs more rows refreshed than an older ANTIC does. The
+    screen going off for those seconds is the check.
 - **0.12** (2026-11-18), against 0.11:
   - **A stuck joystick's signal is friendlier:** three short "pew" beeps,
     like a toy ray gun, each with the screen flashing bright orange (about
