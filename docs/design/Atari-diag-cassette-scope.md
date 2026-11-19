@@ -153,7 +153,7 @@ Numbered the same in every format; the items are what `FAIL` lists.
 | 2 | Keyboard | stuck key at the start; then a key map that lights each key | 1 stuck; 2 keys never pressed |
 | 3 | Console keys | START, SELECT, OPTION; the console speaker by ear | 1-3 the key; 4 the speaker |
 | 4 | Joysticks | live, 4 ports on a 400/800, 2 on an XL/XE; stuck lines at the start | the port |
-| 5 | Paddles | open-input check (every unplugged input reads 228), then live values with min, max and jitter; fast scan | the paddle |
+| 5 | Paddles | open-input check (every unplugged input reads 228), then live values with min, max and jitter (no fast scan: it can't read paddles) | the paddle |
 | 6 | POKEY | timer IRQ and RANDOM (automatic); each voice's scale and noise by ear; the sampled "hello" (cartridge, disk file, `diag-16k-03-hello`) | 1 timer; 2 random; 3-6 voices; 7 "hello" |
 | 7 | GTIA/ANTIC | luminance and colour ramps, the word ATARI in players and missiles scrolling right to left and snaking, PAL/NTSC; page 2: ANTIC 6, 7, the bitmaps 8, A, B, D, F, GTIA 9, 10, 11, fine scrolling | 1 page 1 looks wrong; 2 page 2 looks wrong |
 

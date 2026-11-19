@@ -4,8 +4,10 @@
 ;   which proves the scan works. One that doesn't fails item = paddle.
 ;   live: value bar, min/max seen (a full turn reaches about 1 and 228),
 ;   jitter (spread over 16 frames: big with the knob still = dirty pot),
-;   the paddle trigger. SELECT: fast scan (SKCTL bit 2). START or a
-;   keyboard key ends it.
+;   the paddle trigger. START or a keyboard key ends it. (No fast scan,
+;   SKCTL bit 2: it can't read paddles. The counts come out 114 times too
+;   high and it turns off the transistors that empty the capacitors:
+;   Altirra Hardware Reference Manual, 5.9.)
 PCUR	= TSCR+$00		; 8: paddle values now
 PMIN	= TSCR+$08		; 8
 PMAX	= TSCR+$10		; 8
@@ -13,7 +15,6 @@ WMIN	= TSCR+$18		; 8: this 16-frame window, for the jitter
 WMAX	= TSCR+$20		; 8
 PJIT	= TSCR+$28		; 8: the last window's spread
 PFRM	= TSCR+$30		; frame count in the window
-PFAST	= TSCR+$31		; nonzero: fast pot scan (SKCTL bit 2)
 
 t_pad	lda #5
 	sta TEST
@@ -24,9 +25,7 @@ t_pad	lda #5
 	beq pd_s0
 	PRINT 5, 0, s_pd1
 	PRINT 6, 0, s_pd2
-pd_s0	lda #0
-	sta PFAST
-	jsr waitrel
+pd_s0	jsr waitrel
 pd_w	jsr vsync		; a key (START, fire): check, SELECT: skip it
 	jsr inputs
 	lsr
@@ -108,17 +107,8 @@ pd_sh	jsr potshow
 	beq pd_end
 	lda CONSOL
 	lsr
-	bcc pd_end
-	lsr			; SELECT: fast scan on/off
 	bcs pd_lp
-	lda PFAST
-	eor #1
-	sta PFAST
-	jsr waitrel
-	jmp pd_lp
-pd_end	lda #3			; SKCTL back to normal
-	sta SKCTL
-	jsr waitrel
+pd_end	jsr waitrel
 	jmp tend
 
 ; npots: compare X with the number of paddles (twice the ports): Z set at
@@ -137,12 +127,7 @@ ps_rd	lda POT0,x
 	inx
 	cpx #8
 	bne ps_rd
-	lda #3			; SKCTL bit 2: fast scan (a couple of scanlines)
-	ldx PFAST
-	beq ps_n
-	lda #7
-ps_n	sta SKCTL
-	sta POTGO
+	stx POTGO
 	rts
 
 ; potshow: row 8+n per paddle: "P1 <bar> VAL MIN MAX JIT T".
@@ -150,10 +135,7 @@ potshow	lda DISPOK
 	bne pw_go
 	rts
 pw_go	PRINT 7, 0, s_pdh
-	lda PFAST
-	beq pw_r
-	PRINT 7, 0, s_fast
-pw_r	ldx #0
+	ldx #0
 pw_lp	stx CNT
 	txa
 	clc
@@ -263,6 +245,5 @@ p3_o	pha
 
 s_pd1	dta d'UNPLUG ALL PADDLES, THEN PRESS A KEY',$FF
 s_pd2	dta d'(SELECT SKIPS THE OPEN-INPUT CHECK)',$FF
-s_pd3	dta d'TURN EACH. SELECT=FAST. START/KEY ENDS.',$FF
+s_pd3	dta d'TURN EACH. START OR A KEY ENDS.',$FF
 s_pdh	dta d'                       VAL MIN MAX JIT',$FF
-s_fast	dta d'FAST SCAN'*,$FF

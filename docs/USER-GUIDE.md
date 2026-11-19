@@ -40,7 +40,9 @@ The other two are for the cases those don't cover (see
   load on a machine too sick to boot a disk.
 
 A BASIC cartridge can stay in: the ROM test checks it too (see
-[BASIC cartridges](#basic-cartridges)).
+[BASIC cartridges](#basic-cartridges)). BASCRC checks BASIC on its own,
+from its own disk or tape (see
+[BASCRC](#bascrc-the-basic-check-on-its-own)).
 
 ## Contents
 
@@ -235,6 +237,8 @@ column and in the columns to the left of it:
 \* with the sampled "hello" (POKEY item 7); the others play every other
 sound but that one.
 
+Not on the menu: `diag-bascrc.atr` and `diag-bascrc.cas`, the BASIC check
+on its own (see [BASCRC](#bascrc-the-basic-check-on-its-own)).
 
 Pictures in this guide come from the project's simulator, using the MiSTer
 Atari800 core's NTSC palette and a real Atari OS font. The colours and
@@ -511,10 +515,87 @@ Two things to know:
 - With BASIC in, the 8K of RAM under it can't be tested: a 48K 800 shows
   `RAM 40K`. Test the RAM with the cartridge out.
 - The diag cartridge can't check a BASIC cartridge: it takes the slot
-  itself, so its ROM test shows `BASIC NONE` on a 400/800.
+  itself, so its ROM test shows `BASIC NONE` on a 400/800. Use a tape, a
+  disk or BASCRC (below).
 
 On an XL/XE a cartridge in the slot is read the same way, in place of the
 built-in BASIC.
+
+### BASCRC: the BASIC check on its own
+
+BASCRC checks a BASIC cartridge (or an XL/XE's built-in BASIC) and
+nothing else: it works out the CRC32 of $A000-$BFFF and names the
+revision, as the ROM test does. It is a second opinion, and the way in
+when you only want BASIC checked.
+
+The easiest way, with a disk drive or an SIO adapter: the BASCRC disk
+(`disks/diag-bascrc.atr`), the check in machine code. Put it in drive 1
+(or mount it as D1:), the cartridge in, and switch on: it boots straight
+into the check, with no DOS. It prints the CRC32, the revision byte and
+`REV A: GOOD` (or B, C), or `NO MATCH`; a key ends it, and with BASIC
+there you get BASIC's `READY`. On an XL/XE it switches the built-in
+BASIC in itself if it is off.
+
+It is a DOS 2 disk as well, with two files: `BASCRC.XEX`, the same check
+to run from DOS (`L`, then the name; a key goes back to DOS), and
+`BASCRC.LST`, the BASIC program below as a listing.
+
+Or the BASIC program:
+
+1. Switch on with the BASIC cartridge in (no START held), to `READY`.
+2. Load BASCRC, one of three ways:
+   - **Tape** (`cassettes/diag-bascrc`): type `ENTER "C:"` (not
+     `CLOAD`: CLOAD only reads a program saved with `CSAVE`, and on this
+     listing it stops with `ERROR- 21`, "not a SAVE file") and
+     press RETURN. It beeps once: start the tape and press a key. It reads
+     about a minute, stopping between blocks.
+
+     The tape has to be at its start for every try: after an error, or
+     after a CLOAD, rewind it (on a MiSTer, load the `.cas` again).
+   - **Disk:** with DOS booted from a DOS disk, put the BASCRC disk in
+     drive 1 (or copy `BASCRC.LST` onto your DOS disk), then type
+     `ENTER "D:BASCRC.LST"`.
+   - **Type it in** (below). Line 40 catches a typing mistake in the
+     numbers before anything runs.
+3. Type `RUN`.
+
+It prints the CRC32 and `PEEK(43234)` (the byte that says the revision,
+for a cross-check), then `REV A - GOOD`, `REV B - GOOD` or
+`REV C - GOOD`. `NO MATCH - BAD OR UNKNOWN ROM` with a `PEEK(43234)` that
+names a revision (162 A, 96 B, 234 C) points at the ROM or the
+cartridge's contacts: clean them (DeoxIT, see
+[When something fails](#when-something-fails)), reseat it, and run it
+again. A badly failing cartridge may not get BASIC far enough to run it
+at all.
+
+```
+1 REM BASCRC: BASIC ROM CRC32 (A8 ATARI DIAG SUITE)
+10 DIM H$(16),C$(8)
+20 H$="0123456789ABCDEF":C$=""
+30 FOR I=0 TO 108:READ B:POKE 1536+I,B:S=S+B:NEXT I
+40 IF S<>15058 THEN PRINT "DATA TYPO - CHECK LINES 1000-1070":END
+50 PRINT "CHECKING...":X=USR(1536)
+60 FOR I=1779 TO 1776 STEP -1:B=PEEK(I)
+70 D=INT(B/16):C$(LEN(C$)+1)=H$(D+1,D+1)
+80 D=B-D*16:C$(LEN(C$)+1)=H$(D+1,D+1)
+90 NEXT I
+100 PRINT "CRC32: ";C$;"   PEEK(43234)=";PEEK(43234)
+110 IF C$="4BEC4DE2" THEN PRINT "REV A - GOOD":END
+120 IF C$="F0202FB3" THEN PRINT "REV B - GOOD":END
+130 IF C$="7D684184" THEN PRINT "REV C - GOOD":END
+140 PRINT "NO MATCH - BAD OR UNKNOWN ROM":END
+1000 DATA 104,169,255,141,240,6,141,241,6,141,242,6,141,243
+1010 DATA 6,169,0,133,203,169,160,133,204,160,0,177,203,77
+1020 DATA 240,6,141,240,6,162,8,78,243,6,110,242,6,110
+1030 DATA 241,6,110,240,6,144,32,173,243,6,73,237,141,243
+1040 DATA 6,173,242,6,73,184,141,242,6,173,241,6,73,131
+1050 DATA 141,241,6,173,240,6,73,32,141,240,6,202,208,207
+1060 DATA 200,208,194,230,204,165,204,201,192,208,186,162,3,189
+1070 DATA 240,6,73,255,157,240,6,202,16,245,96
+```
+
+The reference CRCs are MAME's (`hash/a800.xml`): A `4BEC4DE2`, B
+`F0202FB3`, C `7D684184`.
 
 ### Keyboard and console keys (tests 2 and 3)
 
@@ -572,7 +653,7 @@ test.
 
 ![Paddles](img/ports-02-paddles.png)
 
-1. What to do. SELECT switches the fast scan on and off.
+1. What to do.
 2. The column headings: the value now, the lowest and highest seen (a full
    turn reaches about 1 and 228), and the jitter.
 3. One line per paddle, with a bar. Here nothing is plugged in, so every

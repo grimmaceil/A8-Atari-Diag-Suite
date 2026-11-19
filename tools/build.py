@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the diag tapes, the disks and the cartridge: assemble with MADS,
-wrap as .cas (mkcas.py), .atr (mkatr.py: build_disk, build_diskset) and
-.car (mkcar.py, CAR), optionally deploy.
+wrap as .cas (mkcas.py), .atr (mkatr.py: build_disk, build_diskset, and
+build_bascrc for BASCRC's) and .car (mkcar.py, CAR), optionally deploy.
 
   python tools/build.py                 normal tapes into build/
   python tools/build.py --fault 2,5     also tapes with an injected fault
@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 MADS = ROOT / 'tools' / 'bin' / 'mads.exe'
 BUILD = ROOT / 'build'          # everything the assembler makes (not in git)
 CASSETTES = ROOT / 'cassettes'  # the release tapes (in git): what users load
-DISKS = ROOT / 'disks'          # the release disks (.atr, in git): the boot disk, the 16k memtest's
+DISKS = ROOT / 'disks'          # the release disks (.atr, in git): the boot disk, the 16k memtest's, BASCRC's
 DISKSET = ROOT / 'disk-set'     # the disk set (.atr, in git): the 8k tapes as disks
 CARTS = ROOT / 'carts'          # the release cartridge (.car, in git)
 SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTer Atari800 core's folder
@@ -410,6 +410,21 @@ def build_diskset(fast):
     return out, BUILD / 'diag-16k-memtest.atr'
 
 
+def build_bascrc(lst):
+    """BASCRC's disk (mkatr.dos2): it boots to the check in machine code
+    (src/basic/bascrc.asm with BOOT), and holds it as a DOS file too, with
+    the BASIC listing (lst, mkbasic.py's): BASCRC.XEX, for L from DOS 2,
+    and BASCRC.LST, for ENTER "D:BASCRC.LST"."""
+    import mkatr
+    bx, bb = BUILD / 'diag-bascrc', BUILD / 'bascrc-boot'
+    mads('basic', 'bascrc.asm', bx, {})
+    mads('basic', 'bascrc.asm', bb, {'BOOT': 1})
+    out = BUILD / 'diag-bascrc.atr'
+    mkatr.dos2(out, Path(f'{bb}.bin').read_bytes(),
+               [('BASCRC.XEX', Path(f'{bx}.bin').read_bytes()), ('BASCRC.LST', lst.read_bytes())])
+    return out
+
+
 def wrap(out, label, img=False):
     """The boot image as a tape; img: just the image (.bin, .lab), for
     mkcar.py and the boot disk."""
@@ -457,10 +472,18 @@ def main():
     car = build_car(a.fast)
     atr = build_disk(a.fast)            # the boot disk (Atari-diag-boot-disk-scope.md)
     dset, memdisk = build_diskset(a.fast)     # the 8k tapes as disks, and the 16k memtest's
+    # BASCRC, the BASIC cartridge check: the BASIC program as a tape for
+    # ENTER "C:", and a disk that boots to it in machine code and holds the
+    # listing for ENTER "D:"
+    bas, lst = BUILD / 'diag-bascrc.cas', BUILD / 'bascrc.lst'
+    subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkbasic.py'),
+                    str(ROOT / 'src' / 'basic' / 'bascrc.bas'), str(lst), str(bas)], check=True)
+    cas.append(bas)
+    bdisk = build_bascrc(lst)
     if a.fast:                      # FAST builds skip test patterns: not for use,
         return                      # so they stay in build/
     rel = []                        # the release files, named with the version
-    for folder, files in ((CASSETTES, cas), (DISKS, [atr, memdisk]), (DISKSET, dset),
+    for folder, files in ((CASSETTES, cas), (DISKS, [atr, memdisk, bdisk]), (DISKSET, dset),
                           (CARTS, [car])):
         folder.mkdir(exist_ok=True)
         for f in files:

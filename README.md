@@ -39,10 +39,12 @@ cartridge port itself is bad.
 | **Cartridge** | `carts/diag-cart.car` | any Atari (8K); an AtariMax 128K flash cartridge | every test on one menu, run from ROM: no loading, and it works when the RAM is too sick to load a program into |
 | **Disk set** | `disk-set/diag-8k-01-ram.atr` to `diag-8k-06-video.atr`, `diag-8k-memtest.atr` | any Atari (8K) with a disk drive or an SIO adapter | the 8k tapes as disks, the same programs: one test to a disk, no menu, no DOS. With 16K or more the RAM disk tests the rest by itself, the sound disk adds the "hello", and the memtest disk runs `diag-16k-memtest` |
 | **Memory test disk** | `disks/diag-16k-memtest.atr` | 16K; a disk drive or an SIO adapter | boots straight into the long memory test (`diag-16k-memtest`) |
+| **BASCRC disk** | `disks/diag-bascrc.atr` | the BASIC cartridge in (or an XL/XE's built-in BASIC); a disk drive or an SIO adapter | boots to the BASIC check on its own (BASCRC), no DOS; on it for DOS too: `BASCRC.XEX`, the same check, and `BASCRC.LST`, the BASIC listing |
 | **Cassette** | the 8k set: `diag-8k-01-ram` to `diag-8k-06-video` | 8K: every Atari | six small tapes, about 2 minutes each; long test `diag-8k-memtest` (400/800) |
 | | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, `diag-16k-03-hello` | 16K | about 3-3.5 minutes each; long test `diag-16k-memtest` |
 | | `diag-32k-xl-xe` | 32K | one tape, about 6 minutes: the RAM test, then every test with the menu |
 | | `diag-controls` | 16K | keyboard, joysticks and paddles only: goes with Atari's SALT disks, no test harness needed |
+| | `diag-bascrc` | BASIC cartridge in | BASCRC as a BASIC listing (`ENTER "C:"`); also on the BASCRC disk as `BASCRC.LST`, for `ENTER "D:"` |
 
 **Cassettes too:** a cassette boot needs the least of the machine: no disk
 drive, no DOS, just the computer, its OS and the first few K of RAM. So the
@@ -130,10 +132,15 @@ cartridge and the cassettes. Reports from other machines are welcome.
     4-bit step from the one before) and unpacked as it plays, the same
     in every format: `diag-16k-03-hello` loads in about 3 minutes (64
     records, not 92), the boot disk reads 30 sectors for it, not 58.
-  - **BASCRC is gone** (its tape, its disk and the listing): test 1 does
-    its job.
-  - Apart from test 1, every program is the same as in 0.12, but for the
-    version in its title bar.
+  - **BASCRC stays** (its disk and its tape), as the BASIC check on its
+    own: with the diag cartridge, which can't read a BASIC cartridge, or
+    as a second opinion.
+  - **The paddle test has no fast scan** (SELECT did it): POKEY's fast
+    scan can't read paddles (the counts come out 114 times too high, and
+    it turns off the transistors that empty the paddle capacitors, so the
+    values freeze).
+  - **The video modes page's VSCROL line moves a scan line at a time,**
+    up and down: 0.12's jumped 7 lines at the top of its swing.
 - **0.12** (2026-11-18), against 0.11:
   - **A stuck joystick's signal is friendlier:** three short "pew" beeps,
     like a toy ray gun, each with the screen flashing bright orange (about
@@ -407,7 +414,7 @@ screen and the beeps said.
 ## Credits
 
 - **Michael Grimm:** the author. He directs the work, reviews it and tests
-  it on hardware, and wrote BASCRC, the BASIC cartridge check up to 0.12.
+  it on hardware, and wrote BASCRC, the BASIC cartridge check.
 - **Claude** (Anthropic's AI): wrote the code, the tools and the
   documents, under his direction.
 - **Other people's work** this builds on (details in

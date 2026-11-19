@@ -219,6 +219,30 @@ at $BFF0 (`sta $D500,x` / `jmp $A003`: the instruction after the write
 comes from the new bank, which holds the same bytes), each code bank's
 CRC32 at $BFF6, and the cartridge header.
 
+### BASCRC
+
+`src/basic/bascrc.bas` is the author's BASIC program that checks a BASIC
+cartridge on its own (test 1 reads one too, but not from the diag
+cartridge). `tools/mkbasic.py` makes it an ATASCII listing
+(`build/bascrc.lst`) and a tape for `ENTER "C:"` (`cassettes/diag-bascrc`:
+the cassette handler's $FC/$FA/$FE records, a 20 s leader and 3 s gaps, as
+`LIST "C:"` writes them; the handler stops the motor between records when
+BASIC reads that way).
+`src/basic/bascrc.asm` is the same check in machine code, printing through
+the OS screen editor, built twice (`build_bascrc`):
+- with `BOOT`: boot sectors (5, at $0700). The OS calls $0706 at power-on
+  with the screen editor open; the check runs, then returns (C clear) and
+  the OS goes on to the cartridge (BASIC's `READY`) or DOSVEC. It sets
+  MEMLO just past `b_init` (also DOSINI, for RESET), so BASIC keeps clear
+  of the little that has to stay;
+- without: `BASCRC.XEX`, an executable (loads at $2000) that returns to DOS.
+
+`disks/diag-bascrc.atr` is both: the boot in sectors 1-5, and a DOS 2.0S
+file system (`mkatr.py`'s `dos2`: the VTOC at 360, the directory at
+361-368, each file a chain of 125-byte sectors) holding `BASCRC.XEX` and
+`BASCRC.LST`. `dos2` reads its disk back as DOS would (`dos2_files`) and
+stops the build if a file doesn't come back the same.
+
 ## How a program runs
 
 `src/common/boot.asm` is the start of every program:
@@ -409,8 +433,9 @@ These came from the author's direction over the sessions:
 | `src/system/` | tests 1-7: `main.asm` builds a program from the tests `WANT_*` picks; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia` and `t_gtia2`, its video modes page); `common.asm` the flow, the menu and the end of a tape; `tlist.asm` the order; `kbmap.asm` the keyboard map (`tools/gen_kbmap.py`) |
 | `src/cart/` | the cartridge: `romsum.asm` (bank layout, sums), `ldmem.asm` (the long test's loader), `undercart.asm` (the RAM under it), `hello.asm` and `audio/` (the sampled "hello", made by `tools/mkhello.py`) |
 | `src/disk/` | the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`); the disk set's two-program boot (`setboot.asm`) |
-| `tools/` | `build.py`, `mkcas.py`, `mkcar.py`, `mkatr.py` (the disks), `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
-| `cassettes/`, `disks/` (the boot disk, the 16k memtest's), `disk-set/` (the 8k tapes as disks), `carts/` | the release files |
+| `src/basic/` | BASCRC: the BASIC listing and the machine code (its disk's boot, and its executable) |
+| `tools/` | `build.py`, `mkcas.py`, `mkcar.py`, `mkatr.py` (the disks), `mkbasic.py`, `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
+| `cassettes/`, `disks/` (the boot disk, the 16k memtest's, BASCRC's), `disk-set/` (the 8k tapes as disks), `carts/` | the release files |
 | `docs/design/Atari-diag-cassette-scope.md` | the design: constraints, feedback, sets, the ROM table, open items |
 | `docs/design/Atari-diag-disk-scope.md` | the executables' design (`.xex`, up to 0.11) |
 | `docs/design/Atari-diag-boot-disk-scope.md` | the boot disk's design |

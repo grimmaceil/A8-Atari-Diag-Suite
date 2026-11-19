@@ -9,9 +9,10 @@
 ;   GTIA 9, 10, 11: one line of 16 values (5 pixels each), 8 times in each
 ;     band: 16 shades of blue, 9 colors, 16 hues. PRIOR and COLBK are set as
 ;     the beam reaches the blank line before each band.
-;   ANTIC fine scroll: a text line sliding sideways (HSCROL) and one moving
-;     up and down (VSCROL, in the middle of a 3-line region, so it is never
-;     cut off), along the wave. The question stays still at the bottom.
+;   ANTIC fine scroll: a text line sliding sideways along the wave (HSCROL)
+;     and one moving up and down a scan line at a time (VSCROL, in the
+;     middle of a 3-line region, so it is never cut off). The question
+;     stays still at the bottom.
 ; The text and bitmaps are in the screen block; the display list (gdlist,
 ; from gdl_t) is at GMDL, in the P/M block's unused bytes (sprites are off).
 GM6	= $028			; ANTIC 6's 20 bytes, then ANTIC 7's
@@ -136,12 +137,14 @@ gm_w	lda VCOUNT		; past the question: the scroll registers for the
 	lda GPX
 	jsr gwave
 	sta HSCROL		; sideways, 0-8 color clocks
-	lda GPX
-	clc
-	adc #16
-	jsr gwave
-	and #7
-	sta VSCROL		; up and down, 0-7 lines
+	lda GPX			; up and down, 0-7 lines: one line every
+	lsr			; 4 frames, 0 up to 7 and back down to 0
+	lsr
+	and #15
+	cmp #8
+	bcc gm_vs
+	eor #15
+gm_vs	sta VSCROL
 	jsr gans
 	beq gm_lp
 	cmp #2
