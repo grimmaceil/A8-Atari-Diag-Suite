@@ -3,6 +3,11 @@
 By **Michael Grimm**, written with Claude (Anthropic's AI). MIT license
 (see [LICENSE](../../LICENSE)).
 
+**Retired in 0.12:** the executables (`.xex`) are gone. The boot disk
+(0.10, [Atari-diag-boot-disk-scope.md](Atari-diag-boot-disk-scope.md))
+does what they did, with no DOS and on 8K. This file is kept as their
+design.
+
 Status at 0.9 (2026-11-15): built, and run from the MiSTer's XEX loader
 and on a real 800 and 800XL over an SIO adapter. First built in v0.2
 (2026-11-08) from the proposal below; where the build settled a point

@@ -10,8 +10,8 @@ set-up); not yet on a real machine. The plan: docs/superpowers/plans/2026-11-16-
 Where the build settled a point differently from the text below: the boot
 is sectors 1-4 at $0600-$07FF (its loader already in place at $0700); the
 menu piece is 3.75K (30 sectors); the disk error has no status number and
-a steady tone (the page-7 loader must fit 254 bytes). The disk files (`.xex`) have
-their own document, [Atari-diag-disk-scope.md](Atari-diag-disk-scope.md).
+a steady tone (the page-7 loader must fit 254 bytes). The disk files (`.xex`, up to
+0.11; gone in 0.12) have their own document, [Atari-diag-disk-scope.md](Atari-diag-disk-scope.md).
 This disk reverses two calls made there: it is a bootable `.atr`, and it
 runs on an 8K machine.
 
@@ -234,7 +234,7 @@ and the loader where the cartridge has `XBANK`.
 6. The results page lives in the ROM piece (it has the ROM names).
 7. The long test needs 16K and clears the other results, as on the
    cartridge.
-8. The `.xex` files stay as they are (since moved to `xex/`: `disks/` holds
-   only the boot disk).
+8. The `.xex` files stay as they are (since moved to `xex/`, then dropped
+   in 0.12: the boot disk does what they did).
 9. Title bar `DIAG-DISK`, file `disks/diag-disk-v0.10.atr`, version 0.10
    (the design said 0.9; it shipped as 0.10).

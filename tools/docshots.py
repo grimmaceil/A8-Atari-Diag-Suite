@@ -81,8 +81,8 @@ RUNS = {
                                '--until', '420'], [
         ('^START=RUN', 0.5, '32k-02-menu')]),   # (its results page: as the 16k tape's)
     'memtest': ('diag-16k-memtest', ['--ram', '0x8000', '--stuck', '6FFC-6FFF:3:1',
-                                 '--key', '150', '--until', '220'], [
-        ('PASSES 4', 3, 'memtest-01-running'),
+                                 '--key', '100', '--until', '220'], [
+        ('PASSES 3', 3, 'memtest-01-running'),
         ('FIX SOLID', 1, 'memtest-02-summary')]),
     # the screen sweep is timed, not text-triggered: at 10 s on 8K it is on
     # row 13 (the save-page churn and the sweep alternate every pass)

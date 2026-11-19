@@ -107,7 +107,7 @@ border, the low tone on and off).
 | `build_one16` | `diag-16k-01-ram` | stage 1 (`ONE16`) with stage 2 inserted into the same image at the address it was built for, one load |
 | `build_one32` | `diag-32k-xl-xe` | stage 1 (`ONE32`), stage 2 and the system tests in one image; the addresses depend on the sizes, so a few rounds settle them |
 | `tape2` | `diag-8k-memtest` | `src/tape2/main.asm` with `OWNTEST` (page-tests its own RAM), `NOXL` |
-| `build_bounce` | `diag-16k-memtest` | the same source with `BOUNCE`: two copies that take turns, each testing the other's RAM; a relocation bitmap made by assembling at $0800 and $0C00, checked byte for byte against both |
+| `build_bounce` | `diag-16k-memtest` | the same source with `BOUNCE`: two copies that take turns, each testing the other's RAM; a relocation bitmap made by assembling at $0800 and $0C00, checked byte for byte against both. `BOUNCE` sets `XSWEEP`: one March C- over a range list of all the RAM the copy reaches, cut at the bank edges so each range's errors go to its own bank (`ramtest.asm`'s `rngbank`), the RAM under an XL/XE's OS in the same sweep (`xlram.asm`'s `osout`); no address test on main RAM. Then, in copy A's half, the refresh check (`retain`, `rwait`): the list filled with $00 and with $FF, each left 5 s with the screen and NMIs off and the CPU in a frame-counting loop, then read back; the 130XE banks' cross-bank values wait the same 5 s |
 
 `tools/mkcas.py` writes the `.cas`: FUJI and baud chunks, then the boot
 records ($55 $55 sync, control byte $FC/$FA/$FE, 128 bytes, checksum),
@@ -454,7 +454,9 @@ cycles a scan line and a floating bus. It models:
   (`--xe`, `--xejunk` for extended RAM full of random bytes as at
   power-on), the self-test ROM
 - RAM faults: stuck bits (`--stuck`), flaky bits (`--flaky`), mirrored
-  banks (`--mirror`)
+  banks (`--mirror`), a refresh fault (`--leak LO-HI:SECS`: a page there
+  reads $00 once SECS pass with no CPU access to it; keep the screen
+  block out, ANTIC's reads aren't modelled)
 - the VBI, the keyboard (`--key SECS`, `--kb CODE:SECS[:HOLD]`), console
   keys (`--con KEY:SECS[:HOLD]`), joystick 1 (`--joy UP|DOWN|LEFT|RIGHT|FIRE:SECS[:HOLD]`),
   paddles, POKEY's interrupt latches
@@ -538,7 +540,19 @@ Notes from the sessions, for whoever works on this next.
   program can see it (a 48K 800 with BASIC shows 40K). An AtariMax can
   switch itself off ($D510) and back on (a bank select), which is how the
   diag cartridge counts and tests that RAM.
-- With a cartridge in, a 400/800 won't boot a cassette, but a disk boots.
+- With a cartridge in, a 400/800 still boots a cassette (START held) or a
+  disk (when the cartridge's $BFFD bit 0 asks for it, as BASIC's does):
+  the OS's boot enters the program at load+6 before it would start the
+  cartridge (OS rev B $F1E1-$F20F, $F301-$F37B, read from the ROM
+  itself). An earlier note here said a cassette won't boot with one.
+- Every read or write refreshes the DRAM row it touches, so a march (which
+  touches every row all the time) can't see a refresh fault. The long
+  test's refresh check leaves the RAM alone with the screen off; ANTIC's
+  refresh counter is 7 or 8 bits depending on the chip (Altirra Hardware
+  Reference Manual), and some later RAM chips need the 8.
+- POKEY's fast pot scan can't read paddles: the counts are 114 times
+  higher, and it turns off the transistors that empty the capacitors
+  (Altirra Hardware Reference Manual, 5.9).
 - The OS's cassette boot reads one record past the count it was given:
   every file needs its EOF record.
 - The sampled sound plays with the screen off: ANTIC takes the processor

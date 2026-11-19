@@ -739,8 +739,8 @@ Without a working screen the test is skipped.
 3. `GTIA 9, 10, 11`: three bands of the same line of 16 values: 16 shades
    of blue, then 9 colours, then 16 hues.
 4. A line that slides from side to side (ANTIC's fine horizontal scroll)
-   and one that moves up and down (fine vertical scroll). The picture
-   catches them at one moment.
+   and one that moves up and down a scan line at a time (fine vertical
+   scroll). The picture catches them at one moment.
 5. The question, which stays still.
 
 Answer whether it all looks right (item 2).
@@ -846,10 +846,35 @@ What each one covers:
 1. An XL/XE (its main RAM only: this tape doesn't look further).
 2. Load `diag-16k-memtest` instead.
 
+What a pass does, as the `NOW:` line shows it. **`diag-16k-memtest`**
+(also line 9 of the cartridge and the boot disk):
+1. `LOW RAM`: $0000-$07FF, every byte saved, tested and put back.
+2. `ALL THE RAM, ONE MARCH`: March C- over all the RAM at once, the RAM
+   under an XL/XE's OS included: first with $00/$FF, then with $55/$AA.
+   It finds stuck bits, bits that change their neighbours, and bad
+   address lines.
+3. `REFRESH CHECK: THE SCREEN GOES OFF`: once a pass, the RAM is filled
+   with $00, then the screen goes off (all of it shows the border colour)
+   and nothing touches the RAM for 5 seconds, so only the machine's
+   refresh keeps it. Then it is read back, and the same again with $FF:
+   about 12 seconds in all. Every read or write also refreshes the RAM,
+   so the march can't see a refresh fault. One example is a replacement
+   RAM chip that needs more of the refresh than an older ANTIC gives. A
+   key still ends the test after the pass.
+4. `130XE BANKS 5-8`: each extra bank, then the banks against each other
+   (with the same 5-second wait, so the screen goes off once more).
+
+A pass takes about half a minute on a 48K 800.
+
+**`diag-8k-memtest`**: `LOW RAM`, then the march on each 16K bank in turn
+(`BANK 1`, 2 ...), then `ADDRESSES` over all of them: every byte given its
+own address and checked, for bad address lines. There's no room in 8K for
+the refresh check.
+
 ![Memory test running](img/memtest-01-running.png)
 
 1. The passes done (`PASSES 0` during the first) and how long it has run.
-2. What it's testing now.
+2. What it's testing now (see the list above).
 3. The log: bank (B1-B8; B9 is the memory test's own RAM, when it tests it
    page by page), bit, the first pass it failed in, and failed/passes.
 4. Press a key (or START, SELECT, OPTION or a joystick button) to end
@@ -1128,7 +1153,8 @@ to boot a disk may still load a tape.
 
 No. The RAM tapes test every byte with strong patterns, but only once. A
 fault that only shows when warm, or now and then, needs the memory test
-running for a while.
+running for a while. Only the memory test (16K and up) checks the
+refresh as well: see [Memory test](#memory-test-line-9).
 
 ### Does a pass prove the machine is good?
 
