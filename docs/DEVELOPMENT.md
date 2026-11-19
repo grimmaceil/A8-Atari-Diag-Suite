@@ -35,7 +35,7 @@ it and tests it on hardware.
 The project grew over many sessions in November 2026, with the author
 trying each build and deciding what changes; the design moved a lot along
 the way, and the documents describe where it ended up, not every step. The
-version history in the [README](../README.md#versions) has the steps.
+version history in [CHANGELOG.md](../CHANGELOG.md) has the steps.
 
 How a change is tested:
 - **The simulator** (below) first, but only as much as the change needs:
@@ -175,7 +175,9 @@ from the disk when it is needed. Design and reasons:
 `disk-set/` holds the 8k tapes as disks (`build_diskset`), each named as
 its tape and holding the tape's own program, byte for byte:
 `mkatr.cas_image` takes it from the tape file (the $FC records, as many as
-the header counts), so the title bars and `NEXT:` lines name the disks.
+the header counts), so the title bars and `NEXT:` lines name the disks
+(and test 1's `DIAG TAPE` and the video disk's `LAST 8K TAPE` still say
+tape).
 A tape program boots from a disk unchanged: the OS's disk boot reads the
 same 6-byte header (flags, sectors, load, init), loads the sectors to LOAD
 and calls LOAD+6, as the cassette boot does, and the program sets up the

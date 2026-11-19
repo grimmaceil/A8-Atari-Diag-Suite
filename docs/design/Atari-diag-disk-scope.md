@@ -27,7 +27,10 @@ joystick can still be tested when something else is failing.
   as it was (Mike: "the others should be binary same and we are only
   adding disks").
 - **Named like the tapes,** and holding the tapes' own programs byte for
-  byte, so the title bars and the `NEXT:` lines name the disks too.
+  byte, so the title bars and the `NEXT:` lines name the disks too. Two
+  strings still say tape: test 1's self-check line (`DIAG TAPE`) on the
+  ROM disk, and the video disk's `LAST 8K TAPE`; only the RAM disk is
+  rebuilt (`DSKLD`: `NOT ON DISK`).
 - **No DOS, no cartridge:** switch on with the disk in drive 1 (or
   mounted as D1:). A BASIC cartridge can stay in, as for a tape: the OS
   boots the disk before it would start the cartridge.

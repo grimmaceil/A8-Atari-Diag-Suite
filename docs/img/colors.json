@@ -9,7 +9,7 @@
   "name": "green flash",
   "atari": "$CC",
   "rgb": "#4CE5AB",
-  "meaning": "a pass beep: the jingle, one long flash per bank or test"
+  "meaning": "a pass: the charge, one long flash per bank or test"
  },
  {
   "name": "red flash",
@@ -21,7 +21,7 @@
   "name": "yellow",
   "atari": "$1C",
   "rgb": "#F0C55A",
-  "meaning": "testing (a hang shows yellow); burn-in: an intermittent fault seen"
+  "meaning": "testing (a hang shows yellow); memory test: an intermittent fault seen"
  },
  {
   "name": "red",
@@ -33,7 +33,13 @@
   "name": "purple",
   "atari": "$56",
   "rgb": "#AD3C9F",
-  "meaning": "waiting for you: a question, or the video check's last chance"
+  "meaning": "waiting for you: a question"
+ },
+ {
+  "name": "orange",
+  "atari": "$28",
+  "rgb": "#C06A22",
+  "meaning": "a stuck joystick at switch-on, with a \"pew\" beep"
  },
  {
   "name": "black",

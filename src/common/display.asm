@@ -153,7 +153,7 @@ fs_next	ldx CNT
 ; each 16K bank.
 	.ifdef RAMPC		; a boot disk's RAM piece: where no later piece loads
 	.ifdef ONE16		; RAM16: the top of bank 1, above the pieces
-SCR1	= $3C			; and "hello" ($0900-$38FF)
+SCR1	= $3C			; and "hello" ($0900-$2AFF)
 scrcand	.byte $3C, $7C, $BC, $3C
 	.else			; RAM8: the top 1K of 8K, above the pieces
 SCR1	= $1C

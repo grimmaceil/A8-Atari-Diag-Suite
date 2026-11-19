@@ -84,10 +84,10 @@ RUNS = {
                                  '--key', '100', '--until', '220'], [
         ('PASSES 3', 3, 'memtest-01-running'),
         ('FIX SOLID', 1, 'memtest-02-summary')]),
-    # the screen sweep is timed, not text-triggered: at 10 s on 8K it is on
-    # row 13 (the save-page churn and the sweep alternate every pass)
+    # the screen sweep is timed, not text-triggered: at 9.4 s on 8K its bar is
+    # on row 14 (the save-page churn and the sweep alternate every pass)
     'memtest-sweep': ('diag-8k-memtest', ['--ram', '0x2000', '--until', '11',
-                                           '--shot', '10:@RAW/memtest-03-sweep.png'], []),
+                                           '--shot', '9.4:@RAW/memtest-03-sweep.png'], []),
     'memtest-xl': ('diag-8k-memtest', ['--xl', '--until', '40'], [
         ('XL/XE: USE', 1, 'memtest-04-xl')]),
 }
@@ -119,7 +119,7 @@ ANNOT = {
     '32k-02-menu': [(4, 4, 1), (5, 11, 2), (12, 12, 3), (18, 20, 4)],
     'memtest-01-running': [(5, 5, 1), (6, 6, 2), (8, 9, 3), (23, 23, 4)],
     'memtest-02-summary': [(5, 6, 1), (8, 9, 2)],
-    'memtest-03-sweep': [(13, 13, 1)],
+    'memtest-03-sweep': [(14, 14, 1)],
     'memtest-04-xl': [(2, 2, 1), (23, 23, 2)],
     'ports-03-end': [(21, 22, 1), (23, 23, 2)],
 }
@@ -150,11 +150,12 @@ def annotate(pic, marks):
 # Colors the guide explains: (name, Atari color value, meaning).
 COLORS = [
     ('green', 0xC8, 'alive; a pass'),
-    ('green flash', 0xCC, 'a pass beep: the jingle, one long flash per bank or test'),
+    ('green flash', 0xCC, 'a pass: the charge, one long flash per bank or test'),
     ('red flash', 0x38, 'a fault beep: long = where, short = which bit or item'),
-    ('yellow', 0x1C, 'testing (a hang shows yellow); burn-in: an intermittent fault seen'),
+    ('yellow', 0x1C, 'testing (a hang shows yellow); memory test: an intermittent fault seen'),
     ('red', 0x34, 'a fault: the beep code follows'),
-    ('purple', 0x56, 'waiting for you: a question, or the video check\'s last chance'),
+    ('purple', 0x56, 'waiting for you: a question'),
+    ('orange', 0x28, 'a stuck joystick at switch-on, with a "pew" beep'),
     ('black', 0x00, 'the text background'),
     ('text', 0x0C, 'the text (luminance 12)'),
 ]
