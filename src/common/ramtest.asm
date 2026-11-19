@@ -11,6 +11,48 @@ pagebank rol
 	adc #1
 	rts
 
+	.ifdef XSWEEP
+; split: range list RNG* = [RBS, RBE) minus the block at the screen (XBLK
+; pages: the screen's, and the font's while the OS is out). splitadd adds
+; them to the list (the long test's one march over all of its RAM).
+split	lda #0
+	sta RNGN
+splitadd ldx RNGN
+	lda SCRPG
+	beq sx_all
+	cmp RBE
+	bcs sx_all		; block starts at or past the end
+	clc
+	adc XBLK
+	cmp RBS
+	beq sx_all
+	bcc sx_all		; block ends at or before the start
+	lda RBS
+	cmp SCRPG
+	bcs sx_hi
+	sta RNGS,x		; part below the block
+	lda SCRPG
+	sta RNGE,x
+	inx
+sx_hi	lda SCRPG
+	clc
+	adc XBLK
+	cmp RBE
+	bcs sx_x
+	sta RNGS,x		; part above the block
+	lda RBE
+	sta RNGE,x
+	inx
+sx_x	stx RNGN
+	rts
+sx_all	lda RBS
+	sta RNGS,x
+	lda RBE
+	sta RNGE,x
+	inx
+	stx RNGN
+	rts
+	.else
 ; split: range list RNG* = [RBS, RBE) minus the screen block.
 split	ldx #0
 	lda SCRPG
@@ -47,6 +89,7 @@ sp_all	lda RBS
 	inx
 	stx RNGN
 	rts
+	.endif
 
 ; march2: March C- with $00/$FF, then (unless FAST) $55/$AA.
 march2	lda #$00
@@ -98,6 +141,19 @@ march	lda #$40		; write only
 	sta MREAD
 	jmp elem_up
 
+	.ifdef XSWEEP
+; rngbank: the range at MSTART's errors go to its own bank (the long test's
+; list spans banks 1-4), unless BANKOVR names one (a 130XE bank: its pages
+; are $40-$7F). Uses A and X.
+rngbank	lda BANKOVR
+	bne rb_x
+	lda MSTART
+	jsr pagebank
+	sta CURBANK
+	jmp setfmask
+rb_x	rts
+	.endif
+
 ; One march element over every range: ascending in order, descending in
 ; reverse order, so the element runs over the union as one sweep.
 elem_up	ldx #0
@@ -109,6 +165,9 @@ eu_lp	cpx RNGN
 	sta MEND
 	txa
 	pha
+	.ifdef XSWEEP
+	jsr rngbank
+	.endif
 	jsr m_up
 	pla
 	tax
@@ -125,6 +184,9 @@ ed_lp	dex
 	sta MEND
 	txa
 	pha
+	.ifdef XSWEEP
+	jsr rngbank
+	.endif
 	jsr m_dn
 	pla
 	tax

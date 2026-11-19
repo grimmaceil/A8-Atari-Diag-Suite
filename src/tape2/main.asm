@@ -56,6 +56,9 @@
 ; during the low RAM test (the stack is under test); that part is added to
 ; the clock as a fixed allowance, so the time is approximate.
 
+	.ifdef BOUNCE		; the long test: one march over all the RAM it
+XSWEEP	= 1			; reaches, the RAM under an XL/XE's OS too
+	.endif			; (ramtest.asm, xlram.asm, vars.asm)
 	icl '../common/hw.asm'
 	icl '../common/vars.asm'
 	icl '../common/faults.asm'
@@ -68,8 +71,9 @@ RPCOLVAR = 1			; report.asm: steady color from RPCOL
 RESTART	= 1			; to its menu (report.asm: the end waits)
 	.endif
 	.ifdef BOUNCE
-FONT	= LOAD+$3000		; ROM font copy while the OS is out (moves with
-				; the copy; BOFF is a whole number of 1K blocks)
+FONT	= [SCR1+4]*256		; ROM font copy while the OS is out: the 1K after
+				; the screen block (moves with the copy; the
+				; march leaves it out, XBLK)
 REGLO	= BSS+$F4		; bankrange: the region, pages [REGLO, REGHI)
 REGHI	= BSS+$F5
 XOFF	= BSS+$F6		; the distance to copy B, pages: BOFF or BOFFXL
@@ -248,6 +252,25 @@ ps_lr	jsr tick
 	sta NMIEN
 
 	.ifdef BOUNCE
+; One march (March C-) over all the RAM this copy reaches, as one sweep:
+; below it (copy B: A's RAM), above it, and on an XL/XE the RAM under the
+; OS, the same 64K chips (osout). Each range is a bank's part, its errors
+; charged to that bank (ramtest.asm's rngbank). March C- over one sweep
+; finds address faults in it too, so there is no address test here (the
+; 130XE banks keep theirs).
+	lda RAMTOP		; one flash per 16K bank, at the end (osout
+	clc			; adds bank 4)
+	adc #$3F
+	asl
+	rol
+	rol
+	and #3
+	sta NBANKS
+	lda #4			; the screen block left out (osout: and the font's)
+	sta XBLK
+	jsr osout
+	lda #0
+	sta RNGN
 	lda #$08		; main banks: below this copy (copy B: A's RAM)
 	sta REGLO
 	lda #>LOAD
@@ -258,32 +281,30 @@ ps_lr	jsr tick
 	lda RAMTOP
 	sta REGHI
 	jsr banks
-	lda RAMTOP		; one flash per 16K bank, at the end
-	clc
-	adc #$3F
-	asl
-	rol
-	rol
-	and #3
-	sta NBANKS
-	lda #<s_aia		; address-in-address, each region
-	ldy #>s_aia
+	ldx RNGN
+	lda OSRAM		; under the OS: $C000-$CFFF, $D800-$FEFF
+	cmp #2
+	bne ps_one
+	lda #$C0
+	sta RNGS,x
+	lda #$D0
+	sta RNGE,x
+	inx
+	lda #$D8
+	sta RNGS,x
+	lda #UOEND
+	sta RNGE,x
+	inx
+	stx RNGN
+ps_one	lda #<s_main
+	ldy #>s_main
 	jsr step
-	lda #>LOAD
-	cmp #$09
-	bcc ps_ai2
-	lda #$08
-	sta RBS
-	lda #>LOAD
-	sta RBE
-	jsr aiarun
-ps_ai2	lda #TSTART
-	sta RBS
-	lda RAMTOP
-	sta RBE
-	jsr aiarun
-	jmp ps_xl
-	.endif
+	jsr march2
+	lda OSRAM
+	cmp #2
+	bne ps_xl
+	jsr osin
+	.else
 	lda #1			; main banks
 	sta CURBANK
 ps_bank	jsr bankrange
@@ -321,15 +342,21 @@ ps_nb	inc CURBANK
 	inc AIAMODE
 	jsr aia
 	dec INAIA
+	.endif
 
 ps_xl
 	.ifndef NOXL
 	lda MACHINE
 	beq ps_end
+	.ifdef XSWEEP		; (the RAM under the OS: in the march, osout)
+	lda #0
+	sta XERAM
+	.else
 	lda #0
 	sta OSRAM
 	sta XERAM
 	jsr underos
+	.endif
 	jsr xebanks
 	.endif
 
@@ -840,47 +867,28 @@ su_end	PRINT 23, 0, s_toggle2
 
 	.ifndef NOXL
 ; Progress hooks for xlram.asm.
+	.ifndef XSWEEP
 osprog	lda #<s_os
 	ldy #>s_os
 	jmp step
+	.endif
 xeprog	lda #<s_xe
 	ldy #>s_xe
 	jmp step
 	.endif
 
 	.ifdef BOUNCE
-; banks: the march over banks 1-3, each clipped to [REGLO, REGHI).
+; banks: the parts of banks 1-3 in [REGLO, REGHI) added to the range list,
+; each cut at its bank's edges (the one march goes over all of it).
 banks	lda #1
 	sta CURBANK
 bk_lp	jsr bankrange
 	bcs bk_nb
-	lda #<s_bank
-	ldy #>s_bank
-	jsr step
-	lda CURBANK
-	clc
-	adc #$10
-	jsr putc_s
-	jsr split
-	lda RNGN
-	beq bk_nb
-	jsr setfmask
-	jsr march2
+	jsr splitadd
 bk_nb	inc CURBANK
 	lda CURBANK
 	cmp #4
 	bne bk_lp
-	rts
-
-; aiarun: address-in-address over [RBS, RBE), both modes.
-aiarun	jsr split
-	inc INAIA
-	lda #0
-	sta AIAMODE
-	jsr aia
-	inc AIAMODE
-	jsr aia
-	dec INAIA
 	rts
 
 ; halfa: C set if this is copy A and copy B fits (A's pass is half a pass).
@@ -1278,10 +1286,16 @@ s_use16	dta d'XL/XE: USE DIAG-16K-MEMTEST',$FF
 s_stopping dta d'ENDING AFTER PASS  ',$FF
 s_now	dta d'NOW: ',$FF
 s_low	dta d'LOW RAM',$FF
+	.ifdef BOUNCE
+s_main	dta d'ALL THE RAM, ONE MARCH',$FF
+	.else
 s_bank	dta d'BANK ',$FF
 s_aia	dta d'ADDRESSES',$FF
+	.endif
 	.ifndef NOXL
+	.ifndef XSWEEP
 s_os	dta d'UNDER THE OS',$FF
+	.endif
 s_xe	dta d'130XE BANKS 5-8',$FF
 	.endif
 s_pass	dta d'PASSES ',$FF

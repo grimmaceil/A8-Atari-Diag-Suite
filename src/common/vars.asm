@@ -43,9 +43,17 @@ CHSTAB	= BSS+$26	; nonzero: second read of the character ROM matched
 VCMIN	= BSS+$27	; VCOUNT range seen
 VCMAX	= BSS+$28
 INAIA	= BSS+$29	; nonzero while the address test runs (merr bookkeeping)
+	.ifdef XSWEEP		; the long test (tape 2, BOUNCE): one march over
+RNGN	= $91		; all the RAM it reaches (ramtest.asm): count,
+RNGS	= $92		; 10 start pages,
+RNGE	= $9C		; 10 end pages (zero page: $91 up is free there)
+XBLK	= $A6		; pages left out at the screen block: 4, or 8 with
+			; the font's block while the OS is out (xlram.asm)
+	.else
 RNGN	= BSS+$2A	; range list (a bank minus the screen block): count,
 RNGS	= BSS+$2B	; 2 start pages,
 RNGE	= BSS+$2D	; 2 end pages
+	.endif
 RBS	= BSS+$2F	; range to split
 RBE	= BSS+$30
 PCY	= BSS+$31	; putc: saved Y

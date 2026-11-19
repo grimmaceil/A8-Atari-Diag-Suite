@@ -11,6 +11,73 @@ UOEND	= $00			; MEND $00 = up to $FFFF
 	.endif
 
 ; ---------------------------------------------------------------------------
+	.ifdef XSWEEP
+; osout: the long test (tape 2, BOUNCE) marches the RAM under an XL/XE's OS
+; in the same sweep as banks 1-3 (the same 64K chips), so the OS is switched
+; out for the whole march (PORTB bit 0 = 0). OSRAM: 0 not an XL/XE, 1 no RAM
+; under the OS (the OS back in at once), 2 there: the OS out until osin, the
+; ROM font copied to FONT (the 1K after the screen block, left out of the
+; march with it: XBLK 8; the other copy tests it), the clock's NMI vector in
+; page $FF, which is left out ($FF00-$FFFF: UOEND).
+osout	lda #0
+	sta OSRAM
+	lda MACHINE
+	beq oo_x
+	inc OSRAM		; an XL/XE
+	ldy #0			; copy the font while the ROM is still in
+	sty PTR
+	sty SPTR
+	lda #$E0
+	sta PTR+1
+	lda #>FONT
+	sta SPTR+1
+	ldx #4
+oo_cp	lda (PTR),y
+	sta (SPTR),y
+	iny
+	bne oo_cp
+	inc PTR+1
+	inc SPTR+1
+	dex
+	bne oo_cp
+	lda #>FONT
+	sta CHBASE
+	lda #0			; no NMI while the vector is switched
+	sta NMIEN
+	lda PORTB
+	sta PBSAVE
+	and #$FE
+	sta PORTB
+	lda #<nmiraw		; the clock keeps running: its NMI vector now comes
+	sta $FFFA		; from RAM, in page $FF
+	lda #>nmiraw
+	sta $FFFB
+	lda #$40
+	sta NMIEN
+	lda #$C0		; anything there? (a 600XL with 16K has nothing)
+	jsr ramat
+	bcs osin
+	lda #$E0
+	jsr ramat
+	bcs osin
+	inc OSRAM		; 2: there, the OS out
+	inc NBANKS
+	lda #8			; the font's block left out with the screen's
+	sta XBLK
+oo_x	rts
+
+; osin: the OS back in, and its font.
+osin	lda #0
+	sta NMIEN
+	lda PBSAVE
+	sta PORTB
+	lda #$40
+	sta NMIEN
+	lda #$E0
+	sta CHBASE
+	rts
+	.else
+
 ; underos: test the RAM under the XL/XE OS ROM as bank 4. PORTB bit 0 = 0
 ; switches the ROM out. While it is out:
 ;   - no interrupts: the NMI/IRQ vectors at $FFFA come from the RAM under
@@ -100,6 +167,7 @@ uo_back	.if .def BURNIN
 	lda #$E0
 	sta CHBASE
 	rts
+	.endif
 
 ; ramat: C clear if page A holds RAM, by the same rule as stage 1's size
 ; probe: $A5 and $5A come back with 4 or fewer wrong bits in total (a ROM or
