@@ -1,7 +1,7 @@
 # A8 Atari Diag Suite, disk files: scope
 
 By **Michael Grimm**, written with Claude (Anthropic's AI). MIT license
-(see [LICENSE](LICENSE)).
+(see [LICENSE](../../LICENSE)).
 
 Status at 0.9 (2026-11-15): built, and run from the MiSTer's XEX loader
 and on a real 800 and 800XL over an SIO adapter. First built in v0.2

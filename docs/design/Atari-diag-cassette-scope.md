@@ -1,7 +1,7 @@
 # A8 Atari Diag Suite: scope and design
 
 By **Michael Grimm**, written with Claude (Anthropic's AI). MIT license
-(see [LICENSE](LICENSE)).
+(see [LICENSE](../../LICENSE)).
 
 A diagnostic suite for every Atari 8-bit computer: the 400, 800, 1200XL,
 600XL, 800XL, 65XE, 800XE, 130XE and XE Game System. It started as
@@ -13,8 +13,8 @@ hardware has proven itself.
 
 This document is the design as built at version 0.9: what is tested, how
 results are reported, and why. How the code is put together is in
-[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md); how to use it, in the
-[user guide](docs/USER-GUIDE.md).
+[docs/DEVELOPMENT.md](../DEVELOPMENT.md); how to use it, in the
+[user guide](../USER-GUIDE.md).
 
 Authorship: the author has programmed 6502 machine language and assembler
 since childhood, but for now this project is 100% AI-written. Claude

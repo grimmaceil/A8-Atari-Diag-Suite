@@ -124,6 +124,10 @@ class Atari:
                 return (self.line % self.frame_lines) // 2
             if a == 0xD014:
                 return 0x01 if self.pal else 0x0F
+            if a == 0xD013:      # TRIG3: XL/XE, 1 = a cartridge in the slot (the
+                if self.xl:      # diag cartridge while it is on); 400/800: stick
+                    return int(self.car is not None and self.caron)   # 4's button,
+                return 1         # not pressed
             if a == 0xD300:      # PORTA: sticks 1 and 2, 0 = pressed (--joy)
                 v = 0xFF
                 for bit in self.active('JOY'):

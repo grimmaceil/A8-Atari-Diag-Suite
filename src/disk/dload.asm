@@ -275,7 +275,11 @@ DLLEN	= dl_end-dl_src
 	.error "the disk loader runs into the long test's mark ($07FE)"
 	.endif
 
+	.ifdef SETTAB			; (the disk set's boot: its two programs)
+	icl '../../build/settab.asm'
+	.else
 	icl '../../build/disktab.asm'	; (after the loader: in the boot, page 7)
+	.endif
 
 ; dsum: Z set if this piece's sum is right: every byte from LOAD up to the
 ; stored sum (CKSUM; CRCFIX after it isn't summed), as tools/mkatr.py sums

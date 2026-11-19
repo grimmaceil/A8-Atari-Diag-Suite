@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build the diag tapes, boot disk, BASCRC's disk and cartridge: assemble
-with MADS, wrap as .cas (mkcas.py), .atr (mkatr.py: build_disk, and
-build_bascrc for BASCRC's) and .car (mkcar.py, CAR), optionally deploy.
+"""Build the diag tapes, the disks and the cartridge: assemble with MADS,
+wrap as .cas (mkcas.py), .atr (mkatr.py: build_disk, build_diskset) and
+.car (mkcar.py, CAR), optionally deploy.
 
   python tools/build.py                 normal tapes into build/
   python tools/build.py --fault 2,5     also tapes with an injected fault
@@ -26,7 +26,8 @@ sys.path.insert(0, str(ROOT / 'tools'))
 MADS = ROOT / 'tools' / 'bin' / 'mads.exe'
 BUILD = ROOT / 'build'          # everything the assembler makes (not in git)
 CASSETTES = ROOT / 'cassettes'  # the release tapes (in git): what users load
-DISKS = ROOT / 'disks'          # the release disks (.atr, in git): the boot disk, BASCRC's
+DISKS = ROOT / 'disks'          # the release disks (.atr, in git): the boot disk, the 16k memtest's
+DISKSET = ROOT / 'disk-set'     # the disk set (.atr, in git): the 8k tapes as disks
 CARTS = ROOT / 'carts'          # the release cartridge (.car, in git)
 SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTer Atari800 core's folder
 # The version: in every release file's name (diag-...-v0.8.cas) and at the
@@ -34,7 +35,7 @@ SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTe
 # matched. One digit before the point, one or two after, and a patch level
 # (one digit after a second point) when there is one (screen.asm).
 # build/ keeps the plain names.
-VERSION = '0.12'
+VERSION = '0.13'
 VDEFS = dict(zip(('VMAJ', 'VMIN', 'VPAT'), VERSION.split('.') + ['0']))
 
 # Each tape: source dir, name, stages (first = boot), defines. A later stage
@@ -351,19 +352,43 @@ def make_disk(out, bins):
     return Path(out)
 
 
-def build_bascrc(lst):
-    """BASCRC's disk (mkatr.dos2): it boots to the check in machine code
-    (src/basic/bascrc.asm with BOOT), and holds it as a DOS file too, with
-    the BASIC listing (lst, mkbasic.py's): BASCRC.XEX, for L from DOS 2,
-    and BASCRC.LST, for ENTER "D:BASCRC.LST"."""
+def build_diskset(fast):
+    """The disk set (disk-set/): the 8k tapes as disks, for when the boot
+    disk can't help (its menu and loader need more of the machine). Each
+    disk is named as its tape and holds the tape's own program, byte for
+    byte (mkatr.cas_image), so its title bar and its NEXT line name the
+    disk to load next. The OS boots it from sector 1 as from tape, except:
+      - diag-8k-01-ram: part 1 built with DSKLD (loader.asm: part 2 from the
+        disk, by itself on 16K and up), then part 2;
+      - diag-8k-05-sound and diag-8k-memtest: a boot (src/disk/setboot.asm)
+        that picks by the RAM: under 16K the tape's program, 16K and up the
+        sound test with the sampled "hello" (HELLO16: the recording in the
+        image) or diag-16k-memtest's.
+    Also the 16k memtest's own disk, for disks/. Needs the tapes built.
+    Returns (the disk set, the 16k memtest disk)."""
     import mkatr
-    bx, bb = BUILD / 'diag-bascrc', BUILD / 'bascrc-boot'
-    mads('basic', 'bascrc.asm', bx, {})
-    mads('basic', 'bascrc.asm', bb, {'BOOT': 1})
-    out = BUILD / 'diag-bascrc.atr'
-    mkatr.dos2(out, Path(f'{bb}.bin').read_bytes(),
-               [('BASCRC.XEX', Path(f'{bx}.bin').read_bytes()), ('BASCRC.LST', lst.read_bytes())])
-    return out
+    tape = lambda n: mkatr.cas_image(BUILD / f'{n}.cas')
+    f = {'FAST': 1} if fast else {}     # (as the tapes it goes with)
+    out = []
+    for n in ('diag-8k-02-rom', 'diag-8k-03-input', 'diag-8k-04-ports', 'diag-8k-06-video'):
+        mkatr.plain(BUILD / f'{n}.atr', [tape(n)])
+        out.append(BUILD / f'{n}.atr')
+    build('tape1', 'dset-ram', ['main.asm', 'stage2.asm'], dict(f, NORAMK=1, DSKLD=1), '')
+    s2 = tape('dset-ram-part2')
+    if s2 != tape('diag-8k-01-ram-part2'):
+        sys.exit("build_diskset: the RAM disk's part 2 isn't the tape's")
+    mkatr.plain(BUILD / 'diag-8k-01-ram.atr', [tape('dset-ram'), s2])
+    out.insert(0, BUILD / 'diag-8k-01-ram.atr')
+    build('system', 'dset-sound16', ['main.asm'],
+          dict(f, **N16, SETNO=0, TAPENO=5, WANT_POK=1, HELLO16=1, BIGSTAGE=1), '')
+    for n, big in (('diag-8k-05-sound', 'dset-sound16'), ('diag-8k-memtest', 'diag-16k-memtest')):
+        imgs = [tape(n), tape(big)]
+        (BUILD / 'settab.asm').write_text(mkatr.settab(imgs))
+        mads('disk', 'setboot.asm', BUILD / 'dset-boot', {})
+        mkatr.choice(BUILD / f'{n}.atr', (BUILD / 'dset-boot.bin').read_bytes(), imgs)
+        out.append(BUILD / f'{n}.atr')
+    mkatr.plain(BUILD / 'diag-16k-memtest.atr', [tape('diag-16k-memtest')])
+    return out, BUILD / 'diag-16k-memtest.atr'
 
 
 def wrap(out, label, img=False):
@@ -411,18 +436,12 @@ def main():
                          f'A8 {name.upper()} FAULT {tag}')
     car = build_car(a.fast)
     atr = build_disk(a.fast)            # the boot disk (Atari-diag-boot-disk-scope.md)
-    # BASCRC, the BASIC cartridge check: the BASIC program as a tape for
-    # ENTER "C:", and a disk that boots to it in machine code and holds the
-    # listing for ENTER "D:"
-    bas, lst = BUILD / 'diag-bascrc.cas', BUILD / 'bascrc.lst'
-    subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkbasic.py'),
-                    str(ROOT / 'src' / 'basic' / 'bascrc.bas'), str(lst), str(bas)], check=True)
-    cas.append(bas)
-    bdisk = build_bascrc(lst)
+    dset, memdisk = build_diskset(a.fast)     # the 8k tapes as disks, and the 16k memtest's
     if a.fast:                      # FAST builds skip test patterns: not for use,
         return                      # so they stay in build/
     rel = []                        # the release files, named with the version
-    for folder, files in ((CASSETTES, cas), (DISKS, [atr, bdisk]), (CARTS, [car])):
+    for folder, files in ((CASSETTES, cas), (DISKS, [atr, memdisk]), (DISKSET, dset),
+                          (CARTS, [car])):
         folder.mkdir(exist_ok=True)
         for f in files:
             if 'FAULT' in f.name:   # fault-injection builds stay in build/

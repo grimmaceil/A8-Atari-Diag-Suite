@@ -6,7 +6,7 @@ the credit when you pass it on.
 
 This is for anyone who wants to build the programs from source, change
 them, or check how they work. To test a machine you only need the release
-files (`carts/`, `disks/`, `cassettes/`) and the [user guide](USER-GUIDE.md).
+files (`carts/`, `disks/`, `disk-set/`, `cassettes/`) and the [user guide](USER-GUIDE.md).
 
 ## Contents
 
@@ -70,17 +70,17 @@ How a change is tested:
 ## Building
 
 ```
-python tools/build.py              # everything: build/ (all output), and the releases in cassettes/, disks/, carts/
+python tools/build.py              # everything: build/ (all output), and the releases in cassettes/, disks/, disk-set/, carts/
 python tools/build.py --nodeploy   # the same, without copying the changed files to the MiSTer share
 python tools/build.py --fault 2,5  # extra builds with a stuck bit 5 in bank 2, to hear a fail code
 python tools/build.py --fast       # skip the $55/$AA march pass (quicker simulator runs); build/ only
 ```
 
 The version is `VERSION` in `tools/build.py`. It goes into every release
-file's name (`cassettes/diag-...-v0.12.cas`; `build/` keeps the plain
+file's name (`cassettes/diag-...-v0.13.cas`; `build/` keeps the plain
 names, which the simulator examples below use) and onto every title bar
 (`screen.asm`'s header: one digit before the point, one or two after, in
-five columns). A patch level (`0.12.1`, `VPAT`) would take seven, and the
+five columns). A patch level (`0.13.1`, `VPAT`) would take seven, and the
 longest titles (test 3 and test 7's modes page on `diag-16k-02-system`,
 the "hello" on `diag-16k-03-hello`) would then leave the version out. A
 build removes the release files of other versions.
@@ -115,7 +115,7 @@ with the boot header in the first record. Every file on a tape ends in an
 EOF record: the OS boot reads one record past its count.
 
 Up to 0.11 the 32k+ image and the long memory test were executables too
-(`.xex`, [Atari-diag-disk-scope.md](../Atari-diag-disk-scope.md)); the
+(`.xex`, [Atari-diag-disk-scope.md](design/Atari-diag-disk-scope.md)); the
 boot disk does what they did, and 0.12 dropped them.
 
 ### The boot disk
@@ -123,7 +123,7 @@ boot disk does what they did, and 0.12 dropped them.
 `disks/diag-disk.atr` (single density, 720 sectors) is the cartridge
 rebuilt for a disk: the same programs as its banks, each a "piece" loaded
 from the disk when it is needed. Design and reasons:
-[Atari-diag-boot-disk-scope.md](../Atari-diag-boot-disk-scope.md).
+[Atari-diag-boot-disk-scope.md](design/Atari-diag-boot-disk-scope.md).
 
 | Piece | Built from | Load | Sectors (0.12) |
 |---|---|---|---|
@@ -170,6 +170,26 @@ from the disk when it is needed. Design and reasons:
   $07FE, then the 16K+ RAM piece's power-on entry, which skips the RAM
   test and goes to the menu.
 
+### The disk set
+
+`disk-set/` holds the 8k tapes as disks (`build_diskset`), each named as
+its tape and holding the tape's own program, byte for byte:
+`mkatr.cas_image` takes it from the tape file (the $FC records, as many as
+the header counts), so the title bars and `NEXT:` lines name the disks.
+A tape program boots from a disk unchanged: the OS's disk boot reads the
+same 6-byte header (flags, sectors, load, init), loads the sectors to LOAD
+and calls LOAD+6, as the cassette boot does, and the program sets up the
+machine itself (`common/boot.asm`: POKEY, ANTIC, the motor).
+
+| Disk | Sectors | How |
+|---|---|---|
+| `diag-8k-02-rom`, `-03-input`, `-04-ports`, `-06-video` | the program from sector 1 (`mkatr.plain`) | booted by the OS |
+| `diag-8k-01-ram` | part 1, then part 2 | part 1 built with `DSKLD`: `loader.asm` reads part 2 from the sectors after its own (sector `(IMGEND-LOAD)/128+1` on) through SIOV, a sector at a time into the cassette buffer, instead of the tape's records; part 2 is the tape's (`build_diskset` stops if it isn't) |
+| `diag-8k-05-sound`, `diag-8k-memtest` | boot (4), the 8K program, the 16K one (`mkatr.choice`) | `src/disk/setboot.asm`: RAMTOP under $40 the tape's program, else the 16K one, loaded by `dload.asm`'s DLBOOT from `build/settab.asm` (`SETTAB`) and entered at $0806. The 16K sound program is `system` with `HELLO16` (`SAMPLED` with the recording in the image, as `diag-16k-03-hello`), named as the 8k sound tape; the 16K memtest is `diag-16k-memtest`'s |
+
+`disks/diag-16k-memtest.atr` is `diag-16k-memtest`'s program the same way
+(`mkatr.plain`).
+
 ### The cartridge
 
 `carts/diag-cart.car` is an AtariMax 128K (`.car` type 41: 16 banks of 8K
@@ -198,29 +218,6 @@ with a bank switch. Every bank ends with the same 32 bytes (mkcar's
 at $BFF0 (`sta $D500,x` / `jmp $A003`: the instruction after the write
 comes from the new bank, which holds the same bytes), each code bank's
 CRC32 at $BFF6, and the cartridge header.
-
-### BASCRC
-
-`src/basic/bascrc.bas` is the author's BASIC program that checks a BASIC
-cartridge (the programs don't read a 400/800's cartridge). `tools/mkbasic.py`
-makes it an ATASCII listing (`build/bascrc.lst`) and a tape for `ENTER
-"C:"` (`cassettes/diag-bascrc`: the cassette handler's $FC/$FA/$FE records,
-a 20 s leader and 3 s gaps, as `LIST "C:"` writes them; the handler stops
-the motor between records when BASIC reads that way).
-`src/basic/bascrc.asm` is the same check in machine code, printing through
-the OS screen editor, built twice (`build_bascrc`):
-- with `BOOT`: boot sectors (5, at $0700). The OS calls $0706 at power-on
-  with the screen editor open; the check runs, then returns (C clear) and
-  the OS goes on to the cartridge (BASIC's `READY`) or DOSVEC. It sets
-  MEMLO just past `b_init` (also DOSINI, for RESET), so BASIC keeps clear
-  of the little that has to stay;
-- without: `BASCRC.XEX`, an executable (loads at $2000) that returns to DOS.
-
-`disks/diag-bascrc.atr` is both: the boot in sectors 1-5, and a DOS 2.0S
-file system (`mkatr.py`'s `dos2`: the VTOC at 360, the directory at
-361-368, each file a chain of 125-byte sectors) holding `BASCRC.XEX` and
-`BASCRC.LST`. `dos2` reads its disk back as DOS would (`dos2_files`) and
-stops the build if a file doesn't come back the same.
 
 ## How a program runs
 
@@ -276,8 +273,17 @@ $A000-$BEFF at $BFF6 (a code bank's code must stay below $BF00), and the
 ROM test switches each bank in from a routine in low RAM to compare.
 
 The ROM names come from section 10 of the
-[design document](../Atari-diag-cassette-scope.md): published CRC32s, never
+[design document](design/Atari-diag-cassette-scope.md): published CRC32s, never
 the values of one machine.
+
+BASIC (`basread`): a cartridge if one is in, else an XL/XE's built-in
+ROM. The OS boots a tape (START held) or a disk with a cartridge in, and
+enters the booted program (JSR load+6) before it would start the
+cartridge (OS rev B's cold start, $F1E1-$F20F, and its boot loader,
+$F301-$F37B), so the programs see a BASIC cartridge at $A000. They find
+one as the OS does: on a 400/800 no RAM at $A000 (RAMTOP) and $BFFC zero
+(an empty bus reads $BF there); on an XL/XE TRIG3 = 1. The diag
+cartridge has the slot, so on a 400/800 it reports none.
 
 ## The reporter and the keys
 
@@ -397,18 +403,17 @@ These came from the author's direction over the sessions:
 
 | Path | What |
 |---|---|
-| `src/common/` | shared: `boot.asm` (alive, checksum, low RAM, size probe), `stuck.asm` (the short check), `display.asm` (screen prerequisites), `report.asm` (the reporter and keys), `screen.asm`, `info.asm`, `ramtest.asm`, `pagetest.asm` (a program's own RAM, page by page), `xlram.asm` (RAM under the OS, 130XE banks), `loader.asm` (a tape's second stage), `vars.asm`, `defs.asm`, `hw.asm`, `name.asm` (the title-bar names), `lib.asm` |
+| `src/common/` | shared: `boot.asm` (alive, checksum, low RAM, size probe), `stuck.asm` (the short check), `display.asm` (screen prerequisites), `report.asm` (the reporter and keys), `screen.asm`, `info.asm`, `ramtest.asm`, `pagetest.asm` (a program's own RAM, page by page), `xlram.asm` (RAM under the OS, 130XE banks), `loader.asm` (a tape's second stage; `DSKLD`: from the disk set's RAM disk), `vars.asm`, `defs.asm`, `hw.asm`, `name.asm` (the title-bar names), `lib.asm` |
 | `src/tape1/` | the RAM test: stage 1 and stage 2 |
 | `src/tape2/` | the memory test (`diag-8k-memtest`, `diag-16k-memtest`, the cartridge's) |
 | `src/system/` | tests 1-7: `main.asm` builds a program from the tests `WANT_*` picks; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia` and `t_gtia2`, its video modes page); `common.asm` the flow, the menu and the end of a tape; `tlist.asm` the order; `kbmap.asm` the keyboard map (`tools/gen_kbmap.py`) |
 | `src/cart/` | the cartridge: `romsum.asm` (bank layout, sums), `ldmem.asm` (the long test's loader), `undercart.asm` (the RAM under it), `hello.asm` and `audio/` (the sampled "hello", made by `tools/mkhello.py`) |
-| `src/disk/` | the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`) |
-| `src/basic/` | BASCRC: the BASIC listing and the machine code (its disk's boot, and its executable) |
-| `tools/` | `build.py`, `mkcas.py`, `mkcar.py`, `mkatr.py` (both disks), `mkbasic.py`, `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
-| `cassettes/`, `disks/` (the boot disk, BASCRC's disk), `carts/` | the release files |
-| `Atari-diag-cassette-scope.md` | the design: constraints, feedback, sets, the ROM table, open items |
-| `Atari-diag-disk-scope.md` | the executables' design (`.xex`, up to 0.11) |
-| `Atari-diag-boot-disk-scope.md` | the boot disk's design |
+| `src/disk/` | the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`); the disk set's two-program boot (`setboot.asm`) |
+| `tools/` | `build.py`, `mkcas.py`, `mkcar.py`, `mkatr.py` (the disks), `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
+| `cassettes/`, `disks/` (the boot disk, the 16k memtest's), `disk-set/` (the 8k tapes as disks), `carts/` | the release files |
+| `docs/design/Atari-diag-cassette-scope.md` | the design: constraints, feedback, sets, the ROM table, open items |
+| `docs/design/Atari-diag-disk-scope.md` | the executables' design (`.xex`, up to 0.11) |
+| `docs/design/Atari-diag-boot-disk-scope.md` | the boot disk's design |
 
 ## The simulator
 

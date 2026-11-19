@@ -549,7 +549,11 @@ s_l2_8k	dta d'16K ONLY. NEXT: DIAG-8K-02-ROM',$FF
 s_l2_bad dta d'NOT LOADED, BANK 1 FAILED',$FF
 s_l2_big dta d'TOO BIG',$FF
 s_l2_sio dta d'ERROR $',$FF
+	.ifdef DSKLD		; (the disk set's RAM disk: stage 2 from the disk)
+s_l2_hdr dta d'NOT ON DISK',$FF
+	.else
 s_l2_hdr dta d'NOT ON TAPE',$FF
+	.endif
 s_l2_sum dta d'BAD CHECKSUM',$FF
 	.endif
 s_allpass dta d'ALL RAM PASSED',$FF

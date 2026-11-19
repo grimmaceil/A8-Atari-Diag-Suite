@@ -36,7 +36,7 @@ RUNS = {
         ('ALL PASSED. NEXT', 2, 'ram-04-summary')]),  # green, not a flash gap)
     'ram-fail': ('diag-8k-01-ram', ['--ram', '0x4000', '--stuck', '3000-30FF:5:1', '--until', '200'], [
         ('BITS D4', 1, 'ram-05-fail')]),
-    'rom-400': ('diag-8k-02-rom', ['--auto', '--until', '60'], [
+    'rom-400': ('diag-8k-02-rom', ['--auto', '--basic', '@BASIC', '--until', '60'], [   # (BASIC in)
         ('TEST 1 PASS', 1, 'rom-01-400')]),
     'rom-xl': ('diag-8k-02-rom', ['--xl', '--auto', '--basic', '@BASIC', '--until', '60'], [
         ('TEST 1 PASS', 1, 'rom-02-xl')]),

@@ -26,8 +26,10 @@ with 8K or more and a disk drive or an SIO adapter, with no DOS, and it
 works like the cartridge (the same menu, keys and results), only each test
 loads from the disk when you pick it. **The cartridge** needs no loading
 at all: it runs from ROM, so it works on a machine whose RAM is too sick
-to load a program, but it needs a flash cartridge. The cassettes are the
-other way in, and need the least of the machine. All but the cartridge
+to load a program, but it needs a flash cartridge. **The disk set** is the
+8k tapes as disks, one test to a disk with no menu: when the boot disk
+won't get far on a sick machine, each test still boots on its own. The
+cassettes are the other way in, and need the least of the machine. All but the cartridge
 cost nothing (no flash cartridge to buy), and they are the way in when the
 cartridge port itself is bad.
 
@@ -35,12 +37,12 @@ cartridge port itself is bad.
 |---|---|---|---|
 | **Boot disk** | `disks/diag-disk.atr` | any Atari (8K) with a disk drive or an SIO adapter | the cartridge's menu from a disk you boot: no DOS; each test loads as you pick it; the long test and the "hello" with 16K |
 | **Cartridge** | `carts/diag-cart.car` | any Atari (8K); an AtariMax 128K flash cartridge | every test on one menu, run from ROM: no loading, and it works when the RAM is too sick to load a program into |
-| **BASCRC disk** | `disks/diag-bascrc.atr` | the BASIC cartridge in (or an XL/XE's built-in BASIC); a disk drive or an SIO adapter | boots to the check for a BASIC cartridge (BASCRC), no DOS; on it for DOS too: `BASCRC.XEX`, the same check, and `BASCRC.LST`, the BASIC listing |
+| **Disk set** | `disk-set/diag-8k-01-ram.atr` to `diag-8k-06-video.atr`, `diag-8k-memtest.atr` | any Atari (8K) with a disk drive or an SIO adapter | the 8k tapes as disks, the same programs: one test to a disk, no menu, no DOS. With 16K or more the RAM disk tests the rest by itself, the sound disk adds the "hello", and the memtest disk runs `diag-16k-memtest` |
+| **Memory test disk** | `disks/diag-16k-memtest.atr` | 16K; a disk drive or an SIO adapter | boots straight into the long memory test (`diag-16k-memtest`) |
 | **Cassette** | the 8k set: `diag-8k-01-ram` to `diag-8k-06-video` | 8K: every Atari | six small tapes, about 2 minutes each; long test `diag-8k-memtest` (400/800) |
 | | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, `diag-16k-03-hello` | 16K | about 3.5 minutes each; long test `diag-16k-memtest` |
 | | `diag-32k-xl-xe` | 32K | one tape, about 6 minutes: the RAM test, then every test with the menu |
 | | `diag-controls` | 16K | keyboard, joysticks and paddles only: goes with Atari's SALT disks, no test harness needed |
-| | `diag-bascrc` | BASIC cartridge in | BASCRC as a BASIC listing (`ENTER "C:"`); also on the BASCRC disk as `BASCRC.LST`, for `ENTER "D:"` |
 
 **Cassettes too:** a cassette boot needs the least of the machine: no disk
 drive, no DOS, just the computer, its OS and the first few K of RAM. So the
@@ -48,9 +50,9 @@ tapes are there for a machine with only a recorder, or one too sick to boot
 a disk. Tape is slow (about 3K a minute), so they come in sets by RAM
 size: the more RAM, the fewer tapes.
 
-Version 0.12. Every file has its version in its name
-(`diag-disk-v0.12.atr`) and every screen shows it at the right of the
-title bar (`V0.12`). The names here leave the `-v0.12` out.
+Version 0.13. Every file has its version in its name
+(`diag-disk-v0.13.atr`) and every screen shows it at the right of the
+title bar (`V0.13`). The names here leave the `-v0.13` out.
 
 ## Get started
 
@@ -60,9 +62,12 @@ title bar (`V0.12`). The names here leave the `-v0.12` out.
    for the machine's RAM (a machine that won't get through its own set:
    the 8k set). A tape that needs more RAM than the machine has stops at
    once: red border, a low tone on and off.
-2. Take out any cartridge (BASIC too) and load it: for the boot disk, put
+2. Take out any cartridge but BASIC, and load it: for the boot disk, put
    it in drive 1 (or mount it as D1:) and switch on; for a tape, hold
    START, switch on, start the tape and press a key when it beeps.
+   BASIC can stay in: the ROM test (test 1) then checks it too, but the
+   8K of RAM under it can't be tested (a 48K 800 shows `RAM 40K`), so
+   take it out to test all the RAM.
 3. Watch and listen: green is good, red plus beeps is a fault. Long beeps
    say where (the RAM bank or the test), short beeps say what (the data
    bit or the item).
@@ -99,6 +104,29 @@ cartridge and the cassettes. Reports from other machines are welcome.
 
 ## Versions
 
+- **0.13** (2026-11-19), against 0.12:
+  - **The disk set** (`disk-set/`, new): the 8k tapes as disks, named as
+    the tapes (`diag-8k-01-ram.atr` to `diag-8k-06-video.atr`,
+    `diag-8k-memtest.atr`), one test to a disk, no menu and no DOS. When
+    the boot disk can't get far on a sick machine, each test still boots
+    on its own, as from tape. They hold the tapes' own programs, byte for
+    byte, so each title bar and `NEXT:` line names the disk to load next.
+    With 16K or more the RAM disk loads its part 2 from the disk by
+    itself, the sound disk plays the sampled "hello" too (POKEY item 7),
+    and the memtest disk runs `diag-16k-memtest`.
+  - **The long memory test on a disk of its own**
+    (`disks/diag-16k-memtest.atr`, new): it boots straight into
+    `diag-16k-memtest`.
+  - **The ROM test checks a BASIC cartridge itself:** the tapes and the
+    disks run with BASIC in (the OS boots them before it would start
+    BASIC, and they never hand it back), so test 1 reads a cartridge at
+    $A000 and names BASIC rev A, B or C, as it does an XL/XE's built-in
+    BASIC; any other cartridge shows `UNKNOWN` (item 2). With BASIC in,
+    the 8K of RAM under it can't be tested (a 48K 800 shows `RAM 40K`).
+  - **BASCRC is gone** (its tape, its disk and the listing): test 1 does
+    its job.
+  - Apart from test 1, every program is the same as in 0.12, but for the
+    version in its title bar.
 - **0.12** (2026-11-18), against 0.11:
   - **A stuck joystick's signal is friendlier:** three short "pew" beeps,
     like a toy ray gun, each with the screen flashing bright orange (about
@@ -360,8 +388,8 @@ tools; a cycle-timed simulator runs the programs without an Atari.
 building, the source layout, the simulator, how each format is put
 together, the rules the code keeps (byte budgets, no timeouts, two keys for
 everything) and the lessons learned along the way.
-[Atari-diag-cassette-scope.md](Atari-diag-cassette-scope.md) is the design
-and the ROM table; [Atari-diag-disk-scope.md](Atari-diag-disk-scope.md)
+[Atari-diag-cassette-scope.md](docs/design/Atari-diag-cassette-scope.md) is the design
+and the ROM table; [Atari-diag-disk-scope.md](docs/design/Atari-diag-disk-scope.md)
 the executables' design (`.xex`, up to 0.11).
 
 Contributions are welcome: issues and pull requests on GitHub are the way
@@ -372,7 +400,7 @@ screen and the beeps said.
 ## Credits
 
 - **Michael Grimm:** the author. He directs the work, reviews it and tests
-  it on hardware, and wrote BASCRC, the BASIC cartridge check.
+  it on hardware, and wrote BASCRC, the BASIC cartridge check up to 0.12.
 - **Claude** (Anthropic's AI): wrote the code, the tools and the
   documents, under his direction.
 - **Other people's work** this builds on (details in

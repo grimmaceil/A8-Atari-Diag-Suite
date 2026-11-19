@@ -1,7 +1,7 @@
 # A8 Atari Diag Suite, the boot disk: scope and design
 
 By **Michael Grimm**, written with Claude (Anthropic's AI). MIT license
-(see [LICENSE](LICENSE)).
+(see [LICENSE](../../LICENSE)).
 
 Status: built 2026-11-16, released in version 0.10 (2026-11-17) as the
 place to start. Run in the project's simulator (tools/disktest.py: 8K and

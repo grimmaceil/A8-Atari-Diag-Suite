@@ -3,8 +3,8 @@
 ; machine's ROMs: a repaired board can carry chips of mixed revisions, so on
 ; the 400/800 each OS chip is named on its own.
 ;   item 1: the OS reads differently twice (flaky ROM, socket, data bus)
-;   item 2: the XL/XE's built-in BASIC matches no revision (A, B, C):
-;           failing, or reading differently
+;   item 2: BASIC matches no revision (A, B, C): failing, reading
+;           differently, or a cartridge that isn't BASIC
 ;   item 3: an OS ROM matches no known revision (patched, replacement,
 ;           failing or mis-socketed)
 ;   item 4: the character set read differently twice (dprereq's sums)
@@ -17,14 +17,15 @@
 ; The 400/800 OS is three chips: $D800-$DFFF, $E000-$EFFF, $F000-$FFFF. The
 ; XL/XE OS is one 16K image, $C000-$CFFF, then $D000-$D7FF (the self-test,
 ; which the CPU sees at $5000-$57FF with PORTB bit 7 = 0), then $D800-$FFFF;
-; the 1200XL's two 8K chips are its halves. BASIC: the XL/XE's built-in ROM
-; (PORTB bit 1 = 0), $A000-$BFFF. A BASIC cartridge (400/800, 1200XL) isn't
-; read: BASCRC, a BASIC program, checks it (the user guide).
+; the 1200XL's two 8K chips are its halves. BASIC, $A000-$BFFF: a
+; cartridge there (a BASIC cartridge: the OS boots a tape or a disk with it
+; in, and never starts it), or else the XL/XE's built-in ROM (PORTB bit 1
+; = 0). On the diag cartridge a 400/800 has none: it has the slot.
 
 CRC	= $86			; 4: CRC32 being built (zero page: the inner loop)
 OSCRC	= T3D+$03		; 3 x 4: 400/800 chips $D800, $E000, $F000;
 				; XL/XE whole, $C000 half, $E000 half
-BASCRC	= T3D+$0F		; 4
+BASICCRC	= T3D+$0F		; 4
 OSID	= T3D+$13		; 3: name number of each OSCRC ($FF: unknown)
 BASID	= T3D+$16
 ROMHAVE	= T3D+$17		; bit 1: BASIC read, bit 2: halves read
@@ -71,14 +72,14 @@ tr_osok	jsr mixed
 	ora BADMASK+1
 	sta BADMASK+1
 tr_bas
-	jsr basread		; the XL/XE's built-in BASIC
+	jsr basread		; BASIC: a cartridge, or built in
 	bcc tr_font
 	lda #2
 	ora ROMHAVE
 	sta ROMHAVE
 	jsr basname
-	cmp #$FF		; not revision A, B or C: item 2 (the built-in
-	bne tr_font		; ROM is always one of them)
+	cmp #$FF		; not revision A, B or C: item 2 (any other
+	bne tr_font		; cartridge reads so too: the guide says so)
 	lda #2
 	ora BADMASK+1
 	sta BADMASK+1
@@ -257,7 +258,7 @@ mixed	ldx OSID+1
 mx_x	rts
 
 	.ifdef ROM
-; basread, on the cartridge: the XL/XE's built-in BASIC into BASCRC. C
+; basread, on the cartridge: the XL/XE's built-in BASIC into BASICCRC. C
 ; clear: none (a 400/800, where this cartridge has the slot, or a 1200XL).
 ; The cartridge covers BASIC, so a routine in low RAM (bw_src with crcpg
 ; behind it, copied to BWAT) switches the cartridge off, BASIC in, takes
@@ -276,7 +277,7 @@ bx_xl	jsr bwcopy
 	ldx #3
 bx_put	lda CRC,x
 	eor #$FF
-	sta BASCRC,x
+	sta BASICCRC,x
 	dex
 	bpl bx_put
 bx_x	rts
@@ -326,10 +327,23 @@ sk_bad	sec
 	rts
 sk_res	.byte $E3, $20, $BB, $DE	; (before CRC32's final inversion)
 
-; basread: the XL/XE's built-in BASIC into BASCRC. C clear: none to see (a
-; 400/800, a 1200XL, or a cartridge covering it).
+; basread: BASIC into BASICCRC. C clear: none to see. A cartridge, found as
+; the OS finds one: on a 400/800 no RAM at $A000 and $BFFC zero; on an
+; XL/XE TRIG3 (the slot's RD5). Or else the XL/XE's built-in BASIC (none
+; on a 1200XL).
 basread	lda MACHINE
-	beq br_no
+	bne br_xl
+	lda RAMTOP		; 400/800
+	cmp #$A1
+	bcs br_no
+	lda $BFFC
+	bne br_no
+br_cart	jsr br_crc
+	sec
+	rts
+br_xl	lda $D013		; TRIG3: 1 = a cartridge in the slot
+	lsr
+	bcs br_cart
 	lda PORTB
 	sta PBSAVE
 	ora #2			; BASIC out: RAM at $A000
@@ -348,7 +362,7 @@ br_cmp	lda $A000,x
 	bne br_rom
 	dex
 	bpl br_cmp
-	clc			; the same both ways: RAM (a 1200XL) or a cartridge
+	clc			; the same both ways: RAM (a 1200XL)
 	bcc br_out
 br_rom	jsr br_crc
 	sec
@@ -364,14 +378,14 @@ br_crc	jsr crcnew
 	ldx #3
 br_put	lda CRC,x
 	eor #$FF
-	sta BASCRC,x
+	sta BASICCRC,x
 	dex
 	bpl br_put
 	rts
 	.endif
 
-; basname: name BASCRC into BASID (A too).
-basname	ldx #BASCRC-OSCRC	; crcid's X counts from OSCRC
+; basname: name BASICCRC into BASID (A too).
+basname	ldx #BASICCRC-OSCRC	; crcid's X counts from OSCRC
 	lda #<tab_bas
 	ldy #>tab_bas
 	jsr crcid
@@ -576,27 +590,18 @@ ri_sk	lda #<s_skok
 	ldy #>s_skok
 ri_put	jsr puts
 	inc CNT
-	lda MACHINE		; BASIC: the 400/800 has none built in
-	bne ri_xb
-	lda #<s_rbas
-	ldy #>s_rbas
-	jsr ri_lbl
-	lda #<s_bcart
-	ldy #>s_bcart
-	jsr puts
-	jmp ri_nx
-ri_xb	lda ROMHAVE
+	lda ROMHAVE
 	and #2
 	bne ri_have
-	lda #<s_rbas		; none: a 1200XL, or a cartridge over it
-	ldy #>s_rbas
+	lda #<s_rbas		; none: no cartridge, none built in (on the
+	ldy #>s_rbas		; diag cartridge, a 400/800: it has the slot)
 	jsr ri_lbl
 	lda #<s_none
 	ldy #>s_none
 	jsr puts
 ri_nx	inc CNT
 	jmp ri_ch
-ri_have	ldx #3			; BASCRC is OSCRC+12 and BASID is OSID+3: slot 3
+ri_have	ldx #3			; BASICCRC is OSCRC+12 and BASID is OSID+3: slot 3
 	lda #<s_rbas
 	ldy #>s_rbas
 	jsr romline
@@ -769,7 +774,6 @@ s_rself	dta d'DIAG TAPE',$FF
 	.endif
 s_skok	dta d'SELF-CHECK OK',$FF
 s_skbad	dta d'SELF-CHECK FAILED'*,$FF
-s_bcart	dta d'A CARTRIDGE: USE BASCRC',$FF
 s_rev	dta d'REV ',$FF
 s_unk	dta d'UNKNOWN'*,$FF
 s_none	dta d'NONE',$FF

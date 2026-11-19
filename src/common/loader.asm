@@ -13,10 +13,17 @@
 ; has passed and was restored, so that is safe now.
 ; It loads at LDTO, into RAM this stage has just tested: $2000 (bank 1) for
 ; tape 1's stage 2 (the 8k tape).
+; DSKLD (the disk set's RAM disk, disk-set/diag-8k-01-ram.atr): stage 2 is
+; on the disk instead, in the sectors right after this stage's own (the OS
+; booted this stage from sectors 1 on), read one sector at a time into the
+; same buffer; the rest is the same.
 	.ifndef LDTO
 LDTO	= $2000
 	.endif
 DDEVIC	= $0300		; SIO device control block, $0300-$030B
+	.ifdef DSKLD
+DAUX1	= $030A		; (the sector to read)
+	.endif
 SIOV	= $E459
 CASBUF	= $03FD		; record as read: $55 $55, type, 128 data bytes
 CASDAT	= CASBUF+3
@@ -85,6 +92,12 @@ l2_dma	sta SDMCTL
 	sta PTR
 	lda #>LDTO
 	sta PTR+1
+	.ifdef DSKLD		; the sector after this stage's last
+	lda #[IMGEND-LOAD]/128+1
+	sta DAUX1
+	lda #0
+	sta DAUX1+1
+	.endif
 	jsr rdrec		; first record: the stage 2 header
 	.ifdef SKIPEOF
 	bcc l2_hd		; SKIPEOF: this stage was loaded by a loader, not
@@ -170,6 +183,32 @@ l2_fail	sta L2MSG
 	jsr results
 l2_end	jmp final
 
+	.ifdef DSKLD
+; rdrec: read the next sector (DAUX1) into CASDAT, then step DAUX1 on (SIOV
+; changes only DSTATS). C clear if it read; else C set, A = SIO status.
+rdrec	ldx #9
+rr_dcb	lda dcbtab,x
+	sta DDEVIC,x
+	dex
+	bpl rr_dcb
+	jsr SIOV
+	tya
+	bmi rr_err
+	inc DAUX1
+	bne rr_ok
+	inc DAUX1+1
+rr_ok	clc
+	rts
+rr_err	sec
+	rts
+
+; The DCB, $0300-$0309: drive 1, read ('R', status $40) 128 bytes into
+; CASDAT, 7 s timeout; DAUX1, the sector, is set by load2 and rdrec.
+dcbtab	.byte $31, 1, 'R', $40
+	.word CASDAT
+	.byte 7, 0
+	.word 128
+	.else
 ; rdrec: read the next tape record into CASBUF, as the OS's RBLOK does.
 ; C clear if it read a data record; else C set, A = SIO status (1 = fine
 ; but not a data record).
@@ -198,6 +237,7 @@ dcbtab	.byte $60, 0, 'R', $40
 	.byte 35, 0
 	.word 131
 	.byte 0, $80
+	.endif
 
 ; l2stop: back to how this stage runs: no interrupts, motor off, POKEY
 ; reset from serial mode, sound off.

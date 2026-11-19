@@ -101,6 +101,8 @@ RESPAGE	= 1
 SAMPLED	= 1			; 8k hello tape (WANT_SND)
 	.elseif .def DISK
 SAMPLED	= 1
+	.elseif .def HELLO16	; (the disk set's sound disk on 16K: the
+SAMPLED	= 1			; recording in the image, as the hello tape)
 	.endif
 	.elseif .def WANT_SND
 SAMPLED	= 1
