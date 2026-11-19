@@ -32,10 +32,11 @@ CARTS = ROOT / 'carts'          # the release cartridge (.car, in git)
 SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTer Atari800 core's folder
 # The version: in every release file's name (diag-...-v0.8.cas) and at the
 # right of every screen's title bar, so a file and what it shows can be
-# matched. One digit before the point, one or two after (screen.asm).
+# matched. One digit before the point, one or two after, and a patch level
+# (one digit after a second point) when there is one (screen.asm).
 # build/ keeps the plain names.
-VERSION = '0.11'
-VDEFS = dict(zip(('VMAJ', 'VMIN'), VERSION.split('.')))
+VERSION = '0.12'
+VDEFS = dict(zip(('VMAJ', 'VMIN', 'VPAT'), VERSION.split('.') + ['0']))
 
 # Each tape: source dir, name, stages (first = boot), defines. A later stage
 # is told where the boot stage keeps its BSS and where its own test area ends.

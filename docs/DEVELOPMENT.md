@@ -77,11 +77,13 @@ python tools/build.py --fast       # skip the $55/$AA march pass (quicker simula
 ```
 
 The version is `VERSION` in `tools/build.py`. It goes into every release
-file's name (`cassettes/diag-...-v0.11.cas`; `build/` keeps the plain names,
-which the simulator examples below use) and onto every title bar
-(`screen.asm`'s header: one digit before the point, one or two after,
-in the same five columns). A build removes the release files of other
-versions.
+file's name (`cassettes/diag-...-v0.12.cas`; `build/` keeps the plain
+names, which the simulator examples below use) and onto every title bar
+(`screen.asm`'s header: one digit before the point, one or two after, in
+five columns). A patch level (`0.12.1`, `VPAT`) would take seven, and the
+longest titles (test 3 and test 7's modes page on `diag-16k-02-system`,
+the "hello" on `diag-16k-03-hello`) would then leave the version out. A
+build removes the release files of other versions.
 
 Every build copies the release files that changed to the share (`SHARE`
 in `tools/build.py`: the author's MiSTer `_diag` folder; change it for
@@ -137,9 +139,9 @@ rebuilt for a disk: the same programs as its banks, each a "piece" loaded
 from the disk when it is needed. Design and reasons:
 [Atari-diag-boot-disk-scope.md](../Atari-diag-boot-disk-scope.md).
 
-| Piece | Built from | Load | Sectors (0.11) |
+| Piece | Built from | Load | Sectors (0.12) |
 |---|---|---|---|
-| boot | `src/disk/boot.asm` | $0600-$07FF | 1-4 |
+| boot | `src/disk/boot.asm`: the short check, then the RAM piece for this machine | $0600-$07FF | 1-4 |
 | RAM8 | tape 1's stage 1 with `DISK` (no ONE16): RAM above it, then its own RAM page by page (`ownram`) | $0900-$1BFF | 38 |
 | RAM16 | tape 1 with `ONE16` and `DISK` (`build_one16(disk=True)`) | $0900-$24FF | 56 |
 | MENU, ROM, INPUT, PORTS, SOUND, VIDEO | `src/system/main.asm` with `DISK` and the `WANT_*` of each (the menu: `MENUPC`) | $0900, at most $1BFF | 30-38 |
@@ -159,7 +161,16 @@ from the disk when it is needed. Design and reasons:
   interrupts off and enters the piece. A disk error waits for a key and
   reads the sector again. `build/disktab.asm` (written by
   `tools/mkatr.py`) gives each piece's first sector, count and load page.
-  `dsum`: a system piece's own sum, checked at its entry.
+  `dsum`: a system piece's own sum, checked at its entry. Each has only
+  what it uses: `DLFETCH` (the RAM pieces, which keep the whole loader,
+  and the sound piece, for HELLO) has `dfetch` and its way back; `DLBOOT`
+  (the boot: no screen yet, the loader already in place at $0700, one
+  way) has no messages, no copy, and none of the screen's or the VBI's
+  set-up.
+- The boot sectors give the short check (`src/common/stuck.asm`) before
+  anything loads, with the OS's VBI off, ANTIC off and POKEY out of SIO's
+  serial state, and S set back to $FF after it; the pieces leave it out
+  (`DISK`).
 - `XREQ` says why a piece was loaded, as on the cartridge (0 the menu, 1-7
   that test, 8 the long test, 9 the results; $80 the RAM piece's power-on
   hand-over, `src/disk/ramhand.asm`). In `system/main.asm`, `SPLIT` makes
@@ -321,13 +332,21 @@ The boot disk's loader (`dl_in`) takes fire and START as a new press the
 same way. `FIREONLY` (`diag-8k-memtest`, no room for `joyc`): `inputs`
 takes fire only, also as a new press.
 
-**The short check** (`src/common/boot.asm`, right after the hardware is
-reset, in every build's start): a joystick line in port 1 or 2 already
-active at power-on is stuck (a switch shorts its line to ground). About a
-second of `RANDOM` steps, one value in both COLBK and AUDC1: near black
-with a quiet poly buzz, or a blue spark with loud noise. Registers only:
-no RAM has been tested yet. Nothing is stored; `joyc` keeps the line from
-blocking anything. `NOSHORT` leaves it out (`diag-8k-memtest`: no room).
+**The short check** (`src/common/stuck.asm`, included by `boot.asm`
+right after the hardware is reset, in every build's start; on the boot
+disk, by its boot sectors instead): a joystick line in port 1 or 2
+already active at power-on is stuck (a switch shorts its line to ground).
+It gives a signal, not an alarm: three shots, each a pure-tone beep
+falling from 1.9 kHz to 250 Hz with COLBK bright orange ($28), then a gap,
+quiet and near black ($A0 in both AUDC1 and COLBK). Each shot and its gap
+is one count of Y ($10-$7F the beep, AUDF1 = Y; $80-$FF the gap), a step
+every S scan lines: S is 16, 12, then 8, so the shots get quicker and the
+two gaps differ (0.13 s, 0.1 s); about half a second in all. Registers
+only: no RAM has been tested yet, so the step lives in the stack pointer
+(nothing is pushed until low RAM passes and `lr_pass` sets S). It is 62
+bytes; `diag-8k-03-input`, the fullest tape, has 2 bytes left (0.12). `joyc` keeps the
+line from blocking anything. `NOSHORT` leaves it out (`diag-8k-memtest`:
+no room).
 
 ## Memory and byte budgets
 
@@ -381,14 +400,14 @@ These came from the author's direction over the sessions:
 
 | Path | What |
 |---|---|
-| `src/common/` | shared: `boot.asm` (alive, checksum, low RAM, size probe), `display.asm` (screen prerequisites), `report.asm` (the reporter and keys), `screen.asm`, `info.asm`, `ramtest.asm`, `pagetest.asm` (a program's own RAM, page by page), `xlram.asm` (RAM under the OS, 130XE banks), `loader.asm` (a tape's second stage), `vars.asm`, `defs.asm`, `hw.asm`, `name.asm` (the title-bar names), `lib.asm` |
+| `src/common/` | shared: `boot.asm` (alive, checksum, low RAM, size probe), `stuck.asm` (the short check), `display.asm` (screen prerequisites), `report.asm` (the reporter and keys), `screen.asm`, `info.asm`, `ramtest.asm`, `pagetest.asm` (a program's own RAM, page by page), `xlram.asm` (RAM under the OS, 130XE banks), `loader.asm` (a tape's second stage), `vars.asm`, `defs.asm`, `hw.asm`, `name.asm` (the title-bar names), `lib.asm` |
 | `src/tape1/` | the RAM test: stage 1 and stage 2 |
 | `src/tape2/` | the memory test (`diag-8k-memtest`, `diag-16k-memtest`, the cartridge's) |
 | `src/system/` | tests 1-7: `main.asm` builds a program from the tests `WANT_*` picks; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia` and `t_gtia2`, its video modes page); `common.asm` the flow, the menu and the end of a tape; `tlist.asm` the order; `kbmap.asm` the keyboard map (`tools/gen_kbmap.py`) |
 | `src/cart/` | the cartridge: `romsum.asm` (bank layout, sums), `ldmem.asm` (the long test's loader), `undercart.asm` (the RAM under it), `hello.asm` and `audio/` (the sampled "hello", made by `tools/mkhello.py`) |
 | `src/disk/` | the disk files' guard and mover (`xexwrap.asm`); the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`) |
 | `src/basic/` | BASCRC: the BASIC listing and the disk file |
-| `tools/` | `build.py`, `mkcas.py`, `mkxex.py`, `mkcar.py`, `mkatr.py`, `mkbasic.py`, `mkhello.py`, `sim.py`, `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
+| `tools/` | `build.py`, `mkcas.py`, `mkxex.py`, `mkcar.py`, `mkatr.py`, `mkbasic.py`, `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
 | `cassettes/`, `disks/` (the boot disk), `xex/` (the DOS files), `carts/` | the release files |
 | `Atari-diag-cassette-scope.md` | the design: constraints, feedback, sets, the ROM table, open items |
 | `Atari-diag-disk-scope.md` | the disk files' design |
@@ -437,8 +456,8 @@ python tools/sim.py build/diag-disk.atr --ram 0x2000 --auto --until 200
 
 `tools/disktest.py` runs the boot disk's checks (a fast build of it, in
 the simulator): the boot on 8K and 64K, a disk error, both RAM pieces and
-a fault in RAM8's own RAM, the menu, each test from it, all of them in
-order (`--menuall`), the results page, the long test and back, 8K
+a fault in RAM8's own RAM, the menu, each test from it, the results
+page, the long test and back, 8K
 without the "hello", a joystick button stuck from power-on (`stuckfire`)
 and stick up on a result (`stickup`). A check can ask for text between
 two times (`(after, by, text)`), and any run where the simulator reports
@@ -460,12 +479,15 @@ shows on screen; a trigger that starts with `^` must start a screen row
 rows). With `--auto` the simulator presses on about 0.25 s after a result
 appears, so those pictures use a short delay. `ANNOT` holds the numbered
 callouts; `--annotate` redraws them without running anything. The raw
-screens go to `docs/img/raw/` (not in git). The video test's picture
-(`av-02-gtia`) is left out of the regular runs: the simulator can't draw
-that screen as it really looks. For the same reason `--auto` can't answer
-test 7's video modes page (it can't read that screen), so the 16k menu
-pictures walk tests 1-6 by their keys and then open line 8, the results
-(`--walk 1234568`); test 7 shows there as not run. (The simulator's 32k+
+screens go to `docs/img/raw/` (not in git). The video test's first
+picture (`av-02-gtia`) is left out of the runs: the simulator can't draw
+its moving sprites as they really look. Its second page, the video modes
+(`av-03-modes`), is drawn by `tools/antic.py`, which `sim.py`'s picture
+hands any display list with more than GRAPHICS 0 text: the bitmap and
+GTIA modes, the scrolls, and the registers as they were on each scan
+line (no players or missiles). The 16k menu pictures walk tests 1-6 by
+their keys and then open line 8, the results (`--walk 1234568`); test 7
+shows there as not run. (The simulator's 32k+
 menu doesn't take the number keys, so it has no results picture of its
 own: the page is the same.)
 

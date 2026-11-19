@@ -209,7 +209,7 @@ header	pha
 hd_pad	lda CUR			; the block is page aligned: CUR lo = column on row 0
 	cmp #40-VERLEN
 	beq hd_ver
-	bcs hd_x		; (no title is that long: the version always fits)
+	bcs hd_x		; (no room: only a patch's longer version, s_ver)
 	lda #0
 	jsr putc
 	jmp hd_pad
@@ -219,15 +219,28 @@ hd_ver	lda #<s_ver
 hd_x	lda #0
 	sta INV
 	rts
-	.if VMAJ>9 .or VMIN>99
-	.error 'the version is one digit, a point, one or two digits'
+	.if VMAJ>9 .or VMIN>99 .or VPAT>9
+	.error 'the version is one digit, a point, one or two digits (and a point and one digit)'
 	.endif
 	.if VMIN>9		; two digits take the blank after: the same length
-s_ver	dta d'V',[VMAJ+$10],d'.',[VMIN/10+$10],[VMIN-VMIN/10*10+$10],$FF
+s_ver	dta d'V',[VMAJ+$10],d'.',[VMIN/10+$10],[VMIN-VMIN/10*10+$10]
 	.else
-s_ver	dta d'V',[VMAJ+$10],d'.',[VMIN+$10],d' ',$FF
+s_ver	dta d'V',[VMAJ+$10],d'.',[VMIN+$10]
 	.endif
+	.if VPAT>0		; a patch: .n after (7 places: the longest titles,
+	.if VMIN>9		; on the 16k tapes, then leave the version out)
+	dta d'.',[VPAT+$10],$FF
+	.else
+	dta d'.',[VPAT+$10],d' ',$FF
+	.endif
+VERLEN	= 7
+	.elseif VMIN>9
+	dta $FF
 VERLEN	= 5
+	.else
+	dta d' ',$FF
+VERLEN	= 5
+	.endif
 
 ; clrrow: blank row A.
 clrrow	ldx #0

@@ -63,42 +63,15 @@ rm_wx	sta WSYNC
 rm_ok
 	.endif
 
-; The short check: a joystick line already active at power-on (port 1 or 2:
-; a direction or the button) is stuck. A switch closes its line to ground,
-; so a stuck switch, a pinched cable or a bad port pin all read as a press
-; that never ends; nobody holds a stick while the machine starts. The
-; programs only take a new press from a stick (report.asm's joyc), so it
-; holds nothing up; this shows it: about a second of low buzz and loud
-; cracks, the whole screen near black with bright blue sparks (ANTIC is
-; off: all of it is the border). Registers only: no RAM tested yet. One
-; value is both the border and voice 1's control (a spark: noise, loud;
-; between: the harsh buzz, quiet); voice 1 and the border are the alive
-; chirp's next, so nothing is put back after. NOSHORT: left out (no room).
-SC_DARK	= $02			; near black / poly buzz, volume 2
-SC_SPARK = $8F			; bright blue / noise, volume 15
-SC_ODDS	= $28			; a spark when RANDOM is below this (1 in 6)
+; The short check (common/stuck.asm): a stuck joystick at power-on gets
+; three orange flashes and beeps. Voice 1 and the border are the alive
+; chirp's next, so nothing is put back after; lr_pass sets S. NOSHORT:
+; left out (no room). The boot disk does it in its boot sectors
+; (disk/boot.asm), before the RAM piece loads.
 	.ifndef NOSHORT
-	lda TRIG0
-	and TRIG1		; bit 0: 0 if a button is down
-	ora #$FE
-	and PORTA		; $FF: nothing down
-	cmp #$FF
-	beq sc_x
-	sta AUDF1		; ($Ex-$FE: a low pitch)
-	ldy #64			; 64 steps of 256 scan lines: about a second
-sc_lp	lda RANDOM
-	cmp #SC_ODDS
-	lda #SC_DARK
-	bcs sc_set
-	lda #SC_SPARK
-sc_set	sta COLBK
-	sta AUDC1
-sc_w	sta WSYNC		; (X runs down to 0 and round: 256 lines a step)
-	dex
-	bne sc_w
-	dey
-	bne sc_lp
-sc_x
+	.ifndef DISK
+	icl '../common/stuck.asm'
+	.endif
 	.endif
 
 	ldx #0			; clear BSS (absolute,X: no zero page needed)

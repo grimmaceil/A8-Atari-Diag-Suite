@@ -50,9 +50,9 @@ tapes are there for a machine with only a recorder, or one too sick to boot
 a disk. Tape is slow (about 3K a minute), so they come in sets by RAM
 size: the more RAM, the fewer tapes.
 
-Version 0.11. Every file has its version in its name
-(`diag-disk-v0.11.atr`) and every screen shows it at the right of the
-title bar (`V0.11`). The names here leave the `-v0.11` out.
+Version 0.12. Every file has its version in its name
+(`diag-disk-v0.12.atr`) and every screen shows it at the right of the
+title bar (`V0.12`). The names here leave the `-v0.12` out.
 
 ## Get started
 
@@ -77,8 +77,8 @@ full-screen flashes, any other key (START, a joystick button) goes on.
 and disk file.
 With no keyboard, a joystick in port 1 or 2 stands in for the console
 keys on every screen: fire = START, down = SELECT, up = OPTION. A stuck
-joystick (a short) gets a buzz and blue sparks at switch-on, and is then
-ignored: only a new press counts.
+joystick (a short) gets three "pew" beeps and orange flashes at
+switch-on, and is then ignored: only a new press counts.
 
 **Dirty contacts cause a lot of "faults".** An unpaid recommendation from
 the author: DeoxIT contact cleaner (CAIG Laboratories) on the cartridge
@@ -101,6 +101,19 @@ cartridge and the cassettes. Reports from other machines are welcome.
 
 ## Versions
 
+- **0.12** (2026-11-18), against 0.11:
+  - **A stuck joystick's signal is friendlier:** three short "pew" beeps,
+    like a toy ray gun, each with the screen flashing bright orange (about
+    half a second), in place of 0.11's buzz and blue sparks, which sounded
+    like a fault in the machine. The boot disk gives it in its boot
+    sectors, before the RAM test loads.
+  - **The menus lose `ALL OF THEM, IN ORDER`:** START, START... still walks
+    the tests, as the next one is highlighted after each. A machine with no
+    picture still runs them all in order.
+  - Smaller: the boot disk's loader carries only what each piece uses (the
+    boot's loads one way and has no screen; only the RAM pieces and the
+    sound piece keep the whole one), and the menus are shorter.
+  - The user guide shows test 7's second page, the video modes.
 - **0.11** (2026-11-17), against 0.10:
   - **The joystick on every screen:** fire goes on, down plays the tones
     again (SELECT), up switches the flashes (OPTION), at every result as

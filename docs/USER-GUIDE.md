@@ -4,12 +4,12 @@ By **Michael Grimm**, written with Claude (Anthropic's AI). Free to use,
 copy, change and share under the [MIT license](../LICENSE); please keep
 the credit when you pass it on.
 
-Version 0.11
+Version 0.12
 
-Every file has its version in its name (`diag-disk-v0.11.atr`), and
-every screen shows it at the right of the title bar (`V0.11`). If the two
+Every file has its version in its name (`diag-disk-v0.12.atr`), and
+every screen shows it at the right of the title bar (`V0.12`). If the two
 don't match, or a screen shows no version, you are running an older file.
-This guide leaves the `-v0.11` out of the names.
+This guide leaves the `-v0.12` out of the names.
 
 These programs test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
 800XL, 65XE, 800XE, 130XE and XE Game System. They tell you what works and
@@ -86,7 +86,7 @@ Other keys:
 
 ### From the boot disk
 
-`disks/diag-disk-v0.11.atr` is a disk image you boot: switch on with it in
+`disks/diag-disk-v0.12.atr` is a disk image you boot: switch on with it in
 drive 1 and it runs the way the cartridge does. There is no DOS on it and
 none is needed, and it works on any Atari with 8K or more.
 
@@ -102,7 +102,7 @@ none is needed, and it works on any Atari with 8K or more.
    itself after three codes, or at a key). The other tests keep their
    results.
 2. Tests 1 to 7.
-3. All of them in order, and `8`, the results.
+3. `8`, the results and the final code.
 4. `9 LONG RAM TEST`: the long memory test, pass after pass until a key
    is pressed. It needs 16K (the line says so on a smaller machine).
 5. The keys: START runs the highlighted line, SELECT and OPTION move it,
@@ -186,10 +186,12 @@ off for the moment it takes to read it.
 
 A joystick switch connects its line to ground, so a switch that sticks, a
 pinched cable or a bad port pin reads as a press that never ends. Every
-program looks for that as it starts, before anything else: if a direction
-or the button in port 1 or 2 is already active, you get about a second of
-low buzz and loud cracks, the screen near black and flashing blue, like a
-short circuit, before the usual green chirp. Then the tests run as normal.
+program looks for that as it starts, before anything else (the boot disk
+as it boots, before its RAM test loads): if a direction or the button in
+port 1 or 2 is already active, you get three short "pew" beeps, like a
+toy ray gun, each with the whole screen flashing bright orange, and a
+little quicker each time: half a second in all, before the usual green
+chirp. Then the tests run as normal.
 A stuck line is ignored everywhere (only a new press counts), so it can't
 hold up a screen; the keyboard, the console keys and the rest of the stick
 still work. Test 4 (joysticks) shows which line it is: it stays inverse
@@ -243,7 +245,7 @@ differ a little.
 The bar along the top names **what you loaded**, then the screen: for
 example `DIAG-DISK  MENU` on the boot disk, `DIAG-CART  MENU` on the
 cartridge, or a tape's own name (`DIAG-16K-02-SYSTEM  2 KEYBOARD`). The
-version is at the right (`V0.11`). That's the program's name, not what it
+version is at the right (`V0.12`). That's the program's name, not what it
 found out about your machine.
 
 What the program **found** is on the line below it: `FOUND:`, then the machine
@@ -691,18 +693,22 @@ Without a working screen the test is skipped.
 4. ATARI, moving.
 5. The question: does it look right?
 
-**Page 2: the video modes** (`7 VIDEO MODES`). Each mode has a line of
-text above it saying what it is:
-- `ANTIC 6` and `ANTIC 7`: big text, wide and white, then tall and green.
-- The bitmaps `ANTIC 8`, `A`, `B`, `D` and `F`, from coarse to fine: each
-  is filled with even bars of its colours (the 4-colour modes: black, red,
-  white, blue; the 2-colour ones: stripes). Each band should be even all
-  the way across, the bars getting finer from one band to the next.
-- `GTIA 9, 10, 11`: three bands of the same line of 16 values: 16 shades
-  of blue, then 9 colours, then 16 hues.
-- A line that slides from side to side (ANTIC's fine horizontal scroll)
-  and one that moves up and down (fine vertical scroll).
-- The question, which stays still.
+**Page 2: the video modes** (`7 VIDEO MODES`) comes after a yes on page
+1. Each mode has a line of text above it saying what it is:
+
+![Video modes](img/av-03-modes.png)
+
+1. `ANTIC 6` and `ANTIC 7`: big text, wide and white, then tall and green.
+2. The bitmaps `ANTIC 8`, `A`, `B`, `D` and `F`, from coarse to fine: each
+   is filled with even bars of its colours (the 4-colour modes: black, red,
+   white, blue; the 2-colour ones: stripes). Each band should be even all
+   the way across, the bars getting finer from one band to the next.
+3. `GTIA 9, 10, 11`: three bands of the same line of 16 values: 16 shades
+   of blue, then 9 colours, then 16 hues.
+4. A line that slides from side to side (ANTIC's fine horizontal scroll)
+   and one that moves up and down (fine vertical scroll). The picture
+   catches them at one moment.
+5. The question, which stays still.
 
 Answer whether it all looks right (item 2).
 
@@ -715,13 +721,12 @@ menu.
 
 1. The tests, in order, with their state: `-` not run yet, PASS, or FAIL
    and the failed items.
-2. `ALL OF THEM, IN ORDER`, highlighted when the menu first appears: one
-   press of START runs everything.
-3. The results and the final code.
-4. The keys: START runs the highlighted line, SELECT moves down, OPTION
-   moves up, and the number keys run that test; a joystick works too
-   (fire runs, down and up move). After a test the next one is
-   highlighted, so pressing START again and again goes through them all.
+2. The results and the final code.
+3. The keys: START runs the highlighted line (test 1 when the menu first
+   appears), SELECT moves down, OPTION moves up, and the number keys run
+   that test; a joystick works too (fire runs, down and up move). After a
+   test the next one is highlighted, so pressing START again and again
+   goes through them all.
 
 Running a test again replaces its old result.
 
@@ -760,9 +765,8 @@ One tape, one load, for any machine with 32K or more:
    the RAM summary (a key, or three codes) you are back at this menu, with
    the other tests cleared to `-`.
 2. The tests.
-3. All of them, in order.
-4. The results.
-5. The keys, joystick included, as on every menu.
+3. The results.
+4. The keys, joystick included, as on every menu.
 
 The results page (line 8) is the one shown under
 [The menu](#the-tapes-menu-diag-16k-02-system-diag-32k-xl-xe), with one more

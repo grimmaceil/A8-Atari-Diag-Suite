@@ -227,7 +227,8 @@ class Atari:
                 self.mpu.processorCycles = (self.line + 1) * 114
             elif a in (0xD01A, 0xD200, 0xD201, 0xD01F, 0xD40E, 0xD400,
                        0xD402, 0xD403, 0xD302, 0xD301, 0xD017, 0xD018,
-                       0xD012, 0xD013, 0xD014, 0xD015, 0xD401, 0xD409):
+                       0xD012, 0xD013, 0xD014, 0xD015, 0xD401, 0xD409,
+                       0xD016, 0xD019, 0xD01B, 0xD404, 0xD405):
                 if self.regs.get(a) != v:
                     self.events.append((self.line, a, v))
                 self.regs[a] = v
@@ -263,11 +264,15 @@ class Atari:
         """The last whole frame as a PNG: border (COLBK), the GRAPHICS 0 text
         (COLPF2 background, COLPF1 luminance), inverse video, the P/M color
         mask, and every color as it was on each scan line (WSYNC color bars
-        and ramps too). palette: 768 bytes of RGB; font: the 1K ROM font."""
+        and ramps too). palette: 768 bytes of RGB; font: the 1K ROM font.
+        A display list with more than GRAPHICS 0 text (test 7's modes page)
+        is drawn by tools/antic.py instead."""
         from PIL import Image
+        import antic
         fl = self.frame_lines
         f0 = (self.line // fl - 1) * fl          # the last complete frame
-        regs = (0xD01A, 0xD017, 0xD018, 0xD012, 0xD013, 0xD014, 0xD015, 0xD401, 0xD400)
+        regs = (0xD01A, 0xD017, 0xD018, 0xD012, 0xD013, 0xD014, 0xD015, 0xD401, 0xD400,
+                0xD016, 0xD019, 0xD01B, 0xD404, 0xD405)
         cur = {r: 0 for r in regs}
         per = []                                   # register values per scan line
         ev = sorted((e for e in self.events if e[1] in regs), key=lambda e: e[0])
@@ -277,6 +282,12 @@ class Atari:
                 cur[ev[k][1]] = ev[k][2]
                 k += 1
             per.append(dict(cur))
+        dl = self.regs.get(0xD402, 0) | self.regs.get(0xD403, 0) << 8
+        if any(p[0xD400] & 0x20 for p in per) and any(
+                m != 2 for m, _, _, _ in antic.lines(self.peek, dl, per).values()):
+            img = antic.draw(self.peek, dl, per, palette, font)
+            img.resize((384 * scale, 240 * scale), Image.NEAREST).save(path)
+            return
         rgb = lambda c: tuple(palette[(c & 0xFE) * 3:(c & 0xFE) * 3 + 3])
         W, H = 384, 240                            # scan lines 8-247, 32 px border
         img = Image.new('RGB', (W, H))
@@ -545,10 +556,8 @@ class Auto:
                'MOVE EACH STICK', 'UNPLUG ALL PADDLES', 'TURN EACH', 'LOOKS RIGHT?',
                'LOOKS RIGHT?']
 
-    def __init__(self, hw, deny, skip, menuwalk=False, walk=None, skiponce=False,
-                 menuall=False):
+    def __init__(self, hw, deny, skip, menuwalk=False, walk=None, skiponce=False):
         self.hw, self.deny, self.skip, self.seen = hw, deny, skip, set()
-        self.menuall = menuall           # SELECT down to ALL, then START, once
         self.menuwalk, self.walk = menuwalk or bool(walk), 0
         self.keys = walk or WALK          # the menu keys, in turn
         self.skiponce = skiponce
@@ -564,17 +573,11 @@ class Auto:
                 self.seen = {x for x in self.seen if x.startswith('MENU|')}
                 self.seen.add(sig)          # (a test run again is answered again)
                 when = self.hw.line + int(1000 * LINES_PER_MS)
-                if self.menuall:              # ALL highlighted yet?
-                    if any('all#of#them' in l for l in sel):   # (inverse: '#' for space)
-                        self.menuall = False
-                        self.hw.press(when, 'CON', 1)
-                    else:
-                        self.hw.press(when, 'CON', 2)
-                elif self.menuwalk and self.walk < len(self.keys):   # a test by its key
+                if self.menuwalk and self.walk < len(self.keys):   # a test by its key
                     self.hw.press(when, 'KB', self.keys[self.walk])
                     self.walk += 1
-                else:                         # START: ALL at first, then (walk)
-                    self.hw.press(when, 'CON', 1)            # the results
+                else:                         # START: the highlighted line (the
+                    self.hw.press(when, 'CON', 1)            # next test, then the results)
             return
         if ('START = GO ON' in text or 'START=GO ON' in text or 'ANY OTHER KEY=GO ON' in text
                 or 'ANY OTHER KEY=MENU' in text):   # a result that waits: one
@@ -703,8 +706,6 @@ def main():
     ap.add_argument('--deny', default='', help='with --auto: answer No where the screen shows these (comma list)')
     ap.add_argument('--skip', type=int, default=0, help='with --auto: leave this many keys unpressed')
     ap.add_argument('--walk', help='with --auto: menu digits to press in turn, e.g. 22')
-    ap.add_argument('--menuall', action='store_true',
-                    help='with --auto: at the first menu, SELECT down to ALL and run it')
     ap.add_argument('--skiponce', action='store_true', help='--skip only the first keyboard test')
     ap.add_argument('--menuwalk', action='store_true',
                     help='with --auto: run the menu tests one at a time by their keys')
@@ -867,6 +868,7 @@ def main():
         sec, *n = kv.split(':')
         diskerr[int(sec)] = int(n[0]) if n else 1
     limit = None
+    seen, aud_on = 0, -1                   # events looked at; the last voice-1 sound in them
     steps = 0
     entered = set()
     insert_at = to_line(a.insert[0]) if a.insert else None
@@ -874,7 +876,7 @@ def main():
     auto = Auto(hw, [d for d in a.deny.split(',') if d], a.skip, a.menuwalk,
                 [0x32 if c == '0' else 0x35 if c == '8' else 0x30 if c == '9' else WALK[int(c) - 1]
                  for c in a.walk] if a.walk else None,
-                a.skiponce, a.menuall) if a.auto else None
+                a.skiponce) if a.auto else None
     next_auto = 0
     while True:
         if auto and hw.line >= next_auto:
@@ -925,8 +927,14 @@ def main():
         base = 4000                    # .car: from when the cartridge handed over
         if hw.carlog and hw.carlog[-1][1] == 'off':
             base += hw.carlog[-1][0]
-        if limit is None and any(r == 0xD201 and v & 0x0F and ln > base
-                                 for ln, r, v in hw.events):
+        # (Only the new events each step: test 7's page 2 logs thousands of
+        # color and scroll writes, and reading all of them each step never ended.)
+        while seen < len(hw.events):
+            ln, r, v = hw.events[seen]
+            seen += 1
+            if r == 0xD201 and v & 0x0F:
+                aud_on = max(aud_on, ln)
+        if limit is None and aud_on > base:
             limit = hw.line + a.seconds * 1000 * LINES_PER_MS
             t_done = hw.line / LINES_PER_MS / 1000
         if limit is not None and hw.line > limit:

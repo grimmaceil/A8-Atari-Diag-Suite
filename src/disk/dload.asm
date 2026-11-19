@@ -4,6 +4,10 @@
 ; there: it reads the piece's sectors with the OS's SIOV, turns the
 ; interrupts off again and enters the piece (or, dfetch, comes back: a data
 ; piece that loads above the caller).
+; Each has only what it uses: DLFETCH (the sound piece, for "hello"; and the
+; RAM pieces, which keep the whole loader) has dfetch; DLBOOT (the boot
+; sectors: no screen yet, the loader already in place, one way) has no
+; messages, no copy and none of the screen's or the VBI's set-up.
 ;
 ; Needs from the includer: BSS (SCRON, SCRPG), hw.asm, defs.asm.
 ; The disk's layout, build/disktab.asm (tools/mkatr.py): for each piece its
@@ -56,21 +60,23 @@ COLOR4	= $02C8
 ATRACT	= $4D
 DLPTR	= $80			; (PTR: the messages' screen row)
 
-	icl '../../build/disktab.asm'
-
+	.ifdef DLFETCH
 ; dfetch: load piece X and come back (the "hello" recording).
 dfetch	lda #$FF
+	.endif
 ; dchain: load piece X and enter it at LOAD + A (6 or 9). Never returns.
 dchain	pha
 	txa
 	pha
 	sei
+	.ifndef DLBOOT		; (the boot's is in place: dl_src is at DLDR)
 	ldx #0			; the loader to page 7
 dc_cp	lda dl_src,x
 	sta DLDR,x
 	inx
 	cpx #DLLEN
 	bne dc_cp
+	.endif
 	pla
 	tax
 	lda dtsl,x
@@ -98,7 +104,12 @@ dc_cp	lda dl_src,x
 	sta DBYTLO+1
 	sta ATRACT			; the shadows, so the OS's VBI keeps the
 	sta IRQEN			; screen as it is while the piece loads
-	sta DLPTR			; (SIOV turns on the serial IRQs it needs)
+	.ifdef DLBOOT			; (SIOV turns on the serial IRQs it needs)
+	sta SDMCTL			; the boot: no screen, a yellow border
+	lda #C_YELLOW
+	sta COLOR4
+	.else
+	sta DLPTR
 	sta DLPTR+1			; (no screen: no messages)
 	ldx SCRON
 	beq dc_ns
@@ -136,6 +147,7 @@ dc_ns	sta SDMCTL
 	sta VVBLKD
 	lda #>XITVBV
 	sta VVBLKD+1
+	.endif
 	lda #$40
 	sta NMIEN
 	cli
@@ -143,15 +155,18 @@ dc_ns	sta SDMCTL
 
 ; ---------------------------------------------------------------------------
 ; dl_src: runs at DLDR. Branches, and its own bytes by DLDR+offset.
-	.ifdef DLALIGN		; the boot: already in place (the copy moves
-	.if *>DLDR		; nothing, so it can't run over itself)
+	.ifdef DLBOOT		; the boot: already in place (it isn't copied,
+	.if *>DLDR		; so it can't run over itself)
 	.error "the boot's code runs into page 7"
 	.endif
 	:[DLDR-*] .byte 0
 	.endif
 dl_src
-dl_new	ldx #dt_load-dl_txt	; LOADING...
+dl_new
+	.ifndef DLBOOT
+	ldx #dt_load-dl_txt	; LOADING...
 	jsr DLDR+[dl_msg-dl_src]
+	.endif
 dl_rd	lda #$40
 	sta DSTATS
 	lda DLDR+[dl_buf-dl_src]
@@ -181,10 +196,12 @@ dl_s2	dec DLDR+[dl_cnt-dl_src]
 	sta SKCTL		; POKEY out of SIO's receive mode, which holds
 	lda #3			; voices 3 and 4 silent (as boot.asm, l2stop)
 	sta SKCTL
+	.ifdef DLFETCH
 	lda DLDR+[dl_vec-dl_src]
 	cmp #$FF
 	bne dl_go
 	rts			; dfetch: back to the caller
+	.endif
 dl_go	jmp (DLDR+[dl_vec-dl_src])
 
 ; A sector that won't read (the OS's SIO has tried it again already): red,
@@ -195,8 +212,10 @@ dl_err	lda #C_RED
 	sta AUDF1
 	lda #AUD_ON
 	sta AUDC1
+	.ifndef DLBOOT
 	ldx #dt_err-dl_txt
 	jsr DLDR+[dl_msg-dl_src]
+	.endif
 dl_wr	jsr DLDR+[dl_in-dl_src]	; all let go, then a press
 	bne dl_wr
 dl_wp	jsr DLDR+[dl_in-dl_src]
@@ -224,6 +243,7 @@ dl_in	lda TRIG0		; bit 0: 0 while fire or START is down
 	eor #4
 dl_ix	rts
 
+	.ifndef DLBOOT
 ; dl_msg: the text at dl_txt+X ($FF ends) on row 23, blanks after it.
 dl_msg	lda DLPTR+1
 	beq dm_x
@@ -243,6 +263,7 @@ dm_x	rts
 dl_txt
 dt_load	dta d'LOADING...',$FF
 dt_err	dta d'DISK ERROR. A KEY TRIES AGAIN',$FF
+	.endif
 dl_sec	.word 0			; the next sector
 dl_cnt	.byte 0			; sectors left
 dl_buf	.word 0			; where it goes
@@ -253,6 +274,8 @@ DLLEN	= dl_end-dl_src
 	.if DLLEN>DMARK-DLDR
 	.error "the disk loader runs into the long test's mark ($07FE)"
 	.endif
+
+	icl '../../build/disktab.asm'	; (after the loader: in the boot, page 7)
 
 ; dsum: Z set if this piece's sum is right: every byte from LOAD up to the
 ; stored sum (CKSUM; CRCFIX after it isn't summed), as tools/mkatr.py sums

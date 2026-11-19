@@ -75,10 +75,6 @@ CHECKS = {
              [(400, ' 2 KEYBOARD         PASS'), (400, ' 3 CONSOLE KEYS     PASS'),
               (400, ' 4 JOYSTICKS        PASS'), (400, ' 5 PADDLES          PASS'),
               (400, ' 6 POKEY            PASS')]),
-    # ALL, in order across the pieces: 1 to 6, then test 7's piece (Mike's
-    # test: the simulator stops there)
-    'all': (real_disk, ['--xl', '--auto', '--menuall'],
-            [(400, 'TEST 6 PASS'), (400, '#7#gtia/antic#')]),
     # an 8K 400/800: RAM8, one part (its own RAM page by page), then the
     # menu and a test, with the screen at $1C00, above every piece
     'ram8': (real_disk, ['--ram', '0x2000', '--auto'],

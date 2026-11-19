@@ -52,8 +52,13 @@ RUNS = {
         ('^DONE. R=RETEST', 1, 'ports-03-end')]),
     'av': ('diag-8k-05-sound', ['--auto', '--until', '120'], [
         ('VOICE 2:', 0.4, 'av-01-pokey')]),
-    'video': ('diag-8k-06-video', ['--auto', '--until', '60'], [
-        ('LOOKS RIGHT?', 1, 'av-02-gtia')]),
+    # test 7's second page, the video modes (drawn by tools/antic.py):
+    # --auto answers page 1 yes at +2.5 s. Page 1's picture (av-02-gtia) is
+    # not taken again: the simulator can't draw its moving sprites as they
+    # look. (The trigger is page 2's first label: the title bar is inverse,
+    # which the simulator's screen text doesn't match.)
+    'video': ('diag-8k-06-video', ['--auto', '--until', '70'], [
+        ('ANTIC 8: 40 WIDE', 1, 'av-03-modes')]),
     'cart': ('diag-cart.car', ['--ram', '0x4000', '--con', 'START:8:0.4,START:22:0.4',
                                '--until', '32'], [   # (no --auto: it would run ALL)
         ('^START=RUN', 1, 'cart-01-menu')]),
@@ -90,8 +95,8 @@ RUNS = {
 # The guide's callouts: picture -> [(first text row, last text row, number)].
 # Each is a bracket in the right border beside those rows, with its number.
 ANNOT = {
-    'cart-01-menu': [(4, 4, 1), (5, 11, 2), (12, 13, 3), (14, 14, 4), (18, 20, 5)],
-    'disk-01-menu': [(4, 4, 1), (5, 11, 2), (12, 13, 3), (14, 14, 4), (18, 20, 5)],
+    'cart-01-menu': [(4, 4, 1), (5, 11, 2), (12, 12, 3), (13, 13, 4), (18, 20, 5)],
+    'disk-01-menu': [(4, 4, 1), (5, 11, 2), (12, 12, 3), (13, 13, 4), (18, 20, 5)],
     'ram-02-testing': [(2, 3, 1), (5, 5, 2)],
     'ram-03-pass': [(4, 4, 1), (6, 9, 2), (20, 21, 3), (23, 23, 4)],
     'ram-04-summary': [(5, 6, 1), (7, 10, 2), (14, 16, 3)],
@@ -105,11 +110,13 @@ ANNOT = {
     'ports-02-paddles': [(5, 5, 1), (7, 7, 2), (8, 15, 3)],
     'av-01-pokey': [(5, 5, 1), (7, 7, 2), (8, 8, 3)],
     'av-02-gtia': [(3, 3, 1), (5, 7, 2), (9, 16, 3), (18, 21, 4), (23, 23, 5)],
-    'system-01-menu': [(4, 10, 1), (11, 11, 2), (12, 12, 3), (18, 20, 4)],
+    # (page 2's lines aren't all 8 scan lines high: half rows)
+    'av-03-modes': [(1, 3, 1), (4, 14, 2), (15, 18.5, 3), (19.5, 21.5, 4), (22.5, 22.5, 5)],
+    'system-01-menu': [(4, 10, 1), (11, 11, 2), (18, 20, 3)],
     'system-02-results': [(4, 10, 1), (12, 16, 2)],
     '16k-01-summary': [(5, 6, 1), (7, 10, 2), (14, 16, 3), (23, 23, 4)],
     '32k-01-summary': [(5, 6, 1), (7, 11, 2), (14, 16, 3), (22, 23, 4)],
-    '32k-02-menu': [(4, 4, 1), (5, 11, 2), (12, 12, 3), (13, 13, 4), (18, 20, 5)],
+    '32k-02-menu': [(4, 4, 1), (5, 11, 2), (12, 12, 3), (18, 20, 4)],
     'memtest-01-running': [(5, 5, 1), (6, 6, 2), (8, 9, 3), (23, 23, 4)],
     'memtest-02-summary': [(5, 6, 1), (8, 9, 2)],
     'memtest-03-sweep': [(13, 13, 1)],

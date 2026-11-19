@@ -438,6 +438,9 @@ t_snd	lda #6
 	icl '../cart/ldmem.asm'
 	.endif
 	.elseif .def DISK	; (no boot here: the RAM piece did it)
+	.ifdef SAMPLED		; (the sound piece fetches "hello")
+DLFETCH	= 1
+	.endif
 	icl '../disk/dload.asm'
 	.elseif .not .def CHAIN
 	icl '../common/display.asm'

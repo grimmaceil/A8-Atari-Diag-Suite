@@ -569,6 +569,7 @@ NPAT	= *-pats
 	icl '../common/bits.asm'
 	.ifdef DISK
 	icl '../common/pagetest.asm'
+DLFETCH	= 1			; (the RAM pieces: the whole loader)
 	icl '../disk/dload.asm'
 	icl '../disk/ramhand.asm'
 	.endif

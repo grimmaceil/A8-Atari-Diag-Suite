@@ -590,6 +590,7 @@ puts_st	pha
 	icl '../common/detail.asm'
 	icl '../common/xlram.asm'
 	.ifdef DISK
+DLFETCH	= 1			; (the RAM pieces: the whole loader)
 	icl '../disk/dload.asm'
 	icl '../disk/ramhand.asm'
 	.endif

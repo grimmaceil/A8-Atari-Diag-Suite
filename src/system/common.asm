@@ -28,18 +28,16 @@ trun	jsr tinit
 	sta TIDX
 	.ifdef MENU
 	sta MMODE
+	sta MSEL		; the first test's line
 	lda DISPOK		; no picture: no menu, all of them in order
 	beq tst_all
 	.ifdef RAM8		; at power on, after the RAM test: the ROM test,
 	lda KEEP		; then the menu. The RAM test run from the menu
 	bne tst_mn		; (KEEP): back to the menu
-	sta MSEL		; (0: the ROM test's line)
 	jmp mgo
 tst_mn	lda #0
 	sta KEEP
 	.endif
-	ldx MNT
-	stx MSEL		; the ALL line first
 	jmp menu
 tst_all	inc MMODE
 	.endif
@@ -74,11 +72,7 @@ tend	ldx TEST		; (run: its line says PASS or FAIL, not SKIPPED)
 	lda MMODE
 	bne te_x
 	inc MSEL		; the next test (after the last: the results)
-	lda MSEL
-	cmp MNT
-	bne te_m
-	inc MSEL
-te_m	lda #<menu
+	lda #<menu
 	sta NEXTVEC
 	lda #>menu
 	sta NEXTVEC+1
@@ -555,14 +549,15 @@ pt_lp	lda #50
 	.ifdef MENU
 ; ---------------------------------------------------------------------------
 ; The test menu (16k and 32k+ tapes): every test on the tape with its state, then
-; ALL (every test in order) and the results. START runs the highlighted
+; the results. START runs the highlighted
 ; line, SELECT moves down, OPTION up; keys 1-7 run that test. A joystick
 ; works too (joyc): fire runs, down and up move. After a test
 ; it comes back here with the next one highlighted, so START, START...
 ; walks the tests forward. It waits as long as it takes: no timeouts.
-MSEL	= BSS+$EE		; highlighted line: a ttests index, MNT = ALL,
-				; MNT+1 = the results
-MMODE	= BSS+$EF		; nonzero: running all of them in order
+MSEL	= BSS+$EE		; highlighted line: a ttests index, MNT = the
+				; results
+MMODE	= BSS+$EF		; nonzero: running all of them in order (no
+				; picture: no menu)
 MNT	= BSS+$F3		; tests on the tape
 	.ifdef RAMAGAIN		; the first test's row: under the RAM line (0)
 MROW0	= 5
@@ -601,7 +596,6 @@ mn_n0
 	cmp #$35		; 8: the results
 	bne mn_n8
 	ldx MNT
-	inx
 	stx MSEL
 	jmp mgo
 mn_n8
@@ -631,10 +625,9 @@ mn_con	lsr
 	bcs mgo			; START
 	lsr
 	bcc mn_up
-	ldx MNT			; SELECT: down (the last line is MNT+1, the
-	inx			; results; then the long memory test and the RAM
-	.ifdef RAMAGAIN		; test, where the tape has them), round to the top
-	inx
+	ldx MNT			; SELECT: down (the last line is MNT, the
+	.ifdef RAMAGAIN		; results; then the long memory test and the RAM
+	inx			; test, where the tape has them), round to the top
 	.endif
 	.ifdef LONGT
 	inx
@@ -650,7 +643,6 @@ mn_up	ldx MSEL		; OPTION: up, round to the bottom
 	dex
 	bpl mn_set
 	ldx MNT
-	inx
 	.ifdef RAMAGAIN
 	inx
 	.endif
@@ -661,43 +653,34 @@ mn_set	stx MSEL
 	jsr mlines		; just the lines: no blanking, no flicker
 	jmp mn_rel
 
-; mgo: run the highlighted line: a test, all of them, or the results.
+; mgo: run the highlighted line: a test or the results.
 mgo	jsr waitrel
 	lda #0			; (a pass goes on by itself again)
 	sta ENDING
 	lda MSEL
 	cmp MNT
 	bcc mr_t
-	beq mr_all
 	.ifdef RAMAGAIN
-	sbc MNT			; (carry set) 1: the results, then (the
-	.ifdef LONGT		; cartridge) 2: the long memory test; last:
-	cmp #2			; the RAM test
+	sbc MNT			; (carry set) 0: the results, then (the
+	.ifdef LONGT		; cartridge) 1: the long memory test; last:
+	cmp #1			; the RAM test
 	bne mg_r
 	jmp golong
-mg_r	cmp #3
+mg_r	cmp #2
 	.else
-	cmp #2
+	cmp #1
 	.endif
 	bne mg_fin
 	jmp ramrun
 mg_fin
 	.endif
 	jmp final
-mr_all	inc MMODE		; all, from the first: every result starts clean
-	ldx #7			; (not test 8, the RAM stages' result)
-	lda #0
-	sta MRUN
-ma_cl	sta BADMASK,x
-	dex
-	bne ma_cl
-	beq mr_go
 mr_t	tax			; one test: its old result goes (a run after a
 	ldy ttests,x		; fail must be able to pass)
 	lda #0
 	sta BADMASK,y
 	txa
-mr_go	asl
+	asl
 	sta TIDX
 	jsr tnextv
 	jmp (NEXTVEC)
@@ -786,32 +769,13 @@ md_f	pha
 md_nx	ldx CNT
 	inx
 	bne md_lp
-md_res	lda #<s_mall		; then ALL and the results
-	ldy #>s_mall
+md_res	lda #<s_mres		; then the results (the row and its
+	ldy #>s_mres		; highlight are set: this is line MNT)
 	jsr puts
+	.ifdef LONGT		; the cartridge: the long memory test, as key 9
 	lda #0
 	sta INV
 	ldx MNT
-	inx
-	cpx MSEL
-	bne md_r
-	lda #$80
-	sta INV
-md_r	txa
-	clc
-	adc #MROW0
-	ldx #0
-	jsr at
-	lda #0
-	jsr putc
-	lda #<s_mres
-	ldy #>s_mres
-	jsr puts
-	.ifdef LONGT		; the cartridge: the long memory test, as key 8
-	lda #0
-	sta INV
-	ldx MNT
-	inx
 	inx
 	cpx MSEL
 	bne md_l
@@ -834,7 +798,7 @@ md_l	txa
 	bcs md_lx
 	lda MNT
 	clc
-	adc #MROW0+2
+	adc #MROW0+1
 	ldx #20
 	jsr at
 	lda #<s_m16
@@ -846,7 +810,6 @@ md_lx
 	lda #0			; with its result so far (test 8)
 	sta INV
 	ldx MNT
-	inx
 	inx
 	.ifdef LONGT
 	inx
@@ -900,7 +863,6 @@ s_hmenu	dta d'MENU',$FF
 	.endif			; (results uses it too; here, as it always was)
 s_notrun dta d'-',$FF
 	.ifdef MENUCODE
-s_mall	dta d'ALL OF THEM, IN ORDER',$FF
 s_mres	dta d'8 RESULTS AND THE FINAL CODE',$FF
 s_m1	dta d'START=RUN  SELECT=DOWN  OPTION=UP',$FF
 s_m3	dta d'OR A JOYSTICK: FIRE=RUN, DOWN, UP',$FF
