@@ -65,7 +65,7 @@ TAPES = [('tape1', 'diag-8k-01-ram', ['main.asm', 'stage2.asm'], {'NORAMK': 1}),
          ('system', 'diag-16k-02-system', ['main.asm'],
           dict(ALL7, **N16, SETNO=1, TAPENO=2, MENU=1, BIGSTAGE=1)),
          ('system', 'diag-16k-03-hello', ['main.asm'],     # the sampled sound: too big
-          dict(N16, SETNO=1, TAPENO=3, WANT_SND=1, BIGSTAGE=1)),   # for 8K
+          dict(N16, SETNO=1, TAPENO=3, WANT_POK=1, HELLO16=1, BIGSTAGE=1)),   # for 8K
          ('one32', 'diag-32k-xl-xe', [], {'NEEDPG': '$80'}),
          ('system', 'diag-controls', ['main.asm'],
           dict(N16, SETNO=3, WANT_KB=1, WANT_JOY=1, WANT_PAD=1, BIGSTAGE=1)),
@@ -81,6 +81,25 @@ MEMDEFS = dict(BOUNCE=1, BIGSTAGE=1, OWNTEST=1)
 CAR = 'diag-cart'
 CARMEMBK = 3                    # the memory test's image: from this bank on
 CARDATAPG = 0x1F                # (mkcar.DATAPG)
+
+
+def hello_pak():
+    """The sampled "hello" packed for every format (cart/hello.asm's player
+    unpacks it as it plays): build/hello-pak.bin from
+    src/cart/audio/hello-15k.bin (tools/mkhello.py), whose samples, 0-30,
+    each become a 4-bit step from the one before, the step + 8, two to a
+    byte, high first. A step beyond -8..7 is cut there and made up on the
+    next samples (35 of 7424 come out off, by at most 5). Steps of 0 pad it
+    to whole pages. Half the size: 15 pages, not 29."""
+    out = BUILD / 'hello-pak.bin'
+    lev, nib = 0, []
+    for s in (ROOT / 'src' / 'cart' / 'audio' / 'hello-15k.bin').read_bytes():
+        step = max(-8, min(7, s - lev))
+        lev += step
+        nib.append(step + 8)
+    nib += [8] * (-len(nib) % 512)
+    out.write_bytes(bytes(nib[i] << 4 | nib[i + 1] for i in range(0, len(nib), 2)))
+    return out
 
 
 def mads(src, asm, out, defines):
@@ -282,7 +301,7 @@ def build_car(fast):
         s1 = new
     else:
         sys.exit('build_car: did not settle')
-    hello = ROOT / 'src' / 'cart' / 'audio' / 'hello-15k.bin'   # (tools/mkhello.py)
+    hello = hello_pak()
     hellopg = len(hello.read_bytes()) // 256
     hellobk = CARMEMBK + -(-mempg // CARDATAPG)                  # after the memory test
     common = dict(f, ROM=1, MENU=1, SETNO=0, TAPENO=0, MEMBK=CARMEMBK, MEMPG=mempg,
@@ -308,7 +327,7 @@ def build_disk(fast, out=None):
     import mkatr
     out = out or BUILD / ('diag-disk-fast.atr' if fast else 'diag-disk.atr')
     f = {'FAST': 1} if fast else {}
-    hello = ROOT / 'src' / 'cart' / 'audio' / 'hello-15k.bin'
+    hello = hello_pak()
     sysd = dict(f, DISK=1, MENU=1, SETNO=0, TAPENO=0, HELLOPG=len(hello.read_bytes()) // 256)
     def system(name, **want):
         mads('system', 'main.asm', BUILD / f'disk-{name.lower()}', dict(sysd, **want))
@@ -410,6 +429,7 @@ def main():
     a = ap.parse_args()
 
     BUILD.mkdir(exist_ok=True)
+    hello_pak()                         # (the tapes' hello.asm includes it)
     cas = []
     for src, name, stages, defs in TAPES:
         d = dict(defs, FAST=1) if a.fast else dict(defs)

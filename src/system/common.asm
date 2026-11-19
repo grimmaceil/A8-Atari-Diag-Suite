@@ -1089,9 +1089,7 @@ s_tpad	dta d'5 PADDLES',$FF
 	.else
 s_tpad	= 0
 	.endif
-	.ifdef WANT_SND
-s_tpok	dta d'6 POKEY: HELLO',$FF
-	.elseif .def WANT_POK
+	.ifdef WANT_POK
 s_tpok	dta d'6 POKEY',$FF
 	.elseif .def MENU
 s_tpok	dta d'6 POKEY',$FF

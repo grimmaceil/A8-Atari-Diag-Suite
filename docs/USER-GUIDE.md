@@ -227,7 +227,7 @@ column and in the columns to the left of it:
 | 3 | console keys | `diag-cart.car`, `diag-disk.atr`, `diag-8k-03-input.atr`, `diag-8k-03-input.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.cas` |
 | 4 | joysticks | `diag-cart.car`, `diag-disk.atr`, `diag-8k-04-ports.atr`, `diag-8k-04-ports.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.cas` |
 | 5 | paddles | `diag-cart.car`, `diag-disk.atr`, `diag-8k-04-ports.atr`, `diag-8k-04-ports.cas` | `diag-16k-02-system.cas`, `diag-controls.cas` | `diag-32k-xl-xe.cas` |
-| 6 | POKEY (sound) | `diag-cart.car`\*, `diag-disk.atr` and `diag-8k-05-sound.atr` (\* with 16K), `diag-8k-05-sound.cas` | `diag-16k-02-system.cas`, `diag-16k-03-hello.cas`\* (the "hello" only) | `diag-32k-xl-xe.cas` |
+| 6 | POKEY (sound) | `diag-cart.car`\*, `diag-disk.atr` and `diag-8k-05-sound.atr` (\* with 16K), `diag-8k-05-sound.cas` | `diag-16k-02-system.cas`, `diag-16k-03-hello.cas`\* | `diag-32k-xl-xe.cas` |
 | 7 | GTIA/ANTIC (video) | `diag-cart.car`, `diag-disk.atr`, `diag-8k-06-video.atr`, `diag-8k-06-video.cas` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.cas` |
 | 8 | results and the final code | `diag-cart.car`, `diag-disk.atr` | `diag-16k-02-system.cas` | `diag-32k-xl-xe.cas` |
 | 9 | long RAM test | `diag-8k-memtest.atr` (on 16K: the 16k one), `diag-8k-memtest.cas` (400/800 only) | `diag-cart.car`, `diag-disk.atr` (line 9 needs 16K), `diag-16k-memtest.atr`, `diag-16k-memtest.cas` | |
@@ -345,7 +345,7 @@ failed. The results screen says `NUMBERS AFTER FAIL = ITEMS THAT FAILED`.
 | 3 Console keys | 1 START, 2 SELECT, 3 OPTION never seen; 4 the speaker tone not heard |
 | 4 Joysticks | the port, 1-4: a line was already active at the start (stuck) |
 | 5 Paddles | the paddle, 1-8: it didn't read as unplugged in the open-input check |
-| 6 POKEY | 1 timer interrupt; 2 random numbers; 3-6 voice 1-4 (scale and hiss); 7 the sampled "hello" (cartridge, boot disk with 16K and `diag-16k-03-hello`) |
+| 6 POKEY | 1 timer interrupt; 2 random numbers; 3-6 voice 1-4 (scale and hiss); 7 the sampled "hello" (cartridge; with 16K the boot disk and the disk set's sound disk; `diag-16k-03-hello`) |
 | 7 GTIA/ANTIC | 1 the ramps or the sprites look wrong; 2 the display modes look wrong |
 
 ### Keys during a result
@@ -599,9 +599,9 @@ rising scale, eight notes from C to C, then noise, a steady hiss. The
 noise comes from a part of the chip the pure tones don't use. A voice that
 plays some notes wrong, or no hiss, counts as not heard.
 
-On the cartridge and the boot disk (with 16K) one more check follows (item 7), and
-`diag-16k-03-hello` is that check on its own: the word "hello", a short
-recording. The first four plays use each voice's volume control as a
+On the cartridge, on `diag-16k-03-hello`, and with 16K on the boot disk
+and the disk set's sound disk, one more check follows (item 7): the word
+"hello", a short recording. The first four plays use each voice's volume control as a
 4-bit sample player; the fifth uses the console speaker, which is only on
 or off, so it sounds rougher. Two more follow, on two voices at once (1+2,
 then 3+4), which doubles the number of levels and sounds clearer: seven in
@@ -610,9 +610,10 @@ all. Answer whether you heard them all.
 The screen goes dark while it plays: the video chip borrows the processor
 on every line it draws, which would make the samples come late and
 unevenly, and sound rough. Every version plays the same recording, a
-sample every scan line (15.7 kHz): the cartridge from a bank of its own,
-the boot disk and the hello tape from RAM (which is why the hello tape
-needs 16K and takes 3.5 minutes to load).
+sample every scan line (15.7 kHz), packed to half its size and unpacked
+as it plays: the cartridge from a bank of its own, the boot disk and the
+tapes from RAM (which is why the hello tape needs 16K; it loads in about
+3 minutes).
 
 The recording is a public-domain one from Wikimedia Commons,
 `En-us-hello.ogg` by Dvortygirl, prepared for 4 bits by
@@ -907,7 +908,7 @@ is tested before a test asks you a yes/no question.
 | RAM | Tapes, in this order | Long test (optional) |
 |---|---|---|
 | 8K or more | the 8k set: `diag-8k-01-ram`, `-02-rom`, `-03-input`, `-04-ports`, `-05-sound`, `-06-video` | `diag-8k-memtest` (400/800) |
-| 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system` (and `diag-16k-03-hello`, the sampled sound) | `diag-16k-memtest` |
+| 16K or more | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system` (and `diag-16k-03-hello`, the sound test with the sampled "hello") | `diag-16k-memtest` |
 | 32K or more | the 32k+ tape: `diag-32k-xl-xe` | `diag-16k-memtest` |
 
 For the keyboard, joysticks and paddles only: `diag-controls` (16K or more).
@@ -945,7 +946,7 @@ All the tapes:
 | `diag-8k-memtest` | 8K | 2 min | the memory test, until you stop it (a 400/800's RAM; on an XL/XE it stops at once: use `diag-16k-memtest`) |
 | `diag-16k-01-ram` | 16K | 3.5 min | the whole RAM test in one load: all the RAM, the tape's own, under an XL/XE's OS, and a 130XE's extra RAM |
 | `diag-16k-02-system` | 16K | 3.5 min | tests 1-7, with a menu |
-| `diag-16k-03-hello` | 16K | 3.5 min | the sampled "hello" (POKEY item 7), as the cartridge plays it: too big for 8K |
+| `diag-16k-03-hello` | 16K | 3 min | the sound test (test 6) with the sampled "hello" (item 7), as the cartridge plays it: too big for 8K |
 | `diag-32k-xl-xe` | 32K | 6 min | the whole RAM test, then tests 1-7 with a menu, in one load |
 | `diag-16k-memtest` | 16K | 2.5 min | the memory test, until you stop it (all the RAM) |
 | `diag-controls` | 16K | 2 min | tests 2, 4 and 5 only: keyboard, joysticks, paddles |

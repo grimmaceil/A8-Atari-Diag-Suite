@@ -40,7 +40,7 @@ cartridge port itself is bad.
 | **Disk set** | `disk-set/diag-8k-01-ram.atr` to `diag-8k-06-video.atr`, `diag-8k-memtest.atr` | any Atari (8K) with a disk drive or an SIO adapter | the 8k tapes as disks, the same programs: one test to a disk, no menu, no DOS. With 16K or more the RAM disk tests the rest by itself, the sound disk adds the "hello", and the memtest disk runs `diag-16k-memtest` |
 | **Memory test disk** | `disks/diag-16k-memtest.atr` | 16K; a disk drive or an SIO adapter | boots straight into the long memory test (`diag-16k-memtest`) |
 | **Cassette** | the 8k set: `diag-8k-01-ram` to `diag-8k-06-video` | 8K: every Atari | six small tapes, about 2 minutes each; long test `diag-8k-memtest` (400/800) |
-| | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, `diag-16k-03-hello` | 16K | about 3.5 minutes each; long test `diag-16k-memtest` |
+| | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, `diag-16k-03-hello` | 16K | about 3-3.5 minutes each; long test `diag-16k-memtest` |
 | | `diag-32k-xl-xe` | 32K | one tape, about 6 minutes: the RAM test, then every test with the menu |
 | | `diag-controls` | 16K | keyboard, joysticks and paddles only: goes with Atari's SALT disks, no test harness needed |
 
@@ -123,6 +123,13 @@ cartridge and the cassettes. Reports from other machines are welcome.
     $A000 and names BASIC rev A, B or C, as it does an XL/XE's built-in
     BASIC; any other cartridge shows `UNKNOWN` (item 2). With BASIC in,
     the 8K of RAM under it can't be tested (a 48K 800 shows `RAM 40K`).
+  - **`diag-16k-03-hello` is the whole sound test** (test 6) with the
+    sampled "hello", not the "hello" alone: the same test the disk set's
+    sound disk runs on 16K. The hello-only build is gone.
+  - **The "hello" recording is packed** to half its size (each sample a
+    4-bit step from the one before) and unpacked as it plays, the same
+    in every format: `diag-16k-03-hello` loads in about 3 minutes (64
+    records, not 92), the boot disk reads 30 sectors for it, not 58.
   - **BASCRC is gone** (its tape, its disk and the listing): test 1 does
     its job.
   - Apart from test 1, every program is the same as in 0.12, but for the

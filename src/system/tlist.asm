@@ -27,8 +27,6 @@ tlist
 	.endif
 	.ifdef WANT_POK
 	.word t_pok
-	.elseif .def WANT_SND
-	.word t_snd
 	.elseif .def SPLIT
 	.word xt6
 	.endif
@@ -66,8 +64,6 @@ ttests
 	.byte 5
 	.endif
 	.ifdef WANT_POK
-	.byte 6
-	.elseif .def WANT_SND
 	.byte 6
 	.elseif .def SPLIT
 	.byte 6

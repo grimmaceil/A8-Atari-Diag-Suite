@@ -6,10 +6,13 @@
 ;   1-4  on voice 1, 2, 3, 4: 4 bits (the sample halved)
 ;   5    on the console speaker: 1 bit (rougher)
 ;   6-7  on voices 1+2, then 3+4: 5 bits (clearer)
-; One byte a sample, 0-30 (tools/mkhello.py), a sample every scan line
-; (15.7 kHz). The cartridge (ROM): from a bank of its own (HELLOBK), so the
-; player runs from low RAM while that bank is in. In RAM (the boot disk,
-; the 16k hello tape): the same recording, in the image.
+; A sample every scan line (15.7 kHz), each a level 0-30 (tools/mkhello.py),
+; packed (build.py's hello_pak): a 4-bit step from the level before, + 8,
+; two to a byte, high first; hnext adds them up as it plays. Every format
+; has the same packed recording: the cartridge in a bank of its own
+; (HELLOBK), so the player runs from low RAM while that bank is in; the boot
+; disk as a piece of its own, loaded at HELLOAT; the 16K tapes and the disk
+; set's sound disk in the image.
 ;
 ; Then the question; no answer in about 3 s plays them all again. Not
 ; heard: POKEY item 7. An answer counts while it plays too (looked at after
@@ -24,6 +27,9 @@ HPLAY	= $0600			; the player, copied to low RAM
 HPN	= $8A			; pages left
 HSPK	= $8B			; the speaker's state
 HMODE	= $8C			; 0 one voice, 1 the speaker, 2 two voices
+HLEV	= $8D			; hnext: the level
+HBYT	= $8E			; the byte being played
+HHALF	= $8F			; 1: its low half is next
 HWHO	= TSCR+$08		; which play, 0-6
 HLINES	= 1
 	.ifdef ROM
@@ -55,11 +61,12 @@ hl_ld	ldx #P_HELLO
 	jsr clrrow
 	PRINT 8, 0, s_hl2
 	PRINT 9, 0, s_hl3
-hl_cp	ldx #hp_len-1		; the player into low RAM
-hl_cl	lda hp_src,x
+hl_cp	ldx #0			; the player into low RAM (up: it is over 128
+hl_cl	lda hp_src,x		; bytes, past what DEX/BPL can count)
 	sta HPLAY,x
-	dex
-	bpl hl_cl
+	inx
+	cpx #hp_len
+	bne hl_cl
 	lda #$40		; the keyboard latch (the CPU masks the IRQ)
 	sta IRQEN
 hl_all	jsr waitrel
@@ -168,11 +175,13 @@ hp_src
 	sta HPN
 	ldy #0
 	sty HSPK
+	sty HLEV
+	sty HHALF
 	lda HMODE
 	beq h1_lp
 	lsr
 	bcc h2_lp
-hs_lp	lda (PTR),y		; the speaker: on at 16 and up, off at 14 and
+hs_lp	jsr HPLAY+hnext-hp_src	; the speaker: on at 16 and up, off at 14 and
 	cmp #16			; down, 15 keeps it as it was (silence stays
 	bcs hs_on		; silent)
 	cmp #15
@@ -187,13 +196,10 @@ hs_k	lda HSPK
 	.if HLINES>1
 	sta WSYNC
 	.endif
-	iny
-	bne hs_lp
-	inc PTR+1
-	dec HPN
+	lda HPN
 	bne hs_lp
 	beq hp_end
-h1_lp	lda (PTR),y		; one voice: half the level, 0-15
+h1_lp	jsr HPLAY+hnext-hp_src	; one voice: half the level, 0-15
 	lsr
 	ora #$10		; volume only
 	sta WSYNC
@@ -201,13 +207,10 @@ h1_a	sta AUDC1		; (patched: the voice)
 	.if HLINES>1
 	sta WSYNC
 	.endif
-	iny
-	bne h1_lp
-	inc PTR+1
-	dec HPN
+	lda HPN
 	bne h1_lp
 	beq hp_end
-h2_lp	lda (PTR),y		; two voices: the halves, the odd one to the
+h2_lp	jsr HPLAY+hnext-hp_src	; two voices: the halves, the odd one to the
 	lsr			; second
 	ora #$10
 	tax
@@ -218,16 +221,39 @@ h2_b	sta AUDC1+2
 	.if HLINES>1
 	sta WSYNC
 	.endif
-	iny
-	bne h2_lp
-	inc PTR+1
-	dec HPN
+	lda HPN
 	bne h2_lp
 hp_end
 	.ifdef ROM
 	ldx #3-OTHER		; this bank back in
 	sta $D500,x
 	.endif
+	rts
+
+; hnext: A = the next level. A new byte every second call (its high half,
+; then its low); HPN goes to 0 as the last page's last byte is taken. At
+; most 65 cycles with the JSR, so a sample still lands on every scan line.
+hnext	lda HHALF
+	bne hn_lo
+	inc HHALF
+	lda (PTR),y
+	sta HBYT
+	iny
+	bne hn_hi
+	inc PTR+1
+	dec HPN
+hn_hi	lsr
+	lsr
+	lsr
+	lsr
+	bpl hn_add		; (always)
+hn_lo	dec HHALF
+	lda HBYT
+	and #$0F
+hn_add	clc
+	adc HLEV
+	sbc #7			; (C clear: minus 8) the step is the half - 8
+	sta HLEV
 	rts
 hp_len	= *-hp_src
 	.if hp_len>255
@@ -240,6 +266,6 @@ s_hl3	dta d'HEARD ALL 7? Y/START=YES, N/SELECT=NO',$FF
 	.ifdef ROM
 	.elseif .def DISK
 	.else
-hl_data	ins '../cart/audio/hello-15k.bin'	; (whole pages)
+hl_data	ins '../../build/hello-pak.bin'	; (build.py's hello_pak: whole pages)
 hl_end
 	.endif

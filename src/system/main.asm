@@ -6,7 +6,6 @@
 ;   4 joysticks (WANT_JOY)       live, per port
 ;   5 paddles (WANT_PAD)         open-input check, then live values
 ;   6 POKEY (WANT_POK)           timer IRQ, RANDOM, the voices and noise by ear
-;     or (WANT_SND, the 16k hello tape) the sampled "hello" only
 ;   7 GTIA (WANT_GTIA)           ramps and sprites by eye
 ; They run in that order (progressive: the Y/N answers later tests ask for
 ; come from the keyboard and console keys tested before them), and the menu
@@ -97,15 +96,13 @@ RESPAGE	= 1
 	.endif
 	.endif
 	.ifdef WANT_POK		; cart/hello.asm: sampled sound, where there is
-	.ifdef ROM		; room: the cartridge and the boot disk, and the
-SAMPLED	= 1			; 8k hello tape (WANT_SND)
-	.elseif .def DISK
+	.ifdef ROM		; room: the cartridge, the boot disk (it fetches
+SAMPLED	= 1			; the recording), and HELLO16: the 16k hello tape
+	.elseif .def DISK	; and the disk set's sound disk on 16K, the
+SAMPLED	= 1			; recording in the image
+	.elseif .def HELLO16
 SAMPLED	= 1
-	.elseif .def HELLO16	; (the disk set's sound disk on 16K: the
-SAMPLED	= 1			; recording in the image, as the hello tape)
 	.endif
-	.elseif .def WANT_SND
-SAMPLED	= 1
 	.endif
 	.ifdef WANT_CON		; common.asm: the tests that ask Y/N
 NEEDYN	= 1
@@ -417,16 +414,6 @@ ch_nk
 	.endif
 	.ifdef WANT_POK
 	icl 't_pok.asm'
-	.elseif .def WANT_SND
-; t_snd: test 6, the sampled "hello" only (the 16k hello tape: the rest of
-; the POKEY test is on the system tapes). Item 7 as in the full test.
-t_snd	lda #6
-	sta TEST
-	lda #<s_tpok
-	ldy #>s_tpok
-	jsr tpage
-	jsr hello
-	jmp tend
 	.endif
 	.ifdef WANT_GTIA
 	icl 't_gtia.asm'

@@ -4,8 +4,10 @@ src/cart/audio/En-us-hello.ogg, and a preview to listen to on a PC.
 
   src/cart/audio/hello-15k.bin   one sample a scan line (15.7 kHz), one
                                  byte each, 0-30 (two voices' levels added):
-                                 the cartridge (in a bank of its own), the
-                                 boot disk and the 16k hello tape
+                                 packed by build.py (hello_pak: 4-bit steps,
+                                 half the size) for the cartridge, the boot
+                                 disk and the tapes, which unpack it as it
+                                 plays
   build/hello-preview.wav        what the Atari plays, in the order it plays
                                  it: 4 bits (one voice), 1 bit (the console
                                  speaker), 5 bits (two voices), for both

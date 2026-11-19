@@ -81,8 +81,8 @@ file's name (`cassettes/diag-...-v0.13.cas`; `build/` keeps the plain
 names, which the simulator examples below use) and onto every title bar
 (`screen.asm`'s header: one digit before the point, one or two after, in
 five columns). A patch level (`0.13.1`, `VPAT`) would take seven, and the
-longest titles (test 3 and test 7's modes page on `diag-16k-02-system`,
-the "hello" on `diag-16k-03-hello`) would then leave the version out. A
+longest titles (test 3 and test 7's modes page on `diag-16k-02-system`)
+would then leave the version out. A
 build removes the release files of other versions.
 
 Every build copies the release files that changed to the share (`SHARE`
@@ -125,13 +125,13 @@ rebuilt for a disk: the same programs as its banks, each a "piece" loaded
 from the disk when it is needed. Design and reasons:
 [Atari-diag-boot-disk-scope.md](design/Atari-diag-boot-disk-scope.md).
 
-| Piece | Built from | Load | Sectors (0.12) |
+| Piece | Built from | Load | Sectors (0.13) |
 |---|---|---|---|
 | boot | `src/disk/boot.asm`: the short check, then the RAM piece for this machine | $0600-$07FF | 1-4 |
 | RAM8 | tape 1's stage 1 with `DISK` (no ONE16): RAM above it, then its own RAM page by page (`ownram`) | $0900-$1BFF | 38 |
 | RAM16 | tape 1 with `ONE16` and `DISK` (`build_one16(disk=True)`) | $0900-$24FF | 56 |
 | MENU, ROM, INPUT, PORTS, SOUND, VIDEO | `src/system/main.asm` with `DISK` and the `WANT_*` of each (the menu: `MENUPC`) | $0900, at most $1BFF | 30-38 |
-| HELLO | `src/cart/audio/hello-15k.bin`, data | $1C00-$38FF | 58 |
+| HELLO | the recording packed (`build/hello-pak.bin`, `hello_pak`), data | $1C00-$2AFF | 30 |
 | MEM | tape 2 with `BOUNCE`, `CART` and `DISK` | $0800 | 60 |
 
 - Every piece but HELLO has the tape image's 6-byte header (mkatr reads

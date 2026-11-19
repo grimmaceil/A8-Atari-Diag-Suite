@@ -18,7 +18,7 @@
 DLDR	= $0700			; the loader runs here (page 7: free once booted;
 DMARK	= $07FE			; $07FE-$07FF: "back from the long test", $5A $A5)
 DLOAD	= $0900			; where the pieces load (the results page: $0800)
-HELLOAT	= $1C00			; the "hello" recording (16K: up to $38FF)
+HELLOAT	= $1C00			; the "hello" recording, packed (16K: up to $2AFF)
 P_RAM8	= 0			; the pieces, in disk order (mkatr.py's PIECES)
 P_RAM16	= 1
 P_MENU	= 2
