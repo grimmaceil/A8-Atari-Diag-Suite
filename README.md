@@ -411,8 +411,9 @@ building, the source layout, the simulator, how each format is put
 together, the rules the code keeps (byte budgets, no timeouts, two keys for
 everything) and the lessons learned along the way.
 [Atari-diag-cassette-scope.md](docs/design/Atari-diag-cassette-scope.md) is the design
-and the ROM table; [Atari-diag-disk-scope.md](docs/design/Atari-diag-disk-scope.md)
-the executables' design (`.xex`, up to 0.11).
+and the ROM table; [Atari-diag-boot-disk-scope.md](docs/design/Atari-diag-boot-disk-scope.md)
+the boot disk's, and [Atari-diag-disk-scope.md](docs/design/Atari-diag-disk-scope.md)
+the disk set's.
 
 Contributions are welcome: issues and pull requests on GitHub are the way
 to reach the author (email isn't checked). A report from real hardware is

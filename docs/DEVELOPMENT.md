@@ -115,8 +115,8 @@ with the boot header in the first record. Every file on a tape ends in an
 EOF record: the OS boot reads one record past its count.
 
 Up to 0.11 the 32k+ image and the long memory test were executables too
-(`.xex`, [Atari-diag-disk-scope.md](design/Atari-diag-disk-scope.md)); the
-boot disk does what they did, and 0.12 dropped them.
+(`.xex`: their design is `docs/design/Atari-diag-disk-scope.md` at the tag
+`v0.11`); the boot disk does what they did, and 0.12 dropped them.
 
 ### The boot disk
 
@@ -437,7 +437,7 @@ These came from the author's direction over the sessions:
 | `tools/` | `build.py`, `mkcas.py`, `mkcar.py`, `mkatr.py` (the disks), `mkbasic.py`, `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
 | `cassettes/`, `disks/` (the boot disk, the 16k memtest's, BASCRC's), `disk-set/` (the 8k tapes as disks), `carts/` | the release files |
 | `docs/design/Atari-diag-cassette-scope.md` | the design: constraints, feedback, sets, the ROM table, open items |
-| `docs/design/Atari-diag-disk-scope.md` | the executables' design (`.xex`, up to 0.11) |
+| `docs/design/Atari-diag-disk-scope.md` | the disk set's design (and, at the tag `v0.11`, the executables') |
 | `docs/design/Atari-diag-boot-disk-scope.md` | the boot disk's design |
 
 ## The simulator

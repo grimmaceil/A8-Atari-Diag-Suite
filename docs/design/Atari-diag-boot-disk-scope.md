@@ -10,10 +10,11 @@ set-up); not yet on a real machine. The plan: docs/superpowers/plans/2026-11-16-
 Where the build settled a point differently from the text below: the boot
 is sectors 1-4 at $0600-$07FF (its loader already in place at $0700); the
 menu piece is 3.75K (30 sectors); the disk error has no status number and
-a steady tone (the page-7 loader must fit 254 bytes). The disk files (`.xex`, up to
-0.11; gone in 0.12) have their own document, [Atari-diag-disk-scope.md](Atari-diag-disk-scope.md).
-This disk reverses two calls made there: it is a bootable `.atr`, and it
-runs on an 8K machine.
+a steady tone (the page-7 loader must fit 254 bytes). The executables
+(`.xex`, up to 0.11; gone in 0.12) had their own design,
+`Atari-diag-disk-scope.md` at the tag `v0.11` (that file is now the disk
+set's design). This disk reversed two calls made there: it is a bootable
+`.atr`, and it runs on an 8K machine.
 
 ## 1. What this is, and why
 

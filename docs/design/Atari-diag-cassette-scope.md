@@ -373,7 +373,8 @@ BASIC on its own against the same A, B and C values.
   OS, runs every test from ROM, and is the best way in all the same.
 - **Executables (`.xex`), up to 0.11:** they needed DOS and 32K. The boot
   disk (0.10) boots with no DOS and needs 8K, so they went in 0.12
-  ([Atari-diag-disk-scope.md](Atari-diag-disk-scope.md) is their design).
+  (their design: [Atari-diag-disk-scope.md](Atari-diag-disk-scope.md) at
+  the tag `v0.11`; that file is now the disk set's design).
 - **Fast pot scan in the paddle test, up to 0.12:** it can't read
   paddles. The counts come out 114 times too high, and it turns off the
   transistors that empty the capacitors (Altirra Hardware Reference
