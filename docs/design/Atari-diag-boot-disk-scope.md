@@ -42,9 +42,10 @@ tapes.
    it tests its own RAM too (section 5). Its summary plays its code three
    times and goes on by itself, as on the cartridge.
 3. The ROM test loads and runs, and waits on its result.
-4. The menu, the cartridge's: `0 RAM` to `7 GTIA/ANTIC`, all in order,
-   `8` the results and the final code, `9` the long RAM test. The same
-   keys, joystick included.
+4. The menu, the cartridge's: `0 RAM` to `7 GTIA/ANTIC`, `8` the results
+   and the final code, `9` the long RAM test. The same keys, joystick
+   included. (Its `ALL OF THEM, IN ORDER` line went in 0.12: after each
+   test the next is highlighted, so START, START... walks them all.)
 5. Picking a test loads its piece (a few seconds on an 810); when it ends,
    the menu loads again with the result on its line.
 6. No picture (the display checks fail): no menu; all the tests run in
@@ -218,7 +219,8 @@ and the loader where the cartridge has `XBANK`.
   disk reads through its `SIOV` stand-in, so a run can go power-on, RAM,
   ROM, menu, a test and back.
 - Checked in the simulator once each: 8K and 64K XL boots, a menu pick
-  and back, all in order, a disk error. Mike does the rest on the MiSTer
+  and back, all the tests in order (the menu's ALL line, up to 0.11), a
+  disk error. Mike does the rest on the MiSTer
   and the real 800 and 800XL (and test 7, which is his).
 
 ## 12. Calls made for this design (Claude's, for Mike to check)
