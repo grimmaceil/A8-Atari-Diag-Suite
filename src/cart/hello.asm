@@ -8,7 +8,7 @@
 ;   6-7  on voices 1+2, then 3+4: 5 bits (clearer)
 ; One byte a sample, 0-30 (tools/mkhello.py), a sample every scan line
 ; (15.7 kHz). The cartridge (ROM): from a bank of its own (HELLOBK), so the
-; player runs from low RAM while that bank is in. In RAM (the disk file,
+; player runs from low RAM while that bank is in. In RAM (the boot disk,
 ; the 16k hello tape): the same recording, in the image.
 ;
 ; Then the question; no answer in about 3 s plays them all again. Not

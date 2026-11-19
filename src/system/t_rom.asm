@@ -10,7 +10,7 @@
 ;   item 4: the character set read differently twice (dprereq's sums)
 ;   item 5: OS chips from different revisions
 ;   item 6: this program's own copy fails its CRC32 (selfchk): the tape or
-;           disk file as it sits in RAM, or the cartridge's code banks
+;           boot disk's piece as it sits in RAM, or the cartridge's code banks
 ; A ROM that matches is read once: a bad read would not match. One that
 ; doesn't is read again, to tell flaky from merely unknown.
 ;

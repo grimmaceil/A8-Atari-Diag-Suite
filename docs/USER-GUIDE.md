@@ -1080,7 +1080,7 @@ a BASIC cartridge).
 
 ### What has it been tried on?
 
-Real 800 and 800XL machines, with the disk files (up to 0.11) over an SIO adapter,
+Real 800 and 800XL machines, with the executables (`.xex`, up to 0.11) over an SIO adapter,
 where the joystick and paddle ports get their real test. Every format,
 the boot disk included, has also run on the author's development set-up,
 the MiSTer's Atari800 core, as a 400/800 and as an XL/XE (64K and a 128K

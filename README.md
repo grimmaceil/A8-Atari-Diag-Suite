@@ -90,7 +90,7 @@ fails. It starts with a table of every test and the files that have it.
 
 ## Status
 
-Tried on a real 800 and a real 800XL with the disk files (up to 0.11) over
+Tried on a real 800 and a real 800XL with the executables (`.xex`, up to 0.11) over
 an SIO adapter, where the joystick and paddle ports get their real test. Every
 format, the boot disk included, has also run on the author's development
 set-up, the MiSTer's Atari800 core, as a 400/800 and as an XL/XE (64K, and
@@ -116,7 +116,7 @@ cartridge and the cassettes. Reports from other machines are welcome.
     no DOS; after a key the machine goes on to BASIC's `READY`. It is a
     DOS 2 disk too, with `BASCRC.XEX` (the same check, `L` from DOS) and
     `BASCRC.LST` (the BASIC listing, `ENTER "D:BASCRC.LST"`).
-  - **No more disk files** (`xex/`): the boot disk does what
+  - **No more executables** (`.xex`, the `xex/` folder): the boot disk does what
     `diag-32k-xl-xe.xex` and `diag-16k-memtest.xex` did, and BASCRC's
     disk carries `diag-bascrc.xex` and `bascrc.lst`. The 32k+ program and
     the long memory test are still tapes too.
@@ -134,8 +134,8 @@ cartridge and the cassettes. Reports from other machines are welcome.
   - Boot disk: test 6's voices 3 and 4 were silent (each disk load left
     POKEY in the serial mode that holds them). The disk error screen takes
     START and fire as a new press only.
-  - `disks/` holds only the boot disk; the DOS files (`.xex`, BASCRC's
-    `.lst`) are in `xex/`.
+  - `disks/` holds only the boot disk; the executables (`.xex`) and
+    BASCRC's `.lst` are in `xex/`.
   - The user guide starts with the boot disk and the cartridge; the disk
     files and the cassettes follow, as the other ways in.
 - **0.10** (2026-11-17), against 0.9:
@@ -145,7 +145,7 @@ cartridge and the cassettes. Reports from other machines are welcome.
     every machine (it tests its own RAM page by page, as the long test
     does); each test loads from the disk as you pick it.
   - **The RAM summary goes on by itself** where the ROM test comes next
-    (the boot disk, the cartridge, the 32k+ tape and disk file): after its
+    (the boot disk, the cartridge, the 32k+ tape and executable): after its
     code has played three times, so a machine left alone runs on to the
     ROM test. Any key goes on at once; T or OPTION stops the count.
   - **Joystick as the console keys** (no keyboard): fire = START, down =
@@ -159,7 +159,7 @@ cartridge and the cassettes. Reports from other machines are welcome.
   - **Keys:** R re-test, T or SELECT the tones, F or OPTION full-screen
     flashes, any other key goes on, at every result; every action has a
     console key and a keyboard key. S skips the RAM test on the cartridge,
-    the 32k+ tape and the disk file; X skips the console key test.
+    the 32k+ tape and the executable; X skips the console key test.
   - **No timers:** no result moves on by itself any more (a pass used to
     go on after 2 seconds). R works at the last screen of every tape
     without a menu (all its tests again), at the RAM summaries and at the
@@ -173,10 +173,10 @@ cartridge and the cassettes. Reports from other machines are welcome.
     start-up chirp.
   - **The 8k set** is six tapes: the sound and video tape became
     `diag-8k-05-sound` and `diag-8k-06-video`, one load each.
-  - **ROM test:** a self-check (item 6): a tape or disk file checks its own
+  - **ROM test:** a self-check (item 6): a tape or executable checks its own
     copy in RAM by CRC32, the cartridge each of its program banks. The
     XL/XE's built-in BASIC must match a revision (item 2). The 400/800's
-    BASIC cartridge is checked by **BASCRC** instead: a disk file, a BASIC
+    BASIC cartridge is checked by **BASCRC** instead: an executable, a BASIC
     listing on tape and a `.lst` file.
   - **RAM:** one long beep per 16K bank at a pass (the 32k+ tape and disk
     file left bank 1 out, so a 130XE beeped 7 times, not 8). The cartridge
@@ -184,14 +184,14 @@ cartridge and the cassettes. Reports from other machines are welcome.
     the long test). The `FOUND:` line no longer says `CART IN`.
   - **Memory test:** the count is passes done, from 0; a key shows `ENDING
     AFTER PASS`; R starts it again. `diag-memtest` is now
-    `diag-16k-memtest` (tape and disk file); the disk's 32k+ file no longer
+    `diag-16k-memtest` (tape and executable); the 32k+ executable no longer
     carries it. `diag-8k-memtest` stops at once on an XL/XE (yellow,
     `XL/XE: USE DIAG-16K-MEMTEST`): it can't reach their extra RAM.
   - **Test 7 is GTIA/ANTIC:** the word ATARI scrolls right to left and
     snakes on its own wave; page 2 shows the video modes (ANTIC 6 and 7,
     the bitmaps 8, A, B, D, F, GTIA 9, 10, 11) and fine scrolling.
   - **"hello"** plays the cartridge's 15.7 kHz recording everywhere it is
-    (cartridge, disk file, `diag-16k-03-hello`), seven plays.
+    (cartridge, executable, `diag-16k-03-hello`), seven plays.
   - The keyboard test ends on any console key; the Atari key shows the
     logo on every machine.
   - Documents: a keys section and a table of every test by file, the MIT
@@ -203,7 +203,7 @@ cartridge and the cassettes. Reports from other machines are welcome.
   - Sounds: a pass plays the first four notes of the "charge" fanfare
     (twice for the final pass); a fail plays a sad trombone (two long
     falling notes) before its beep code.
-  - The disk file loads on 32K again (0.7 needed 34K): its "hello" is now
+  - The executable loads on 32K again (0.7 needed 34K): its "hello" is now
     4 bits, a quarter of the bytes, played on the four voices and the
     speaker. The cartridge keeps its 15.7 kHz version and the two-voice
     plays.
@@ -217,7 +217,7 @@ cartridge and the cassettes. Reports from other machines are welcome.
   - The ROM test runs by itself only at power on; the RAM test run from
     the menu comes back to the menu. The RAM summary waits for START.
   - S skips the RAM test (cartridge), X skips the ROM test (cartridge,
-    disk file, 32k+ tape) and the console key test. A tap counts any time,
+    executable, 32k+ tape) and the console key test. A tap counts any time,
     from switching on.
   - "hello" plays with the screen off, at a steady rate: a sample every
     scan line on the cartridge (15.7 kHz, in a bank of its own), every
@@ -240,7 +240,7 @@ cartridge and the cassettes. Reports from other machines are welcome.
     test (0) keeps the other tests' results.
   - The long memory test returns to the cartridge's menu (START at its
     summary).
-  - The disk file `diag-32k-xl-xe.xex` now holds the long memory test too
+  - The executable `diag-32k-xl-xe.xex` now holds the long memory test too
     (menu line 9) and the sampled "hello"; it needs 34K.
   - "hello" also plays on two voices at once, for twice the levels.
   - CTRL+X skips the console key test. A tap of START is no longer missed
@@ -296,7 +296,7 @@ cartridge and the cassettes. Reports from other machines are welcome.
     tones but not this.
   - The version is in every file name and on every title bar.
   - Fixed: the 130XE check left a wrong byte at `$4000` in the 32k+
-    tape, disk file and cartridge (one wrong character in the GTIA test).
+    tape, executable and cartridge (one wrong character in the GTIA test).
   - Fixed: the tapes without a RAM test accepted a screen block with a bit
     stuck through all of it, and showed garbled text.
   - Fixed: with no working screen block, the console key test wrote its
@@ -319,7 +319,7 @@ cartridge and the cassettes. Reports from other machines are welcome.
     joysticks, paddles, sound, video), SELECT the long memory test. The
     title bars say CART.
 - **0.2** (2026-11-08)
-  - Disk files: `diag-32k-xl-xe.xex` (32K) and `diag-memtest.xex` (16K),
+  - Executables: `diag-32k-xl-xe.xex` (32K) and `diag-memtest.xex` (16K),
     for DOS 2.0S/2.5, MyDOS, the MiSTer's XEX loader, AspeQt and FujiNet.
     The same tests as their tapes; the title bar says XEX. A machine with
     too little RAM, or a DOS in the way, gets a plain message before the
@@ -362,7 +362,7 @@ together, the rules the code keeps (byte budgets, no timeouts, two keys for
 everything) and the lessons learned along the way.
 [Atari-diag-cassette-scope.md](Atari-diag-cassette-scope.md) is the design
 and the ROM table; [Atari-diag-disk-scope.md](Atari-diag-disk-scope.md)
-the disk files' design.
+the executables' design (`.xex`, up to 0.11).
 
 Contributions are welcome: issues and pull requests on GitHub are the way
 to reach the author (email isn't checked). A report from real hardware is

@@ -11,7 +11,7 @@
 ; They run in that order (progressive: the Y/N answers later tests ask for
 ; come from the keyboard and console keys tested before them), and the menu
 ; lists them by number (0 is the RAM test, on the 32k+ image). The numbers
-; are the same on every tape, disk file and the cartridge.
+; are the same on every tape, the boot disk and the cartridge.
 ;
 ; Boots like the other tapes (alive, image checksum, low RAM, size probe,
 ; machine, display prerequisites). The screen block gets a quick test only:
@@ -111,7 +111,7 @@ NEEDYN	= 1
 NEEDYN	= 1
 	.endif
 	.ifdef WANT_ROM		; the ROM test checks this program's own copy too
-	.ifndef ROM		; (t_rom.asm's selfchk): a tape or disk file on its
+	.ifndef ROM		; (t_rom.asm's selfchk): a tape or disk piece on its
 	.ifndef CHAIN		; own ends in CRCFIX (mkcas.py), from CRCAT = LOAD;
 SELFCRC	= 1			; the 32k+ image's comes from tape 1 (build.py)
 SELFAT	= LOAD
@@ -493,7 +493,7 @@ BSS	= $0800			; the results page, shared by the pieces
 TSTART	= [>BSS]+1
 	.else
 	.ifndef CHAIN		; (the one-load image: no pages of its own, so the
-				; disk file needs no more than 32K)
+				; 32k+ image needs no more than 32K)
 ; Pad to a whole page; the last two bytes hold the image sum (mkcas.py),
 ; or (SELFCRC) the last six: the sum, then CRCFIX.
 	.ifdef SELFCRC

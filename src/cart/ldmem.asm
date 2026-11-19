@@ -1,10 +1,7 @@
-; ldmem: the long memory test from the menu.
-; The disk file (not ROM): its image is in this program's own image, at
-; MEMAT (MEMPG pages; build.py). It is copied down to $0800, over this
-; program, by a loop in low RAM, and started. There is no way back but to
-; load the file again: the test needs all the RAM.
-; The cartridge (ROM): It tests all the RAM,
-; the 8K under the cartridge too, so it can't run from ROM: its image (the
+; ldmem: the long memory test from the cartridge's menu (main.asm includes
+; it only there, HASLDR; the boot disk loads its MEM piece instead). It
+; tests all the RAM, the 8K under the cartridge too, so it can't run from
+; ROM: its image (the
 ; same boot image as the tape's, tools/mkcar.py) is copied from banks
 ; MEMBK on (MEMPG pages, DATAPG to a bank) to $0800, the cartridge switches
 ; itself off ($D510: until the power goes off) and the image starts at
@@ -26,15 +23,8 @@ ldmem	sei
 	sta CUR
 	lda #$08
 	sta CUR+1
-	.ifdef ROM
 	lda #MEMBK
 	sta LDBANK
-	.else
-	lda #<MEMAT		; (anywhere: the system tests aren't padded)
-	sta PTR
-	lda #>MEMAT
-	sta PTR+1
-	.endif
 	lda #MEMPG
 	sta LDNPG
 	ldx #ld_len-1
@@ -44,7 +34,6 @@ ld_cp	lda ld_code,x
 	bpl ld_cp
 	jmp LDAT
 
-	.ifdef ROM
 ld_code	ldx LDBANK
 	sta $D500,x
 	lda #$A0
@@ -70,18 +59,4 @@ ld_done	lda #1			; RESET: a cold start
 	lda TRIG3		; (the XL OS halts if TRIG3 changes from this)
 	sta GINTLK
 	jmp $0806
-	.else
-ld_code	ldy #0			; (down: the target is below the source)
-ld_by	lda (PTR),y
-	sta (CUR),y
-	iny
-	bne ld_by
-	inc PTR+1
-	inc CUR+1
-	dec LDNPG
-	bne ld_by
-	lda #1			; RESET: a cold start
-	sta COLDST
-	jmp $0806
-	.endif
 ld_len	= *-ld_code

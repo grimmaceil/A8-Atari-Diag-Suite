@@ -38,7 +38,7 @@ SHLIB	= 1			; part's library (lib.asm)
 
 KEEP	= BSS+$EB		; (system/common.asm)
 	.ifdef ROM		; S skips the RAM test, on the cartridge, the boot
-SKIPKEY	= 1			; disk and the 32k+ tape and disk file (ramtest.asm
+SKIPKEY	= 1			; disk and the 32k+ tape (ramtest.asm
 	.elseif .def ONE32	; looks at it every page)
 SKIPKEY	= 1
 	.elseif .def DISK

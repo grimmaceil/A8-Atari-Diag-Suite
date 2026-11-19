@@ -114,7 +114,7 @@ records ($55 $55 sync, control byte $FC/$FA/$FE, 128 bytes, checksum),
 with the boot header in the first record. Every file on a tape ends in an
 EOF record: the OS boot reads one record past its count.
 
-Up to 0.11 the 32k+ image and the long memory test were DOS files too
+Up to 0.11 the 32k+ image and the long memory test were executables too
 (`.xex`, [Atari-diag-disk-scope.md](../Atari-diag-disk-scope.md)); the
 boot disk does what they did, and 0.12 dropped them.
 
@@ -214,7 +214,7 @@ the OS screen editor, built twice (`build_bascrc`):
   the OS goes on to the cartridge (BASIC's `READY`) or DOSVEC. It sets
   MEMLO just past `b_init` (also DOSINI, for RESET), so BASIC keeps clear
   of the little that has to stay;
-- without: `BASCRC.XEX`, a DOS file at $2000 that returns to DOS.
+- without: `BASCRC.XEX`, an executable (loads at $2000) that returns to DOS.
 
 `disks/diag-bascrc.atr` is both: the boot in sectors 1-5, and a DOS 2.0S
 file system (`mkatr.py`'s `dos2`: the VTOC at 360, the directory at
@@ -403,11 +403,11 @@ These came from the author's direction over the sessions:
 | `src/system/` | tests 1-7: `main.asm` builds a program from the tests `WANT_*` picks; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia` and `t_gtia2`, its video modes page); `common.asm` the flow, the menu and the end of a tape; `tlist.asm` the order; `kbmap.asm` the keyboard map (`tools/gen_kbmap.py`) |
 | `src/cart/` | the cartridge: `romsum.asm` (bank layout, sums), `ldmem.asm` (the long test's loader), `undercart.asm` (the RAM under it), `hello.asm` and `audio/` (the sampled "hello", made by `tools/mkhello.py`) |
 | `src/disk/` | the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`) |
-| `src/basic/` | BASCRC: the BASIC listing and the machine code (its disk's boot, and its DOS file) |
+| `src/basic/` | BASCRC: the BASIC listing and the machine code (its disk's boot, and its executable) |
 | `tools/` | `build.py`, `mkcas.py`, `mkcar.py`, `mkatr.py` (both disks), `mkbasic.py`, `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
 | `cassettes/`, `disks/` (the boot disk, BASCRC's disk), `carts/` | the release files |
 | `Atari-diag-cassette-scope.md` | the design: constraints, feedback, sets, the ROM table, open items |
-| `Atari-diag-disk-scope.md` | the disk files' design (up to 0.11) |
+| `Atari-diag-disk-scope.md` | the executables' design (`.xex`, up to 0.11) |
 | `Atari-diag-boot-disk-scope.md` | the boot disk's design |
 
 ## The simulator
