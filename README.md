@@ -26,23 +26,21 @@ with 8K or more and a disk drive or an SIO adapter, with no DOS, and it
 works like the cartridge (the same menu, keys and results), only each test
 loads from the disk when you pick it. **The cartridge** needs no loading
 at all: it runs from ROM, so it works on a machine whose RAM is too sick
-to load a program, but it needs a flash cartridge. The disk files and the
-cassettes are the other alternatives; the cassettes need the least of the
-machine. All but the cartridge cost nothing (no flash cartridge to buy),
-and they are the way in when the cartridge port itself is bad.
+to load a program, but it needs a flash cartridge. The cassettes are the
+other way in, and need the least of the machine. All but the cartridge
+cost nothing (no flash cartridge to buy), and they are the way in when the
+cartridge port itself is bad.
 
 | | File | Needs | What it is |
 |---|---|---|---|
 | **Boot disk** | `disks/diag-disk.atr` | any Atari (8K) with a disk drive or an SIO adapter | the cartridge's menu from a disk you boot: no DOS; each test loads as you pick it; the long test and the "hello" with 16K |
 | **Cartridge** | `carts/diag-cart.car` | any Atari (8K); an AtariMax 128K flash cartridge | every test on one menu, run from ROM: no loading, and it works when the RAM is too sick to load a program into |
-| **Disk files** | `xex/diag-32k-xl-xe.xex` | 32K; DOS or a PC link | the RAM test, then every test with the menu, in one file |
-| | `xex/diag-16k-memtest.xex` | 16K | the long memory test |
-| | `xex/diag-bascrc.xex` | 16K and DOS, with the BASIC cartridge in | the check for a BASIC cartridge (BASCRC) |
+| **BASCRC disk** | `disks/diag-bascrc.atr` | the BASIC cartridge in (or an XL/XE's built-in BASIC); a disk drive or an SIO adapter | boots to the check for a BASIC cartridge (BASCRC), no DOS; on it for DOS too: `BASCRC.XEX`, the same check, and `BASCRC.LST`, the BASIC listing |
 | **Cassette** | the 8k set: `diag-8k-01-ram` to `diag-8k-06-video` | 8K: every Atari | six small tapes, about 2 minutes each; long test `diag-8k-memtest` (400/800) |
 | | the 16k set: `diag-16k-01-ram`, `diag-16k-02-system`, `diag-16k-03-hello` | 16K | about 3.5 minutes each; long test `diag-16k-memtest` |
 | | `diag-32k-xl-xe` | 32K | one tape, about 6 minutes: the RAM test, then every test with the menu |
 | | `diag-controls` | 16K | keyboard, joysticks and paddles only: goes with Atari's SALT disks, no test harness needed |
-| | `diag-bascrc` | BASIC cartridge in | BASCRC as a BASIC listing (`ENTER "C:"`); also `xex/bascrc.lst` for `ENTER "D:"` |
+| | `diag-bascrc` | BASIC cartridge in | BASCRC as a BASIC listing (`ENTER "C:"`); also on the BASCRC disk as `BASCRC.LST`, for `ENTER "D:"` |
 
 **Cassettes too:** a cassette boot needs the least of the machine: no disk
 drive, no DOS, just the computer, its OS and the first few K of RAM. So the
@@ -73,8 +71,8 @@ Keys at every result, each with a console key and a keyboard key so one
 dead key never traps you: **R** re-test (where there is no menu to pick
 the test from again), **T** or SELECT the tones again, **F** or OPTION
 full-screen flashes, any other key (START, a joystick button) goes on.
-**S** skips the RAM test on the boot disk, the cartridge, the 32k+ tape
-and disk file.
+**S** skips the RAM test on the boot disk, the cartridge and the 32k+
+tape.
 With no keyboard, a joystick in port 1 or 2 stands in for the console
 keys on every screen: fire = START, down = SELECT, up = OPTION. A stuck
 joystick (a short) gets three "pew" beeps and orange flashes at
@@ -92,8 +90,8 @@ fails. It starts with a table of every test and the files that have it.
 
 ## Status
 
-Tried on a real 800 and a real 800XL with the disk files over an SIO
-adapter, where the joystick and paddle ports get their real test. Every
+Tried on a real 800 and a real 800XL with the disk files (up to 0.11) over
+an SIO adapter, where the joystick and paddle ports get their real test. Every
 format, the boot disk included, has also run on the author's development
 set-up, the MiSTer's Atari800 core, as a 400/800 and as an XL/XE (64K, and
 a 128K 130XE). Not tried on a real machine yet: the boot disk, the
@@ -113,6 +111,15 @@ cartridge and the cassettes. Reports from other machines are welcome.
   - Smaller: the boot disk's loader carries only what each piece uses (the
     boot's loads one way and has no screen; only the RAM pieces and the
     sound piece keep the whole one), and the menus are shorter.
+  - **BASCRC has a disk of its own** (`disks/diag-bascrc.atr`, new): it
+    boots straight into the BASIC cartridge check, in machine code, with
+    no DOS; after a key the machine goes on to BASIC's `READY`. It is a
+    DOS 2 disk too, with `BASCRC.XEX` (the same check, `L` from DOS) and
+    `BASCRC.LST` (the BASIC listing, `ENTER "D:BASCRC.LST"`).
+  - **No more disk files** (`xex/`): the boot disk does what
+    `diag-32k-xl-xe.xex` and `diag-16k-memtest.xex` did, and BASCRC's
+    disk carries `diag-bascrc.xex` and `bascrc.lst`. The 32k+ program and
+    the long memory test are still tapes too.
   - The user guide shows test 7's second page, the video modes.
 - **0.11** (2026-11-17), against 0.10:
   - **The joystick on every screen:** fire goes on, down plays the tones

@@ -762,8 +762,6 @@ n_basb	dta d'B',$FF
 n_basc	dta d'C',$FF
 	.ifdef ROM
 s_rself	dta d'DIAG CART',$FF
-	.elseif .def XEX
-s_rself	dta d'DIAG DISK',$FF
 	.elseif .def DISK
 s_rself	dta d'DIAG DISK',$FF
 	.else

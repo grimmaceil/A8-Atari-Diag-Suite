@@ -92,7 +92,8 @@ def load_image(path):
 
 def patch_boot(bin_path, lab_path):
     """Put the image sum into a boot image's last two bytes, in place
-    (mkcas and mkxex). Returns the image, its records, load address, sum.
+    (mkcas, and mkatr for the boot disk's pieces). Returns the image, its
+    records, load address, sum.
     With CRCFIX (the ROM test's self-check: the sum, then 4 bytes, end the
     image): those 4 bytes are the CRC32 of the image from CRCAT up to them,
     as it is in RAM once the boot has run (the page operands boot.asm's sum

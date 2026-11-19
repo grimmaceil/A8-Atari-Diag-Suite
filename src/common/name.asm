@@ -8,28 +8,18 @@ s_hpre	dta d' DIAG-DISK  ',$FF
 	.elseif .def OWNTEST		; the memory test (tape2)
 	.if .def NOXL
 s_hpre	dta d' DIAG-8K-MEMTEST  ',$FF
-	.elseif .def XEX
-s_hpre	dta d' DIAG-16K-MEMTEST-XEX  ',$FF
 	.elseif .def CART
 s_hpre	dta d' DIAG-MEMTEST-CART  ',$FF
 	.else
 s_hpre	dta d' DIAG-16K-MEMTEST  ',$FF
 	.endif
 	.elseif .def ONE32		; the 32k+ program (its RAM stages)
-	.ifdef XEX
-s_hpre	dta d' DIAG-32K-XEX  ',$FF
-	.else
 s_hpre	dta d' DIAG-32K-XL-XE  ',$FF
-	.endif
 	.elseif .def ONE16
 s_hpre	dta d' DIAG-16K-01-RAM  ',$FF
 	.elseif .def SETNO		; the system tests (SETNO 0 = the 8k set,
 	.if SETNO=4			; 1 = 16K, 3 = controls, 4 = 32k+)
-	.ifdef XEX
-s_hpre	dta d' DIAG-32K-XEX  ',$FF
-	.else
 s_hpre	dta d' DIAG-32K-XL-XE  ',$FF
-	.endif
 	.elseif SETNO=3
 s_hpre	dta d' DIAG-CONTROLS  ',$FF
 	.elseif SETNO=1

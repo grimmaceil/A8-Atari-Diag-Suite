@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build the diag tapes, disk files, boot disk and cartridge: assemble with
-MADS, wrap as .cas (mkcas.py), .xex (mkxex.py, XEXES), .atr (mkatr.py,
-build_disk) and .car (mkcar.py, CAR), optionally deploy.
+"""Build the diag tapes, boot disk, BASCRC's disk and cartridge: assemble
+with MADS, wrap as .cas (mkcas.py), .atr (mkatr.py: build_disk, and
+build_bascrc for BASCRC's) and .car (mkcar.py, CAR), optionally deploy.
 
   python tools/build.py                 normal tapes into build/
   python tools/build.py --fault 2,5     also tapes with an injected fault
@@ -26,8 +26,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 MADS = ROOT / 'tools' / 'bin' / 'mads.exe'
 BUILD = ROOT / 'build'          # everything the assembler makes (not in git)
 CASSETTES = ROOT / 'cassettes'  # the release tapes (in git): what users load
-DISKS = ROOT / 'disks'          # the release boot disk (.atr, in git): only it
-XEXDIR = ROOT / 'xex'           # the files loaded from DOS (.xex, BASCRC's .lst; in git)
+DISKS = ROOT / 'disks'          # the release disks (.atr, in git): the boot disk, BASCRC's
 CARTS = ROOT / 'carts'          # the release cartridge (.car, in git)
 SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTer Atari800 core's folder
 # The version: in every release file's name (diag-...-v0.8.cas) and at the
@@ -72,11 +71,9 @@ TAPES = [('tape1', 'diag-8k-01-ram', ['main.asm', 'stage2.asm'], {'NORAMK': 1}),
          ('tape2', 'diag-8k-memtest', ['main.asm'], {'OWNTEST': 1, 'NOXL': 1, 'NORAMK': 1, 'NOFONT': 1,
                                                   'FIREONLY': 1, 'NOSHORT': 1}),   # (8K: no room)
          ('bounce', 'diag-16k-memtest', [], dict(N16, BOUNCE=1, BIGSTAGE=1, OWNTEST=1))]
-# The disk files (Atari-diag-disk-scope.md): the same programs as these
-# tapes, built with XEX (their own title bar, no NEEDPG: the wrapper's guard
-# checks the RAM before the file loads) and wrapped by mkxex.py.
-XEXES = [('one32', 'diag-32k-xl-xe', {}, 0x80),      # (32K: the image loads at $2000, above DOS)
-         ('bounce', 'diag-16k-memtest', dict(BOUNCE=1, BIGSTAGE=1, OWNTEST=1), 0x40)]
+# The long memory test as the cartridge and the boot disk carry it (with
+# CART: no NEEDPG, its own title bar), as diag-16k-memtest's defines.
+MEMDEFS = dict(BOUNCE=1, BIGSTAGE=1, OWNTEST=1)
 # The cartridge (mkcar.py, src/cart/romsum.asm): the tests run from ROM,
 # one program to an 8K bank (build_car), and need 8K of RAM. Only the long
 # memory test is copied to RAM, as it tests the RAM under the cartridge too.
@@ -139,7 +136,7 @@ def build(src, name, stages, defines, label):
                                    for k in range(2, len(stages) + 1)]
 
 
-def build_bounce(name, defines, label, xex=None):
+def build_bounce(name, defines, label, img=False):
     """The 16K+ burn-in: tape 2 with BOUNCE. Its relocation bitmap marks the
     bytes that hold its own page numbers: assembled at $0800 and at $0C00,
     those bytes differ by exactly 4 (4 pages, not 1: the screen block is
@@ -181,7 +178,7 @@ def build_bounce(name, defines, label, xex=None):
             sys.exit(f'build_bounce: copy B ({off:#04x} pages up) differs at ${bad:04X}')
     print(f'{name}: copy A $0800-${lab["BSS"] - 1:04X}, copy B {boff:#04x} pages up, '
           f'{sum(bin(x).count("1") for x in bits)} relocated bytes')
-    return wrap(out, label, xex)
+    return wrap(out, label, img)
 
 
 def build_one16(name, defines, label, disk=False):
@@ -215,7 +212,7 @@ def build_one16(name, defines, label, disk=False):
     return [Path(f'{out}.cas')]
 
 
-def build_one32(name, defines, label, xex=None):
+def build_one32(name, defines, label):
     """The one-load 32k+ tape: tape 1's stage 1 (ONE16, ONE32) with, at
     PAYAT, stage 2 and then the system tests (SYSAT), all three sharing
     stage 1's BSS page. No size depends on an address: a few rounds settle
@@ -242,7 +239,7 @@ def build_one32(name, defines, label, xex=None):
                    SHAREBSS=f"${s1['BSS']:04X}", RAMAGAIN=f"${s1['AGAIN']:04X}",
                    SELFAT=f"${s1['PAYAT']:04X}",       # the ROM test's self-check:
                    SELFPG=(s1['IMGEND'] - s1['PAYAT']) // 256,  # stage 1's CRCAT on
-                   **{k: 1 for k in ('XEX', 'CART') if k in defines})
+                   **{k: 1 for k in ('CART',) if k in defines})
         mads('system', 'main.asm', sy, dsy)
         pay.write_bytes(b2 + Path(f'{sy}.bin').read_bytes())
         mads('tape1', 'main.asm', out, d1)
@@ -252,7 +249,7 @@ def build_one32(name, defines, label, xex=None):
         s1 = new
     else:
         sys.exit('build_one32: did not settle')
-    return wrap(out, label, xex)
+    return wrap(out, label)
 
 
 def build_car(fast):
@@ -261,7 +258,7 @@ def build_car(fast):
     as build_one16, but assembled for ROM at $A000. Banks 1 and 2: the
     system tests, three and four of them, each with the menu."""
     f = {'FAST': 1} if fast else {}
-    me = build_bounce('diag-memtest-cart', dict(XEXES[1][2], CART=1, **f), '', 'img')
+    me = build_bounce('diag-memtest-cart', dict(MEMDEFS, CART=1, **f), '', img=True)
     mempg = -(-len(me[0].read_bytes()) // 256)
     if CARMEMBK + -(-mempg // CARDATAPG) > 16:
         sys.exit('build_car: the memory test does not fit')
@@ -326,8 +323,8 @@ def build_disk(fast, out=None):
                 'SOUND': system('SOUND', WANT_POK=1),
                 'VIDEO': system('VIDEO', WANT_GTIA=1),
                 'HELLO': hello,
-                'MEM': build_bounce('disk-mem', dict(XEXES[1][2], CART=1, DISK=1, **f),
-                                    '', 'img')[0]}
+                'MEM': build_bounce('disk-mem', dict(MEMDEFS, CART=1, DISK=1, **f),
+                                    '', img=True)[0]}
     tabf = BUILD / 'disktab.asm'
     tabf.write_text(mkatr.disktab(mkatr.layout({})))
     first = {n: b.read_bytes() for n, b in pieces().items()}
@@ -354,15 +351,26 @@ def make_disk(out, bins):
     return Path(out)
 
 
-def wrap(out, label, xex):
-    """The boot image as a tape, or with xex (the RAM needed, in pages) as a
-    disk file, out.xex; xex 'img': just the image (.bin, .lab), for mkcar.py."""
-    if xex == 'img':
+def build_bascrc(lst):
+    """BASCRC's disk (mkatr.dos2): it boots to the check in machine code
+    (src/basic/bascrc.asm with BOOT), and holds it as a DOS file too, with
+    the BASIC listing (lst, mkbasic.py's): BASCRC.XEX, for L from DOS 2,
+    and BASCRC.LST, for ENTER "D:BASCRC.LST"."""
+    import mkatr
+    bx, bb = BUILD / 'diag-bascrc', BUILD / 'bascrc-boot'
+    mads('basic', 'bascrc.asm', bx, {})
+    mads('basic', 'bascrc.asm', bb, {'BOOT': 1})
+    out = BUILD / 'diag-bascrc.atr'
+    mkatr.dos2(out, Path(f'{bb}.bin').read_bytes(),
+               [('BASCRC.XEX', Path(f'{bx}.bin').read_bytes()), ('BASCRC.LST', lst.read_bytes())])
+    return out
+
+
+def wrap(out, label, img=False):
+    """The boot image as a tape; img: just the image (.bin, .lab), for
+    mkcar.py and the boot disk."""
+    if img:
         return [Path(f'{out}.bin'), Path(f'{out}.lab')]
-    if xex:
-        subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkxex.py'), f'{out}.xex',
-                        '--boot', f'{out}.bin', f'{out}.lab', '--needpg', str(xex)], check=True)
-        return [Path(f'{out}.xex')]
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkcas.py'), f'{out}.cas',
                     '--boot', f'{out}.bin', f'{out}.lab', '--name', label], check=True)
     return [Path(f'{out}.cas')]
@@ -401,32 +409,20 @@ def main():
                 tag += f'-e{every[0]}'
             cas += build(src, f'{name}-FAULT-{tag}', stages, fd,
                          f'A8 {name.upper()} FAULT {tag}')
-    xexes = []
-    for src, name, defs, need in XEXES:
-        d = dict(defs, XEX=1, **({'FAST': 1} if a.fast else {}))
-        b = build_one32 if src == 'one32' else build_bounce
-        for f in b(f'{name}-xex', d, '', need):
-            f = f.replace(f.with_name(f'{name}.xex'))
-            xexes.append(f)
     car = build_car(a.fast)
     atr = build_disk(a.fast)            # the boot disk (Atari-diag-boot-disk-scope.md)
-    # BASCRC, the BASIC cartridge check (a BASIC program): a tape for
-    # ENTER "C:" with the tapes, the listing for ENTER "D:" with the DOS files
+    # BASCRC, the BASIC cartridge check: the BASIC program as a tape for
+    # ENTER "C:", and a disk that boots to it in machine code and holds the
+    # listing for ENTER "D:"
     bas, lst = BUILD / 'diag-bascrc.cas', BUILD / 'bascrc.lst'
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkbasic.py'),
                     str(ROOT / 'src' / 'basic' / 'bascrc.bas'), str(lst), str(bas)], check=True)
     cas.append(bas)
-    xexes.append(lst)
-    # and as a disk file of its own (src/basic/bascrc.asm: the same check in
-    # machine code, loaded from DOS with the cartridge in)
-    bx = BUILD / 'diag-bascrc'
-    mads('basic', 'bascrc.asm', bx, {})
-    shutil.copy2(f'{bx}.bin', f'{bx}.xex')
-    xexes.append(Path(f'{bx}.xex'))
+    bdisk = build_bascrc(lst)
     if a.fast:                      # FAST builds skip test patterns: not for use,
         return                      # so they stay in build/
     rel = []                        # the release files, named with the version
-    for folder, files in ((CASSETTES, cas), (DISKS, [atr]), (XEXDIR, xexes), (CARTS, [car])):
+    for folder, files in ((CASSETTES, cas), (DISKS, [atr, bdisk]), (CARTS, [car])):
         folder.mkdir(exist_ok=True)
         for f in files:
             if 'FAULT' in f.name:   # fault-injection builds stay in build/

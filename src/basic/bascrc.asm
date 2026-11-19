@@ -1,14 +1,20 @@
-; BASCRC as a disk file (diag-bascrc.xex): the BASIC ROM at $A000-$BFFF by
-; CRC32, named revision A, B or C (MAME's hash/a800.xml), as bascrc.bas does
-; in BASIC. For a 400/800 or 1200XL with a BASIC cartridge (load it from
-; DOS with the cartridge in: DOS, then L), or an XL/XE's built-in BASIC
-; (switched in here if it is off). Uses the OS: it prints through the
-; screen editor (IOCB 0), and returns to DOS after a key. Loads at $2000.
+; BASCRC in machine code: the BASIC ROM at $A000-$BFFF by CRC32, named
+; revision A, B or C (MAME's hash/a800.xml), as bascrc.bas does in BASIC.
+; For a 400/800 or 1200XL with a BASIC cartridge in, or an XL/XE's built-in
+; BASIC (switched in here if it is off). Uses the OS: it prints through the
+; screen editor (IOCB 0, which the OS opens before it boots a disk). Two
+; forms, both on diag-bascrc.atr (build.py, mkatr.py's dos2):
+;  - BOOT: the disk's boot sectors. The OS loads them to $0700 at power-on
+;    and calls $0706: the check runs as the disk boots, with no DOS. After
+;    the key the OS goes on as after any boot: BASIC's READY with BASIC in.
+;    MEMLO is set just past b_init (DOSINI: RESET calls it), so BASIC
+;    keeps clear of it; the check itself is done with by then.
+;  - otherwise: the DOS file BASCRC.XEX, at $2000 (DOS, then L), which
+;    returns to DOS after the key.
 ;
 ; While it reads, the screen is off: on an XL/XE with BASIC off, the screen
 ; can sit under $A000-$BFFF, where BASIC comes in.
 
-	opt h+
 PTR	= $CB			; (free for programs under BASIC and DOS)
 CRC	= $CD			; 4: CRC32 being built
 PGL	= $D1
@@ -20,8 +26,25 @@ SDMCTL	= $022F
 RTCLOK	= $14
 CH	= $02FC
 PORTB	= $D301
+MEMLO	= $02E7
 
+	.ifdef BOOT
+	opt h-
+	org $0700
+	.byte 0, BOOTSEC	; flags, sectors
+	.word $0700, b_init	; load, init (DOSINI)
+	jsr b_init		; ($0706: the OS calls here)
+	jmp start
+b_init	lda #<b_keep		; MEMLO past here (the OS put it back to
+	sta MEMLO		; $0700 on RESET before it called this)
+	lda #>b_keep
+	sta MEMLO+1
+	rts
+b_keep
+	.else
+	opt h+
 	org $2000
+	.endif
 start	lda #<s_title
 	ldy #>s_title
 	jsr print
@@ -138,7 +161,10 @@ wk	lda CH
 	beq wk
 	lda #$FF
 	sta CH
-	rts			; back to DOS
+	.ifdef BOOT
+	clc			; (C clear: the boot went well)
+	.endif
+	rts			; back to DOS, or to the OS's boot
 
 ; isrom: C set if $A000 holds a ROM: a write there doesn't change it.
 isrom	lda $A000
@@ -212,4 +238,9 @@ s_nom	dta c'NO MATCH: NOT A GOOD BASIC A, B OR C',$9B
 s_none	dta c'NO ROM AT $A000: NO BASIC TO CHECK',$9B
 s_key	dta c'PRESS A KEY',$9B
 
+	.ifdef BOOT
+b_end
+BOOTSEC	= (b_end - $0700 + 127) / 128
+	.else
 	run start
+	.endif

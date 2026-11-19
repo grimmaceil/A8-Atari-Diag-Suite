@@ -6,7 +6,7 @@ the credit when you pass it on.
 
 This is for anyone who wants to build the programs from source, change
 them, or check how they work. To test a machine you only need the release
-files (`carts/`, `disks/`, `xex/`, `cassettes/`) and the [user guide](USER-GUIDE.md).
+files (`carts/`, `disks/`, `cassettes/`) and the [user guide](USER-GUIDE.md).
 
 ## Contents
 
@@ -47,7 +47,7 @@ How a change is tested:
   file, tape (the cartridge is quickest to try). It is the development
   set-up, not a machine anyone diagnoses: the user documents name only
   real machines as ways to run the tests.
-- **Real hardware:** an 800 and an 800XL, with the disk files over an SIO
+- **Real hardware:** an 800 and an 800XL, with the disks over an SIO
   adapter (the cassettes can't be played in that way). The joystick and
   paddle ports get their real test there; the MiSTer has no working
   paddle adapter.
@@ -70,7 +70,7 @@ How a change is tested:
 ## Building
 
 ```
-python tools/build.py              # everything: build/ (all output), and the releases in cassettes/, disks/, xex/, carts/
+python tools/build.py              # everything: build/ (all output), and the releases in cassettes/, disks/, carts/
 python tools/build.py --nodeploy   # the same, without copying the changed files to the MiSTer share
 python tools/build.py --fault 2,5  # extra builds with a stuck bit 5 in bank 2, to hear a fail code
 python tools/build.py --fast       # skip the $55/$AA march pass (quicker simulator runs); build/ only
@@ -114,23 +114,9 @@ records ($55 $55 sync, control byte $FC/$FA/$FE, 128 bytes, checksum),
 with the boot header in the first record. Every file on a tape ends in an
 EOF record: the OS boot reads one record past its count.
 
-### The disk files
-
-`XEXES` in `tools/build.py`: the 32k+ image and `diag-16k-memtest`, built
-again with `XEX=1` and wrapped by `tools/mkxex.py`. `XEX` changes the title
-bar and leaves out NEEDPG; everything it changes is under `.ifdef XEX`.
-The image still runs at $0800, where DOS lives while the file loads, so
-the file has three parts (`src/disk/xexwrap.asm`):
-1. the guard at $2000 with INITAD: RAMTOP below the need, or MEMLO above
-   $2000, shows one line and halts (red border, the low tone on and off);
-2. the image (with its checksum, as on tape) at $2000, over the guard;
-3. the mover just past the image with RUNAD: interrupts off, the image
-   copied down to $0800, COLDST = 1 (RESET then starts the machine from
-   cold: DOS is gone), and a jump to $0806, the cassette boot's entry.
-
-The long memory test is a file of its own on disk: it needs all the RAM,
-so it could never return to the menu. The design and its reasons:
-[Atari-diag-disk-scope.md](../Atari-diag-disk-scope.md).
+Up to 0.11 the 32k+ image and the long memory test were DOS files too
+(`.xex`, [Atari-diag-disk-scope.md](../Atari-diag-disk-scope.md)); the
+boot disk does what they did, and 0.12 dropped them.
 
 ### The boot disk
 
@@ -217,13 +203,24 @@ CRC32 at $BFF6, and the cartridge header.
 
 `src/basic/bascrc.bas` is the author's BASIC program that checks a BASIC
 cartridge (the programs don't read a 400/800's cartridge). `tools/mkbasic.py`
-makes it an ATASCII listing (`xex/bascrc.lst`) and a tape for `ENTER
+makes it an ATASCII listing (`build/bascrc.lst`) and a tape for `ENTER
 "C:"` (`cassettes/diag-bascrc`: the cassette handler's $FC/$FA/$FE records,
 a 20 s leader and 3 s gaps, as `LIST "C:"` writes them; the handler stops
 the motor between records when BASIC reads that way).
-`src/basic/bascrc.asm` is the same check as a disk file
-(`xex/diag-bascrc.xex`, at $2000): it prints through the OS screen editor
-and returns to DOS.
+`src/basic/bascrc.asm` is the same check in machine code, printing through
+the OS screen editor, built twice (`build_bascrc`):
+- with `BOOT`: boot sectors (5, at $0700). The OS calls $0706 at power-on
+  with the screen editor open; the check runs, then returns (C clear) and
+  the OS goes on to the cartridge (BASIC's `READY`) or DOSVEC. It sets
+  MEMLO just past `b_init` (also DOSINI, for RESET), so BASIC keeps clear
+  of the little that has to stay;
+- without: `BASCRC.XEX`, a DOS file at $2000 that returns to DOS.
+
+`disks/diag-bascrc.atr` is both: the boot in sectors 1-5, and a DOS 2.0S
+file system (`mkatr.py`'s `dos2`: the VTOC at 360, the directory at
+361-368, each file a chain of 125-byte sectors) holding `BASCRC.XEX` and
+`BASCRC.LST`. `dos2` reads its disk back as DOS would (`dos2_files`) and
+stops the build if a file doesn't come back the same.
 
 ## How a program runs
 
@@ -256,7 +253,7 @@ The programs with the ROM test also check themselves: see
 `name.asm`), the machine line (`info.asm`) and the RAM test engine
 (`ramtest.asm`). The macros and constants are in `defs.asm`.
 
-A one-load image (the 16k RAM tape, the 32k+ tape and disk file, the
+A one-load image (the 16k RAM tape, the 32k+ tape, the
 cartridge's RAM bank) has the library once, in stage 1 (`SHLIB`). Its
 later parts are separate assemblies: build.py writes `build/shlib.asm` from
 stage 1's label table, every label between `LIBBEG` and `LIBEND` except
@@ -268,7 +265,7 @@ ROMs and the RAM) and `REDRAWV` (the screen OPTION brings back).
 ### The ROM test's self-check
 
 The ROM test also checks the program it is part of (`selfchk`, item 6).
-A tape or disk file with the ROM test ends in the image sum and then 4
+A tape or disk piece with the ROM test ends in the image sum and then 4
 more bytes, `CRCFIX`. `mkcas.py`'s `patch_boot` puts there the CRC32 of the
 image from `CRCAT` up to them, as it is in RAM once the boot has run (the
 page operands boot.asm changes as it runs at their final values), so at
@@ -405,12 +402,12 @@ These came from the author's direction over the sessions:
 | `src/tape2/` | the memory test (`diag-8k-memtest`, `diag-16k-memtest`, the cartridge's) |
 | `src/system/` | tests 1-7: `main.asm` builds a program from the tests `WANT_*` picks; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia` and `t_gtia2`, its video modes page); `common.asm` the flow, the menu and the end of a tape; `tlist.asm` the order; `kbmap.asm` the keyboard map (`tools/gen_kbmap.py`) |
 | `src/cart/` | the cartridge: `romsum.asm` (bank layout, sums), `ldmem.asm` (the long test's loader), `undercart.asm` (the RAM under it), `hello.asm` and `audio/` (the sampled "hello", made by `tools/mkhello.py`) |
-| `src/disk/` | the disk files' guard and mover (`xexwrap.asm`); the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`) |
-| `src/basic/` | BASCRC: the BASIC listing and the disk file |
-| `tools/` | `build.py`, `mkcas.py`, `mkxex.py`, `mkcar.py`, `mkatr.py`, `mkbasic.py`, `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
-| `cassettes/`, `disks/` (the boot disk), `xex/` (the DOS files), `carts/` | the release files |
+| `src/disk/` | the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`) |
+| `src/basic/` | BASCRC: the BASIC listing and the machine code (its disk's boot, and its DOS file) |
+| `tools/` | `build.py`, `mkcas.py`, `mkcar.py`, `mkatr.py` (both disks), `mkbasic.py`, `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
+| `cassettes/`, `disks/` (the boot disk, BASCRC's disk), `carts/` | the release files |
 | `Atari-diag-cassette-scope.md` | the design: constraints, feedback, sets, the ROM table, open items |
-| `Atari-diag-disk-scope.md` | the disk files' design |
+| `Atari-diag-disk-scope.md` | the disk files' design (up to 0.11) |
 | `Atari-diag-boot-disk-scope.md` | the boot disk's design |
 
 ## The simulator
@@ -440,9 +437,10 @@ on at each result as a person would; `--menuwalk` runs the menu's tests one
 by one. For debugging, `SIM_IMGDIFF=1` lists the image bytes that changed
 in RAM, and `SIM_DUMP=LO-HI` dumps memory at the end.
 
-What it can't show: ANTIC modes other than text, horizontal sprite
-positions and motion, fine scrolling, and ANTIC going astray when the
-memory under its display list changes. Those need the MiSTer or a real
+What it can't show: horizontal sprite positions and motion, and ANTIC
+going astray when the memory under its display list changes. The other
+ANTIC modes and fine scrolling it draws only as a still (`antic.py`, for
+the guide's picture of test 7's page 2). Those need the MiSTer or a real
 machine. py65 is pure Python, so a run takes minutes (the video test's
 screens are slowest).
 
@@ -450,7 +448,6 @@ screens are slowest).
 python tools/sim.py build/diag-8k-03-input.cas --auto --until 90
 python tools/sim.py build/diag-8k-01-ram.cas --stuck 2:5:1 --until 200
 python tools/sim.py build/diag-cart.car --ram 0xC000 --kb 3E:1 --snap 14 --until 14
-python tools/sim.py build/diag-32k-xl-xe-xex.xex --ram 0x4000 --until 4 --snap 3.5   # the guard
 python tools/sim.py build/diag-disk.atr --ram 0x2000 --auto --until 200
 ```
 

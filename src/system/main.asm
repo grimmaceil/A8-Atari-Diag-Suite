@@ -97,10 +97,8 @@ RESPAGE	= 1
 	.endif
 	.endif
 	.ifdef WANT_POK		; cart/hello.asm: sampled sound, where there is
-	.ifdef ROM		; room: the cartridge and the disk files, and the
+	.ifdef ROM		; room: the cartridge and the boot disk, and the
 SAMPLED	= 1			; 8k hello tape (WANT_SND)
-	.elseif .def XEX
-SAMPLED	= 1
 	.elseif .def DISK
 SAMPLED	= 1
 	.endif

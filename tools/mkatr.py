@@ -6,6 +6,8 @@ Layout: sectors 1-4 the boot, then each piece in a run of whole sectors,
 in PIECES order. build/disktab.asm tells every piece where the others are:
 first sector, sector count, load page. A piece not on the disk points past
 its end, so loading it fails as a disk error does.
+
+Also BASCRC's disk (dos2): a boot of its own, and files DOS 2 can read.
 """
 import struct
 import zlib
@@ -76,6 +78,12 @@ def patch_piece(bin_path, lab_path):
     return img
 
 
+def header(disk):
+    """The 16-byte ATR header for an image of 128-byte sectors."""
+    paras = len(disk) // 16
+    return struct.pack('<HHHHB', 0x0296, paras & 0xFFFF, 128, paras >> 16, 0) + bytes(7)
+
+
 def atr(out, boot, pieces, tab):
     """Write the image: a 16-byte ATR header, then 720 sectors."""
     disk = bytearray(SECTORS * 128)
@@ -84,9 +92,87 @@ def atr(out, boot, pieces, tab):
     for name, data in pieces.items():
         sec = tab[name][0]
         disk[(sec - 1) * 128:(sec - 1) * 128 + len(data)] = data
-    paras = len(disk) // 16
-    head = struct.pack('<HHHHB', 0x0296, paras & 0xFFFF, 128, paras >> 16, 0) + bytes(7)
-    Path(out).write_bytes(head + disk)
+    Path(out).write_bytes(header(disk) + disk)
     used = max(t[0] + t[1] - 1 for n, t in tab.items() if n in pieces) if pieces else 4
     print(f'{out}: {used} of {SECTORS} sectors, '
           + ', '.join(f'{n} {tab[n][0]}+{tab[n][1]}' for n in PIECES if n in pieces))
+
+
+# DOS 2.0S's single-density layout, which DOS 2.5 and MyDOS read too: the
+# VTOC (sector 360: the free count and a bitmap, 1 = free), the directory
+# (361-368: 64 entries of 16 bytes), and each file a chain of sectors of 125
+# data bytes, then its directory entry number << 2 | the next sector's high
+# bits, the next sector's low byte (0: the last) and the bytes used. Sector
+# 720 is out of DOS 2.0's reach, so 707 sectors are free on a blank disk.
+VTOC, DIR, DOSFREE = 360, 361, 707
+
+
+def dos2(out, boot, files):
+    """A disk that boots its own program (boot: its image, sector 1's
+    header first) and also holds files DOS 2 can list, load and copy
+    (files: [('NAME.EXT', data)]): the boot in sectors 1 on, the files after
+    it, the VTOC and directory as DOS 2.0S makes them."""
+    disk = bytearray(SECTORS * 128)
+    nboot = -(-len(boot) // 128)
+    assert boot[0] == 0 and boot[1] == nboot, 'the boot header: flags 0, its sector count'
+    disk[:len(boot)] = boot
+    used = {0, *range(1, max(nboot, 3) + 1), *range(VTOC, DIR + 8)}
+    sec = max(nboot, 3) + 1
+    put = lambda s, data: disk.__setitem__(slice((s - 1) * 128, s * 128), data)
+    entries = bytearray(8 * 128)
+    for n, (name, data) in enumerate(files):
+        base, ext = name.split('.')
+        assert len(base) <= 8 and len(ext) <= 3 and name.isupper()
+        parts = [data[i:i + 125] for i in range(0, len(data), 125)] or [b'']
+        first = sec
+        for k, part in enumerate(parts):
+            nxt = sec + 1 if k < len(parts) - 1 else 0
+            if sec >= VTOC:
+                raise SystemExit(f'{out}: the files reach the VTOC')
+            put(sec, part + bytes(125 - len(part)) + bytes([n << 2 | nxt >> 8, nxt & 0xFF, len(part)]))
+            used.add(sec)
+            sec += 1
+        entries[n * 16:n * 16 + 16] = (bytes([0x42]) + struct.pack('<HH', len(parts), first)
+                                       + base.ljust(8).encode() + ext.ljust(3).encode())
+    for k in range(8):
+        put(DIR + k, entries[k * 128:k * 128 + 128])
+    vtoc = bytearray(128)
+    free = [s for s in range(SECTORS) if s not in used]          # (0-719)
+    vtoc[0:5] = bytes([2]) + struct.pack('<HH', DOSFREE, len(free))
+    for s in free:
+        vtoc[10 + s // 8] |= 0x80 >> (s % 8)
+    put(VTOC, vtoc)
+    got = dos2_files(disk)
+    assert got == dict(files), f'{out}: the files do not read back'
+    Path(out).write_bytes(header(disk) + disk)
+    print(f'{out}: boot {nboot} sectors, ' + ', '.join(
+        f'{name} {len(d)} bytes' for name, d in files) + f', {len(free)} sectors free')
+
+
+def dos2_files(disk):
+    """{'NAME.EXT': data}, read as DOS 2 reads a disk (dos2's check): the
+    directory's entries in use, each chain followed to its end. Fails on a
+    chain that is cut, loops, or isn't its entry's, and on a VTOC that marks
+    a sector of a file free or counts its free sectors wrong."""
+    sec = lambda s: disk[(s - 1) * 128:s * 128]
+    vtoc = sec(VTOC)
+    isfree = lambda s: vtoc[10 + s // 8] & 0x80 >> (s % 8)
+    nfree = sum(bool(isfree(s)) for s in range(SECTORS))
+    assert vtoc[0] == 2 and struct.unpack('<HH', vtoc[1:5]) == (DOSFREE, nfree), 'the VTOC'
+    out = {}
+    for e in range(64):
+        d = sec(DIR + e // 8)[e % 8 * 16:e % 8 * 16 + 16]
+        if not d[0] & 0x40 or d[0] & 0x80:                      # not in use, or deleted
+            continue
+        count, s = struct.unpack('<HH', d[1:5])
+        name = d[5:13].decode().rstrip() + '.' + d[13:16].decode().rstrip()
+        data, seen = b'', 0
+        while s:
+            b = sec(s)
+            assert b[125] >> 2 == e and not isfree(s) and seen < count, f'{name}: sector {s}'
+            data += b[:b[127] & 0x7F]
+            seen += 1
+            s = (b[125] & 3) << 8 | b[126]
+        assert seen == count, f'{name}: {seen} sectors, the directory says {count}'
+        out[name] = data
+    return out
