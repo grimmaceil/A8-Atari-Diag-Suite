@@ -114,24 +114,62 @@ PMCOL	= 30			; the bit digits' first column (76543210)
 @
 .endm
 
-; TIMER: POKEY's voices 3 and 4 joined, 64 kHz: IRQST bit 2 goes to 0
-; about 1 s from now (polled; interrupts stay off).
-.macro TIMER
+; The tones (report.asm's tt_* tables, copied: kinds T_ALONG 0 to T_DM3
+; 10) and a silent one (T_PAUSE, ~1 s); lengths in POKEY timer counts at
+; 64 kHz with voices 3 and 4 joined: report.asm's units (256 scan lines,
+; 16.3 ms) x 1042.
+T_ALONG	= 0			; (defs.asm's numbers: the table's order)
+T_BSHORT = 1
+T_END	= 2
+T_J1	= 3
+T_DM1	= 8
+T_PAUSE	= 11
+sk_frq	dta F_LONG, F_SHORT, F_END, F_J0, F_J1, F_J2, F_J3, F_LONG, F_D1, F_D1, F_D2, 0
+sk_col	dta C_RED+4, C_RED+4, C_RED+4, C_GREEN+4, C_GREEN+4, C_GREEN+4, C_GREEN+4
+	dta C_GREEN+4, C_RED+4, C_RED+4, C_RED+4, C_RED
+sk_lnl	dta <[37*1042-1], <[12*1042-1], <[37*1042-1], <[7*1042-1], <[7*1042-1]
+	dta <[7*1042-1], <[20*1042-1], <[37*1042-1], <[15*1042-1], <[15*1042-1]
+	dta <[55*1042-1], <[61*1042-1]
+sk_lnh	dta >[37*1042-1], >[12*1042-1], >[37*1042-1], >[7*1042-1], >[7*1042-1]
+	dta >[7*1042-1], >[20*1042-1], >[37*1042-1], >[15*1042-1], >[15*1042-1]
+	dta >[55*1042-1], >[61*1042-1]
+sk_gpl	dta <[12*1042-1], <[12*1042-1], <[12*1042-1], <[2*1042-1], <[2*1042-1]
+	dta <[2*1042-1], <[12*1042-1], <[12*1042-1], <[6*1042-1], <[6*1042-1]
+	dta <[25*1042-1], 0
+sk_gph	dta >[12*1042-1], >[12*1042-1], >[12*1042-1], >[2*1042-1], >[2*1042-1]
+	dta >[2*1042-1], >[12*1042-1], >[12*1042-1], >[6*1042-1], >[6*1042-1]
+	dta >[25*1042-1], 0
+
+; TIMERX tlo, thi: POKEY's voices 3 and 4 joined, 64 kHz, counting table
+; entry X (tlo,x and thi,x): IRQST bit 2 goes to 0 when it runs out (polled;
+; interrupts stay off).
+.macro TIMERX
 	lda #$08
 	sta AUDCTL
-	lda #$FF
-	sta AUDF1+4		; AUDF3
-	sta AUDF1+6		; AUDF4
+	lda :1,x
+	sta AUDF1+4
+	lda :2,x
+	sta AUDF1+6
 	lda #0
 	sta AUDC1+4
 	sta AUDC1+6
-	sta IRQEN		; (clears a pending one)
+	sta IRQEN
 	lda #4
 	sta IRQEN
 	sta STIMER
 .endm
 
-; show (phase 0): stage B's results, from the PIA and S.
+; show (phase 0): stage B's results, from the PIA and S, with their sound:
+; a pass plays the charge and hands over; a fault plays its code (the
+; suite's tones: doom, a long beep per the first bad bank's number, short
+; beeps for its lowest bad bit's number + 1, the end tone, 3 s quiet)
+; round after round, until START or fire (after a release) goes on.
+; SELECT or down plays the code again from the start; OPTION or up turns
+; the screen off while held, so the whole screen is the border's flashes.
+;
+; Y carries the state from frame to frame: bit 6 set (rdisp: a sound
+; tick), bit 7 START released since the fault began, bits 1-5 the position
+; in the tune, bit 0 the note (0) or the gap after it (1).
 show	lda #>FONTAT
 	sta CHBASE
 	lda #0
@@ -147,71 +185,205 @@ show	lda #>FONTAT
 	sta PRIOR		; brightness over the box's red
 	lda #$22
 	sta DMACTL
-	ISFAULT sh_f
-	lda #C_GREEN		; a pass: about 2 s, then the suite
+	ldy #$40		; the tune from the start
+	jmp skind
+
+; tick: after each frame.
+tick	ISFAULT tk_f
+	jmp snd			; (a pass: no keys)
+tk_f	lda CONSOL		; START or fire: on, once released
+	and #1
+	beq tk_sd
+	lda TRIG0
+	beq tk_sd
+	tya
+	ora #$80
+	tay
+	jmp tk_o
+tk_sd	tya
+	bpl tk_o
+	.ifndef STANDALONE
+	jmp handover
+	.endif
+tk_o	lda PACTL		; the sticks (port A): up = OPTION, down = SELECT
+	ora #4
+	sta PACTL
+	ldx PORTA
+	lda PACTL
+	and #$FB
+	sta PACTL
+	txa
+	and #1			; OPTION or up: the screen off while held
+	beq tk_oo
+	lda CONSOL
+	and #4
+	beq tk_oo
+	lda #$22
+	bne tk_od
+tk_oo	lda #0
+tk_od	sta DMACTL
+	txa			; SELECT or down: the code again from the start
+	and #2
+	beq tk_s
+	lda CONSOL
+	and #2
+	bne snd
+tk_s	tya
+	and #$80
+	ora #$40
+	tay
+	jmp skind
+
+; snd: the note or the gap still running: another frame; else on.
+snd	lda IRQST
+	and #4
+	beq sn_t
+	jmp frame
+sn_t	tya
+	and #1
+	bne sn_g
+	lda #0			; the note is over: silence, the border back
+	sta AUDF1		; (0 between notes: each note's frequency is a
+	lda #AUD_OFF		; new write)
+	sta AUDC1
+	ISFAULT sn_rf
+	lda #C_GREEN
+	bne sn_c
+sn_rf	lda #C_RED
+sn_c	sta COLBK
+	iny			; the gap after it
+	jmp skind
+sn_g	iny			; the gap is over: the next note
+	jmp skind
+
+; skind: X = the kind at Y's position; then the note (Y bit 0 clear) or
+; its gap (set) starts. Past the tune's end: sdone. A pass: the charge
+; (T_J1-T_J4). A fault: doom (T_DM1-T_DM3), a long beep per the first bad
+; bank's number, short beeps for its lowest bad bit's number + 1, the end
+; tone, three silent pauses.
+skind	ISFAULT skf
+	tya
+	lsr
+	and #$1F
+	cmp #4
+	bcc sk_pj
+	jmp sdone
+sk_pj	adc #T_J1		; (C clear)
+	tax
+	jmp skret
+skf	lda DDRA		; the first bad bank, its mask in A
+	beq skf2
+	ldx #1			; bank 1: X = the lowest bad bit + 1
+sk1b	lsr
+	bcs sk1c
+	inx
+	bne sk1b
+sk1c	tya
+	lsr
+	and #$1F
+	cmp #3
+	bcc sk_dm
+	sbc #3
+	cmp #1
+	bcc sk_lg
+	sbc #1
+	jmp sk_k
+skf2	lda DDRB
+	beq skf3
+	cmp #$FF
+	beq skf3
+	ldx #1			; bank 2
+sk2b	lsr
+	bcs sk2c
+	inx
+	bne sk2b
+sk2c	tya
+	lsr
+	and #$1F
+	cmp #3
+	bcc sk_dm
+	sbc #3
+	cmp #2
+	bcc sk_lg
+	sbc #2
+	jmp sk_k
+skf3	tsx			; bank 3
+	txa
+	ldx #1
+sk3b	lsr
+	bcs sk3c
+	inx
+	bne sk3b
+sk3c	tya
+	lsr
+	and #$1F
+	cmp #3
+	bcc sk_dm
+	sbc #3
+	cmp #3
+	bcc sk_lg
+	sbc #3
+	jmp sk_k
+sk_dm	adc #T_DM1		; doom (C clear)
+	tax
+	jmp skret
+sk_lg	ldx #T_ALONG
+	jmp skret
+; sk_k: A = the position after the long beeps, X = the short beeps' count.
+sk_k	cmp #0
+	beq sk_sh		; still in the short beeps
+	sec
+	sbc #1
+	dex
+	bne sk_k
+	cmp #0			; X ran out: A = past the short beeps
+	beq sk_en
+	cmp #4
+	bcc sk_pa
+	jmp sdone
+sk_sh	ldx #T_BSHORT
+	jmp skret
+sk_en	ldx #T_END
+	jmp skret
+sk_pa	ldx #T_PAUSE
+skret	tya
+	and #1
+	bne sk_gap
+	lda sk_frq,x		; the note: tone, the border's flash colour
+	sta AUDF1
+	lda #AUD_ON
+	cpx #T_PAUSE
+	bne skr1
+	lda #AUD_OFF
+skr1	sta AUDC1
+	lda sk_col,x
+	cpx #T_PAUSE
+	beq skr2		; (a pause: the border as it is)
 	sta COLBK
-	TIMER
-sh_p1	ldy #0
+skr2	TIMERX sk_lnl,sk_lnh
 	jmp frame
-ret0	lda IRQST
-	and #4
-	bne sh_p1
-	TIMER
-sh_p2	ldy #1
+sk_gap	TIMERX sk_gpl,sk_gph
 	jmp frame
-ret1	lda IRQST
-	and #4
-	bne sh_p2
+
+; sdone: past the tune's end. A pass goes on to the suite (the standalone
+; stays, quiet); a fault plays its code again.
+sdone	ISFAULT sd_f
 	.ifdef STANDALONE
-sh_p3	ldy #4			; no suite: the pass stays
+	ldy #$7E		; (a position past the end: quiet frames)
+	lda #0
+	sta IRQEN		; (the timer never fires again)
 	jmp frame
-ret4	jmp sh_p3
 	.else
 	jmp handover
 	.endif
+sd_f	tya
+	and #$80
+	ora #$40
+	tay
+	jmp skind
 
-sh_f	lda #C_RED		; a fault: until START (or fire), after a release
-	sta COLBK
-sh_f1	ldy #2
-	jmp frame
-ret2	lda CONSOL
-	and #1
-	beq sh_f1
-	lda TRIG0
-	beq sh_f1
-sh_f2	ldy #3
-	jmp frame
-ret3	lda CONSOL
-	and #1
-	beq sh_go
-	lda TRIG0
-	bne sh_f2
-sh_go
-	.ifdef STANDALONE
-	jmp sh_f1		; (no suite to go on to)
-	.else
-	jmp handover
-	.endif
-
-; rdisp: back to the caller Y names.
-rdisp	cpy #0
-	bne @+
-	jmp ret0
-@	cpy #1
-	bne @+
-	jmp ret1
-@	cpy #2
-	bne @+
-	jmp ret2
-@	cpy #3
-	bne @+
-	jmp ret3
-@
-	.ifdef STANDALONE
-	jmp ret4
-	.else
-	jmp *
-	.endif
+; rdisp: after a frame, to where Y says: the sound's ticks (bit 6).
+rdisp	jmp tick
 
 ; frame: one frame of the results screen. From the vertical blank: the
 ; top fragment (blank lines and the title), then each row.

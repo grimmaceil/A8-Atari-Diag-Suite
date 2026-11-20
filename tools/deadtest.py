@@ -81,6 +81,17 @@ CHECKS = {
                                            '--hole', '8000-A000'],
                    [(4, 'BANK 1 $0000-$3FFF  NO RAM'), (4, 'BANK 2 $4000-$7FFF  BAD'),
                     (4, 'BANK 3 $8000-$9FFF  NO RAM'), ('ev', 2, 6, 0xD00D, 0x10, 'min', 1)]),
+
+    # the beep codes (AUDF1: report.asm's F_LONG 72, F_SHORT 35, the charge
+    # F_J0-F_J3 81 60 47 40): bank 2, D4: two long beeps, five short, in the
+    # first round (doom first; the round is ~9 s)
+    'beep-b2d4': ('diag-cart-8mbit.car', ['--stuck', '2:5:0'],
+                  [('ev', 2, 12, 0xD200, 72, 'min', 2), ('ev', 2, 12, 0xD200, 72, 'max', 2),
+                   ('ev', 2, 12, 0xD200, 35, 'min', 5), ('ev', 2, 12, 0xD200, 35, 'max', 5)]),
+    'beep-pass': ('diag-cart-8mbit.car', [],
+                  [('ev', 1, 5, 0xD200, 81, 'min', 1), ('ev', 1, 5, 0xD200, 60, 'min', 1),
+                   ('ev', 1, 5, 0xD200, 47, 'min', 1), ('ev', 1, 5, 0xD200, 40, 'min', 1),
+                   (40, FOUND48)]),
 }
 
 TAIL_RUN = bytes.fromhex('A2009D00D54C00A0')     # $BFE0: bank 0's cold start
