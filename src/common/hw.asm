@@ -59,6 +59,7 @@ C_YELLOW = $1C
 C_RED	= $34
 C_PURPLE = $56		; last chance on the video check
 C_BLACK	= $00
+C_WHITE	= $0E		; a cartridge in the way (report.asm's typing)
 
 ; POKEY pure tone, volume 8 / volume 0
 AUD_ON	= $A8

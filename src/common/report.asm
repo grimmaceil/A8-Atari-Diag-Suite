@@ -352,6 +352,87 @@ pa_ch
 	.endif
 	jmp pass
 
+	.ifdef CARTRAM
+; cartend: no fault found, but a cartridge sat over the RAM (CARTIN), so 8K
+; went untested: never a pass. As pass, with white for green and the typing
+; for the charge (once, or twice at the end), then rounds of steady white,
+; the typing in each (quiet: none) where pass flashes once per bank.
+cartend	lda #C_WHITE
+	sta COLBK
+	jsr arm
+	ldx #1			; once, or twice at the end
+	lda CONTVEC+1
+	beq ce_2
+	lda ENDING
+	cmp #2
+	bne ce_n
+ce_2	inx
+ce_n	stx RBIT		; (repeats left: RBIT is free here)
+ce_rep	jsr typing
+	dec RBIT
+	bne ce_rep
+ce_top	lda #50
+	sta RCNT
+	lda #C_WHITE
+	sta HOLDC
+	NCALL RET1, hold
+	lda HSEL		; T, SELECT (or a key at the end): from the top
+	.ifdef RPAUTO
+	bne ce_ch
+	lda AUTON		; counting (the ROM test next): the third round
+	beq ce_q		; goes on by itself
+	dec AUTON
+	bne ce_q
+	jmp (CONTVEC)
+ce_ch
+	.else
+	beq ce_q
+	.endif
+	jmp cartend
+ce_q	lda QUIET
+	bne ce_top
+	jsr typing
+	jmp ce_top
+
+; typing: a cartridge in the way: nine clicks of noise, the border white on
+; each, the gaps between them uneven, like keys being typed. About 0.8 s,
+; and unlike every other signal (red a fault, green a pass, yellow testing,
+; orange and "pew" a stuck joystick). Leaves voice 1 off and the border
+; black. Uses A, X, Y.
+TY_C	= $0F			; noise (the 5- and 17-bit polys), volume 15
+TY_F	= $04
+typing	ldy #0
+ty_clk	lda #C_WHITE
+	sta COLBK
+	lda #TY_F
+	sta AUDF1
+	lda #TY_C
+	sta AUDC1
+	ldx #80			; the click: 80 scan lines (5 ms)
+ty_on	sta WSYNC
+	dex
+	bne ty_on
+	lda #AUD_OFF
+	sta AUDC1
+	lda #C_BLACK
+	sta COLBK
+	lda ty_gap,y		; the gap: A x 256 scan lines, dark and quiet
+ty_g1	ldx #0
+ty_g2	sta WSYNC
+	dex
+	bne ty_g2
+	sec
+	sbc #1
+	bne ty_g1
+	iny
+	cpy #9
+	bne ty_clk
+	rts
+ty_gap	.byte 5, 3, 8, 4, 3, 10, 5, 3, 6
+s_cartway dta d'CART IN WAY',$FF
+s_cartln dta d'CARTRIDGE IN: $A000-$BFFF NOT TESTED',$FF
+	.endif
+
 ; hold: border = HOLDC for RCNT tenths of a second (set HOLDC before the
 ; NCALL: NCALL itself clobbers A). Once low RAM has passed (STACKOK) it
 ; also reads the controls; a press only counts after all of them have been

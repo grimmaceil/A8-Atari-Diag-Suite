@@ -23,6 +23,7 @@ OSXL = ROMS / 'Atari XL-XE OS rev 2 - 800XL 65XE 130XE - 1983-05-10 - CRC 1F9CD2
 BASIC = ROMS / 'BASIC - Revision A.rom'
 LINES_PER_S = 15700
 STEP = 2
+CART_T = 30                     # s: the 8k RAM tape's results are up by then (13 s)
 
 # name: (image in build/, simulator options ('@BASIC': the BASIC ROM),
 #        [(time s, text) | (after s, time s, text) |
@@ -39,6 +40,38 @@ CHECKS = {
                    [(38, 'BASIC      REV A'), (38, 'RAM 56K')]),
     'rom-builtin': ('diag-8k-02-rom.cas', ['--xl', '--basic', '@BASIC', '--auto'],
                     [(38, 'BASIC      REV A'), (38, 'RAM 64K')]),
+
+    # the long test on a 130XE whose screen fell back to $7C00 ($2800-$3FFF
+    # bad): only the injected B1 fault, no B8 (review item 1). Slow: ~4 min.
+    'mem-xe-scr7c': ('diag-16k-memtest.cas', ['--xe', '--stuck', '2800-4000:1:1'],
+                     [(198, 'PASSES 1'), (198, 'B1 D0'), (198, '!B8 ')]),
+    # the long test on a 16K 600XL (no RAM under the OS): it runs (item 3)
+    'mem-600xl': ('diag-16k-memtest.cas', ['--xl', '--ram', '0x4000'],
+                  [(60, 'PASSES 1'), (60, '!B4 ')]),
+
+    # the RAM test with a cartridge over RAM (a 48K 800, BASIC in): the
+    # warning (nine white clicks) before the test, bank 3 CART IN WAY, the
+    # line, and never the green charge (C_GREEN, C_GFLASH)
+    'ram8k-cart800': ('diag-8k-01-ram.cas', ['--basic', '@BASIC'],
+                      [('ev', 0, 6, 0xD01A, 0x0E, 'min', 9),
+                       ('ev', 0, 6, 0xD201, 0x0F, 'min', 9),
+                       (CART_T, 'BANK 3 $8000-$BFFF  CART IN WAY'),
+                       (CART_T, 'CARTRIDGE IN: $A000-$BFFF NOT TESTED'),
+                       ('ev', 0, CART_T, 0xD01A, 0xCC, 'max', 0)]),
+    # nothing hidden: no warning, and the RAM passes
+    'ram8k-32kcart': ('diag-8k-01-ram.cas', ['--ram', '0x8000', '--basic', '@BASIC'],
+                      [('ev', 0, CART_T, 0xD01A, 0x0E, 'max', 0),
+                       (CART_T, 'ALL RAM PASSED')]),
+    'ram8k-40k': ('diag-8k-01-ram.cas', ['--ram', '0xA000', '--dmabus'],
+                  [('ev', 0, CART_T, 0xD01A, 0x0E, 'max', 0),
+                   (CART_T, 'ALL RAM PASSED')]),
+    'ram8k-builtin': ('diag-8k-01-ram.cas', ['--xl', '--basic', '@BASIC'],
+                      [('ev', 0, CART_T, 0xD01A, 0x0E, 'max', 0),
+                       (CART_T, 'ALL RAM PASSED')]),
+    # the diag cartridge (TRIG3 = 1 while it is in): no warning
+    'diagcart': ('diag-cart.car', ['--xl'],
+                 [('ev', 0, CART_T, 0xD01A, 0x0E, 'max', 0),
+                  (CART_T, '!CART IN WAY')]),
 }
 
 

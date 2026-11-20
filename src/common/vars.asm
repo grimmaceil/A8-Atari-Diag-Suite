@@ -111,6 +111,9 @@ EWROTE	= BSS+$90
 EREAD	= BSS+$A0
 MBAD	= BSS+$B0	; bad bits seen by the march tests
 AIABAD	= BSS+$C0	; bad bits seen by the address test
+CARTIN	= BADMASK+$0F	; nonzero: a cartridge sits over RAM, the 8K under it
+			; untested (tape1's cartchk; BADMASK's entry 15, which
+			; nothing else uses or clears)
 
 ; Zero page, used only after low RAM passes.
 PTR	= $80

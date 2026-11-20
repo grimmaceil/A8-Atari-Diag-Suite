@@ -52,6 +52,15 @@ BACKMK	= 1
 	.ifdef DISK		; (display.asm, report.asm: a boot disk's RAM
 RAMPC	= 1			; piece, RAM8 or RAM16)
 	.endif
+	.ifndef ROM		; a cartridge over the RAM: the warning, and never
+	.ifdef ONE16		; a pass (cartchk, report.asm's cartend). Not the
+CARTRAM	= 1			; diag cartridge (it tests the RAM under itself)
+	.else			; nor RAM8 (under 16K the RAM never reaches it)
+	.ifndef DISK
+CARTRAM	= 1
+	.endif
+	.endif
+	.endif
 	.ifdef ONE16		; where S and the long test's way back go on to:
 RAMEND	= PAYAT+6		; stage 2, in the image
 	.elseif .def DISK	; (RAM8: the menu's piece)
@@ -120,6 +129,9 @@ rt_nb
 	.ifdef ROM
 	jsr undercart		; the 8K under the cartridge (cart/undercart.asm)
 	.endif
+	.ifdef CARTRAM
+	jsr cartchk		; a cartridge over the RAM: CARTIN, the warning
+	.endif
 	lda DISPOK		; no display: beeps only (ANTIC stays off)
 	beq rt_go
 	jsr ramscreen
@@ -163,6 +175,12 @@ res_lp	lda BADMASK,x
 	bne res_bad
 	dex
 	bne res_lp
+	.ifdef CARTRAM
+	lda CARTIN		; no fault, but 8K untested: not a pass
+	beq res_ps
+	jmp cartend
+res_ps
+	.endif
 	jmp pass
 res_bad	jmp report
 	.endif
@@ -364,6 +382,33 @@ ramscreen jsr scr_on
 	lda #3
 	jmp chinfo
 
+	.ifdef CARTRAM
+; cartchk: a cartridge over the RAM? The RAM stops at $A000 (RAMTOP, from
+; boot.asm's probe) and a cartridge is there: XL/XE, TRIG3 (the slot's
+; RD5); 400/800, slotrom. Then the 8K under it can't be tested (nothing
+; switches a plain cartridge out): CARTIN, and the warning, with ANTIC off
+; so the whole screen flashes (ramscreen turns it back on). A 40K 800 with
+; a cartridge counts too: it can't be told apart, and the advice is the
+; same.
+cartchk	lda RAMTOP
+	cmp #$A0
+	bne cc_x
+	lda MACHINE
+	beq cc_800
+	lda $D013		; TRIG3: 1 = a cartridge in the slot
+	lsr
+	bcc cc_x
+	bcs cc_in
+cc_800	jsr slotrom
+	bcc cc_x
+cc_in	inc CARTIN
+	lda #0
+	sta DMACTL
+	jmp typing
+cc_x	rts
+	icl '../common/slotrom.asm'
+	.endif
+
 showbank lda DISPOK
 	beq sb_x
 	PRINT 5, 0, s_testing
@@ -434,6 +479,17 @@ rs_bank	lda RROW
 rs_found ldx CURBANK
 	lda BADMASK,x
 	bne rs_fail
+	.ifdef CARTRAM
+	cpx #3			; bank 3 under a cartridge: 8K of it untested
+	bne rs_ps
+	lda CARTIN
+	beq rs_ps
+	lda #<s_cartway
+	ldy #>s_cartway
+	jsr puts
+	jmp rs_next
+rs_ps
+	.endif
 	lda #<s_pass
 	ldy #>s_pass
 	jsr puts
@@ -509,6 +565,17 @@ rs_any	lda BADMASK,x
 	bne rs_bad
 	dex
 	bne rs_any
+	.ifdef CARTRAM
+	lda CARTIN		; none failed, but 8K untested: the line in
+	beq rs_ap		; place of the result
+	lda #20
+	ldx #0
+	jsr at
+	lda #<s_cartln
+	ldy #>s_cartln
+	jmp puts
+rs_ap
+	.endif
 	lda #<s_allpass
 	ldy #>s_allpass
 	jmp puts
