@@ -176,13 +176,14 @@ channel is broken:
 6. **Beep codes**, as the suite: long beeps for the bank (or the chip
    number), short beeps for the bit (or the item); the fail tone first,
    the jingle on a pass.
-7. **Spoken results** (8 Mbit): words played from the cartridge through
-   POKEY with no RAM ("bank two, bit five, bad"; "ROM E-zero-zero-zero
-   bad"; "dead test pass"), as the cartridge already plays its sampled
-   "hello". For a machine whose screen or monitor is the trouble. (Open
-   item 1: where the recordings come from.)
-8. **Chip names** where the bit-to-chip tables exist (open item 2): "800
-   16K BOARD, BIT 3: CHIP Z5" instead of only "BANK 1 BIT 3".
+7. **Spoken results** (8 Mbit): the dead test's pass and its errors,
+   spoken: words played from the cartridge through POKEY with no RAM
+   ("bank two, bit five, bad"; "ROM E-zero-zero-zero bad"; "dead test
+   pass"), as the cartridge already plays its sampled "hello". For a
+   machine whose screen or monitor is the trouble. Later, perhaps, the
+   rest of the cartridge's results spoken too (not in 0.15).
+8. **Chip names** where the bit-to-chip tables are known (decided item
+   2): "BANK 1 BIT 3: CHIP Z5" instead of only "BANK 1 BIT 3".
 
 ### The screen (sketch)
 
@@ -364,8 +365,10 @@ page exists; plus colours, boxes, beeps and speech on top.
 - The display: display lists, the row-by-row bank kernel, the player
   boxes; NTSC and PAL; what the 128K and the standalone 8K drop.
 - The CRC-16 polynomial and tables, and the table of known chips'
-  CRC-16s: computed once from the ROM images Mike has (open item 3) and
-  committed as numbers, so the build never needs a ROM file.
+  CRC-16s: computed once from the ROM images Mike has (decided item 3)
+  and committed as numbers, so the build never needs a ROM file.
+- The words: the synthesizer's settings (speed, pitch), the packing, and
+  how many banks the speech takes on the 8 Mbit.
 - The order of the chip checks, and which are automatic and which wait
   for the user.
 - The simulator: start at ($BFFE) with no OS set-up; no RAM at all, a
@@ -378,22 +381,26 @@ page exists; plus colours, boxes, beeps and speech on top.
 - The suite's checks still pass (`carttest.py`, the cartridge's runs in
   `disktest.py`).
 
-## Open items for Mike
+## Decided with Mike (2026-11-20)
 
-1. **The spoken words:** recorded by Mike, taken from public-domain
-   recordings (as the "hello" was), or made with a speech synthesizer
-   (e.g. espeak-ng, whose output is free to use)? The word list is short:
-   zero to nine, A to F, bank, bit, bad, OK, pass, fail, ROM, RAM, chip,
-   dead test, no RAM.
-2. **Bit-to-chip tables** (already an open item in the scope doc): from
-   the schematics or the boards' silkscreen, for the 800's 16K and 8K
-   boards, the 400, the 800XL and the 130XE, so the result names the
-   chip. Mike can read them off his boards; without them the result
-   names the bank and bit, as the suite does.
-3. **The CRC-16 of each known OS chip:** computed once from the ROM
-   images Mike has (his `_sysroms` dumps match the published CRC32s) and
-   committed as numbers; a chip with no image gets its CRC32 only (stage
-   A) until one turns up.
+1. **Spoken words: yes**, in the dead test, for its pass and its errors
+   (Mike: "then maybe later in the cart replace the rest of the
+   results"). The word list is short: zero to nine, A to F, bank, bit,
+   bad, OK, pass, fault, ROM, RAM, chip, dead test, no RAM, not there.
+   The voice is my call: a speech synthesizer (espeak-ng, whose output is
+   free to use; one clear, even voice for every word), each word made
+   once, packed as the "hello" is (4-bit, a sample per scan line) and
+   committed, so the build needs no synthesizer. The build takes WAV
+   files, so a word can be swapped for a recording of Mike's later.
+2. **Bit-to-chip tables:** I work them out from the boards' schematics in
+   the 400/800 and 800XL service manuals (archive.org); Mike checks a
+   name against his boards when a fault shows one. Only a table that is
+   confirmed (by his boards, or by two sources that agree) goes in; until
+   then the result names the bank and the bit, as the suite does.
+3. **The CRC-16 of each known OS chip:** yes, computed once from the ROM
+   images in Mike's `_sysroms` (they match the published CRC32s) and
+   committed as numbers only, never the ROMs; a chip with no image gets
+   its CRC32 only (stage A) until one turns up.
 
 ## A later project: the A8PicoCart
 
