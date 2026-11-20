@@ -486,6 +486,12 @@ sk_sh	ldx #T_BSHORT
 sk_en	ldx #T_END
 	jmp skret
 sk_pa
+	.ifdef SPEECH
+	cmp #1			; the first pause: the fault, spoken
+	bne sk_p0
+	jmp spkf
+sk_p0
+	.endif
 	.ifndef STANDALONE
 	lda DDRA		; a pause: with no RAM anywhere the OS chips
 	beq sk_p2		; are shown in its place (rphase)
@@ -524,6 +530,9 @@ sdone	ISFAULT sd_f
 	lda #0
 	sta IRQEN		; (the timer never fires again)
 	jmp frame
+	.elseif .def SPEECH
+	ldy #ST_PASS		; "dead test pass", then the suite
+	jmp spk_n
 	.else
 	jmp handover
 	.endif
@@ -532,6 +541,155 @@ sd_f	tya
 	ora #$40
 	tay
 	jmp skind
+
+	.ifdef SPEECH
+; The spoken results (8 Mbit): a phrase is a chain of nodes (build.py's
+; build/speech.asm: nword = the word's bank, nnext = the next node; node 1
+; ends it). spk_n plays node Y's word: to its bank with Y = the next node,
+; which the word bank hands back (main.asm's phase). A fault's phrase is
+; picked once (spkf), from the results; the START-released bit waits in
+; PACTL bit 1 meanwhile (the words take Y).
+
+; LOWBIT: X = the lowest set bit's number in A (not 0).
+.macro LOWBIT
+	ldx #0
+@	lsr
+	bcs @+
+	inx
+	bne @-
+@
+.endm
+
+spkf	lda PACTL
+	and #$FD
+	sta PACTL
+	tya
+	bpl sf_0
+	lda PACTL
+	ora #2
+	sta PACTL
+sf_0	lda DDRA		; bank 1: no RAM, zero page, the stack, a bit
+	beq sf_2
+	cmp #$FF
+	bne sf_1
+	ldy st_none
+	jmp spk_n
+sf_1	lda PACTL
+	and #1
+	beq sf_1s
+	ldy #ST_ZP
+	jmp spk_n
+sf_1s	lda PBCTL
+	and #1
+	beq sf_1b
+	ldy #ST_STACK
+	jmp spk_n
+sf_1b	lda DDRA
+	LOWBIT
+	ldy st_ram,x
+	jmp spk_n
+sf_2	lda DDRB		; bank 2's lowest bit
+	beq sf_3
+	cmp #$FF
+	beq sf_3
+	LOWBIT
+	ldy st_ram+8,x
+	jmp spk_n
+sf_3	tsx			; bank 3's
+	txa
+	beq sf_r
+	cmp #$FF
+	beq sf_r
+	LOWBIT
+	ldy st_ram+16,x
+	jmp spk_n
+sf_r	lda $0400+$413		; the RAM is fine: stage A's (R_ROMBAD)
+	lsr
+	bcc sf_a
+	lda $0400+$410		; an OS chip: not there, or bad
+	cmp #$FE
+	beq sf_nt
+	lda $0400+$411
+	cmp #$FE
+	beq sf_nt
+	lda $0400+$412
+	cmp #$FE
+	beq sf_nt
+	ldy #ST_ROM
+	jmp spk_n
+sf_nt	ldy #ST_ROMNT
+	jmp spk_n
+sf_a	lsr
+	bcc sf_g
+	ldy #ST_ANTIC
+	jmp spk_n
+sf_g	lsr
+	bcc sf_p
+	ldy #ST_GTIA
+	jmp spk_n
+sf_p	lsr
+	bcc sf_i
+	ldy #ST_POKEY
+	jmp spk_n
+sf_i	ldy #ST_PIA
+
+; spk_n: node Y's word, or (node 1) the phrase is over.
+spk_n	cpy #1
+	beq spdone
+	lda nword,y
+	tax
+	lda nnext,y
+	tay
+	jmp XBANK
+
+; spdone: the screen back; a pass goes on to the suite; a fault, with no
+; RAM anywhere, shows the OS chips (rphase), else waits ~2 s quiet (the ROM
+; phase's tick with its last chip: then the code again).
+spdone	lda #$22
+	sta DMACTL
+	ISFAULT sd_ff
+	jmp handover
+sd_ff	lda PBCTL		; START or fire pressed while it spoke: on, if
+	and #2			; START was released before (PACTL bit 1)
+	beq sd_f0
+	lda PBCTL
+	and #$FD
+	sta PBCTL
+	lda PACTL
+	and #2
+	beq sd_f0
+	jmp handover
+sd_f0	ldy #0
+	lda PACTL
+	and #2
+	beq sd_f1
+	ldy #$80
+sd_f1	lda DDRA
+	beq sd_w
+	lda DDRB
+	beq sd_w
+	tsx
+	txa
+	beq sd_w
+	jmp rphase
+sd_w	tya
+	ora #$0C
+	tay
+	lda #$09
+	sta AUDCTL
+	lda #<31399
+	sta AUDF1+4
+	lda #>31399
+	sta AUDF1+6
+	lda #0
+	sta AUDC1+4
+	sta AUDC1+6
+	sta IRQEN
+	lda #4
+	sta IRQEN
+	sta STIMER
+	jmp frame
+	.endif
 
 ; rdisp: after a frame: the sound's ticks or the ROM phase's (tick sorts
 ; them by Y bit 6 after the keys).

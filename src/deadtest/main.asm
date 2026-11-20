@@ -105,6 +105,9 @@ sb_n	ldx #DEADBK+1		; none: straight to the results
 	icl 'show.asm'
 	icl '../../build/dtext.asm'
 	icl 'romcrc8.asm'
+	.ifdef SPEECH
+	icl '../../build/speech.asm'
+	.endif
 	.endif
 	.ifdef STANDALONE
 	icl 'show.asm'
@@ -121,6 +124,12 @@ phase
 	cpy #0
 	bne *+5
 	jmp show
+	.ifdef SPEECH
+	jmp spk_n		; (a spoken phrase's next node, from a word bank)
+	.endif
+	.endif
+	.ifdef WORDPG
+	jmp play		; a word bank: its word
 	.endif
 	.if DTBANK>=DEADBK+2 .and DTBANK<=DEADBK+4
 	cpy #1
@@ -158,6 +167,9 @@ scr	dta d' DEAD TEST'*	; row 0: the title bar, the version at the right
 	dta d'TESTING THE RAM'	; row 2
 	:25 dta 0
 
+	.ifdef WORDPG
+	icl 'speak.asm'
+	.endif
 	.if *>FONTAT
 	.error "the dead test's code runs into its font"
 	.endif

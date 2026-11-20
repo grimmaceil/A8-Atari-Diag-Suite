@@ -322,7 +322,7 @@ def build_car(fast, big=False):
                     *[x for b in ('ram', 'sysa', 'sysb')
                       for x in ('--bank', str(BUILD / f'{pre}-{b}.bin'))],
                     '--mem', *map(str, me), '--data', str(hello), '--data-at', str(hellobk),
-                    *[x for d in build_dead(fast, deadbk) for x in ('--deadbank', str(d))],
+                    *[x for d in build_dead(fast, deadbk, speech=big) for x in ('--deadbank', str(d))],
                     '--dead-at', str(deadbk),
                     *(['--raw8m', str(raw)] if big else [])],
                    check=True)
@@ -333,10 +333,45 @@ DEADN = 5                       # the dead test's banks: start + stage B, the sh
                                 # stage A (three: one per good page)
 
 
-def build_dead(fast, deadbk=5, std=False):
+def speech_asm(wb):
+    """build/speech.asm: the spoken phrases as chains of nodes, a word each
+    (nword: the word's bank; nnext: the next node; node 1 ends a phrase),
+    and each phrase's first node: st_ram (bank b, bit d: (b-1)*8+d),
+    st_none (bank b, no RAM), ST_*. wb: word name -> its bank."""
+    nodes = []                         # node n = nodes[n - 2]
+
+    def chain(words):
+        start = len(nodes) + 2
+        for i, w in enumerate(words):
+            nodes.append((wb[w], start + i + 1 if i + 1 < len(words) else 1))
+        return start
+    st_ram = [chain(['bank', f'd{b}', 'bit', f'd{d}', 'bad']) for b in (1, 2, 3) for d in range(8)]
+    st_none = [chain(['bank', f'd{b}', 'no_ram']) for b in (1, 2, 3)]
+    named = {'ST_ZP': ['zero_page', 'bad'], 'ST_STACK': ['stack', 'bad'],
+             'ST_ROM': ['rom', 'bad'], 'ST_ROMNT': ['rom', 'not_there'],
+             'ST_ANTIC': ['antic', 'bad'], 'ST_GTIA': ['gtia', 'bad'],
+             'ST_POKEY': ['pokey', 'bad'], 'ST_PIA': ['pia', 'bad'],
+             'ST_PASS': ['dead_test', 'pass']}
+    eq = {k: chain(v) for k, v in named.items()}
+    if len(nodes) + 2 > 256:
+        sys.exit('speech_asm: more than 254 nodes')
+    def rows(label, vals):             # (16 to a line: MADS's line length)
+        return [label] + ['\tdta ' + ','.join(map(str, vals[i:i + 16]))
+                          for i in range(0, len(vals), 16)]
+    out = ['; made by build.py (speech_asm): the spoken phrases; do not edit']
+    out += [f'{k}\t= {v}' for k, v in eq.items()]
+    out += rows('st_ram', st_ram) + rows('st_none', st_none)
+    out += rows('nword', [0, 0] + [w for w, _ in nodes])
+    out += rows('nnext', [0, 0] + [n for _, n in nodes])
+    return '\n'.join(out) + '\n'
+
+
+def build_dead(fast, deadbk=5, std=False, speech=False):
     """The dead test (src/deadtest/main.asm), once per bank: build/dead<N>.bin
     for banks deadbk on, or with std the standalone 8K (build/deadstd.bin).
-    The font first (tools/mkfont.py)."""
+    The font first (tools/mkfont.py). With speech (the 8 Mbit), the word
+    banks follow (src/deadtest/words/, a word a bank) and the show bank
+    speaks (SPEECH, build/speech.asm)."""
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkfont.py'),
                     str(ROOT / 'src' / 'deadtest' / 'font.txt'), str(BUILD / 'dtfont.bin')],
                    check=True)
@@ -349,10 +384,24 @@ def build_dead(fast, deadbk=5, std=False):
         out = BUILD / 'deadstd'
         mads('deadtest', 'main.asm', out, dict(f, DTBANK=0, DEADBK=0, STANDALONE=1))
         return [Path(f'{out}.bin')]
+    words = ROOT / 'src' / 'deadtest' / 'words'
+    names = [ln.split(':')[0].strip() for ln in (words / 'words.txt').read_text().splitlines()
+             if ln.strip() and not ln.startswith('#')] if speech else []
+    wb = {name: deadbk + DEADN + i for i, name in enumerate(names)}
+    if speech:
+        f['SPEECH'] = 1
+        (BUILD / 'speech.asm').write_text(speech_asm(wb), encoding='latin-1')
     outs = []
     for n in range(deadbk, deadbk + DEADN):
         out = BUILD / f'dead{n}'
         mads('deadtest', 'main.asm', out, dict(f, DTBANK=n, DEADBK=deadbk))
+        outs.append(Path(f'{out}.bin'))
+    for name, n in wb.items():         # the word banks
+        data = (words / f'{name}.bin').read_bytes()
+        (BUILD / 'word.bin').write_bytes(data)
+        out = BUILD / f'dead{n}'
+        mads('deadtest', 'main.asm', out, dict(f, DTBANK=n, DEADBK=deadbk,
+                                                 WORDPG=len(data) // 256))
         outs.append(Path(f'{out}.bin'))
     return outs
 

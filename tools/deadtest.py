@@ -127,7 +127,31 @@ CHECKS = {
     'c-noram': ('diag-cart-8mbit.car', ['--ram', '0'], [(4, 'OTHER CHIPS NEED RAM')]),
     'c-live': ('diag-cart-8mbit.car', ['--stuck', '2:5:0', '--kb', '3F:5:3'],
                [(4, 'ANTIC OK  GTIA OK  POKEY OK  PIA OK'), (7, 'INPUT  KEY $3F')]),
+
+    # the spoken results (8 Mbit): words through POKEY voice 1 in volume-only
+    # mode; the middle level, AUDC1 = $18, comes back again and again while
+    # one plays. After the first round of beeps (~8 s); the 128K has none.
+    'speak-b2d4': ('diag-cart-8mbit.car', ['--stuck', '2:5:0'],
+                   [('ev', 7, 14, 0xD201, 0x18, 'min', 200)]),
+    'speak-128k': ('diag-cart.car', ['--stuck', '2:5:0'],
+                   [('ev', 2, 14, 0xD201, 0x18, 'max', 0)]),
+    'speak-pass': ('diag-cart-8mbit.car', [],
+                   [('ev', 2, 6, 0xD201, 0x18, 'min', 100), (40, FOUND48)]),
 }
+
+WORDDIR = Path(__file__).resolve().parent.parent / 'src' / 'deadtest' / 'words'
+
+
+def words():
+    """Every word (src/deadtest/words/*.bin): whole pages, starting and
+    ending at the middle level (8: silence), so it starts and stops quietly."""
+    bad = []
+    for f in sorted(WORDDIR.glob('*.bin')):
+        d = f.read_bytes()
+        if len(d) % 256 or d[0] >> 4 != 8 or d[-1] & 15 != 8:
+            bad.append(f.name)
+    print(f'words: {len(list(WORDDIR.glob("*.bin")))}: {"PASS" if not bad else "FAIL " + ", ".join(bad)}')
+    return len(bad)
 
 TAIL_RUN = bytes.fromhex('A2009D00D54C00A0')     # $BFE0: bank 0's cold start
 TAIL_DIAG = bytes.fromhex('8D05D54C00A0')        # $BFE8: sta $D505, jmp $A000
@@ -218,6 +242,8 @@ def old42():
 
 def main():
     args = sys.argv[1:]
+    if '--words' in args:
+        sys.exit(1 if words() else 0)
     if '--static' in args:
         sys.exit(1 if static() else 0)
     if '--layout' in args:

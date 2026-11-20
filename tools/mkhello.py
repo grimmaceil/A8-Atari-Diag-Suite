@@ -45,7 +45,6 @@ import wave
 from pathlib import Path
 
 import numpy as np
-import soundfile as sf
 
 ROOT = Path(__file__).resolve().parent.parent
 AUDIO = ROOT / 'src' / 'cart' / 'audio'
@@ -134,6 +133,7 @@ def play(q, lines, mode):
 
 
 def main():
+    import soundfile as sf          # (only here: mkwords.py shares the rest)
     d, sr = sf.read(SRC)
     if d.ndim > 1:
         d = d.mean(axis=1)

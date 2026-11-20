@@ -136,8 +136,8 @@ def main():
             sys.exit(f'{path}: {len(code)} bytes, a dead bank holds {CODEMAX}')
         banks.append(bytearray(code + b'\xff' * (TAILAT - len(code))))
     dead = range(deadbk, deadbk + len(a.deadbank))
-    if len(banks) > NBANKS:            # (the code addresses banks 0-15 only)
-        sys.exit('the programs do not fit in the cartridge')
+    if len(banks) > nbanks:
+        sys.exit(f'the programs take {len(banks)} banks, the cartridge has {nbanks}')
     while len(banks) < nbanks:
         banks.append(bytearray(b'\xff' * TAILAT))
     for i, b in enumerate(banks):

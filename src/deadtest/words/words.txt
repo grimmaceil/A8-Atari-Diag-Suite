@@ -1,0 +1,27 @@
+# The dead test's spoken words (8 Mbit cartridge): tools/mkwords.py makes
+# each with espeak-ng 1.52.0 and these settings, cleaned up as the "hello"
+# is, and packs it to <name>.bin (committed). A <name>.wav here is used
+# instead of the synthesizer (a recording of one's own).
+# espeak-ng: -v en-us -s 140 -p 45 -a 180
+dead_test: dead test
+pass: pass
+bank: bank
+bit: bit
+bad: bad
+no_ram: no ram
+zero_page: zero page
+stack: stack
+rom: rom
+not_there: not there
+antic: antic
+gtia: G T I A
+pokey: pokey
+pia: P I A
+d0: zero
+d1: one
+d2: two
+d3: three
+d4: four
+d5: five
+d6: six
+d7: seven
