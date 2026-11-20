@@ -1228,8 +1228,10 @@ Real 800 and 800XL machines, over SIO2PC with AspeQt: the boot disk, and
 the executables (`.xex`) up to 0.11. The joystick and paddle ports get
 their real test there. The cartridge, on an 8 Mbit MaxFlash (0.14), in a
 real 48K 800: every test, the results, the self-check, and the 8K under
-it (48K shown). Every format has also run on the author's development
-set-up, the MiSTer's Atari800 core, as a 400/800 and as an XL/XE (64K
-and a 128K 130XE). Not tried yet: the dead test (0.15) on real hardware,
-a physical disk drive, the 128K AtariMax cartridge on a real machine,
-and the cassettes on a real machine.
+it (48K shown). The dead test (0.15), on the same cartridge: in that 800
+with its first RAM board out (the fault, round after round, with no zero
+page or stack) and in a real 800XL. Every format has also run on the
+author's development set-up, the MiSTer's Atari800 core, as a 400/800
+and as an XL/XE (64K and a 128K 130XE). Not tried yet: a physical disk
+drive, the 128K AtariMax cartridge on a real machine, and the cassettes
+on a real machine.

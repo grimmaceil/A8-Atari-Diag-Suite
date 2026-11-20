@@ -32,7 +32,7 @@ name, and every screen shows it at the right of the title bar.
     PIA DDRA and PACTL/PBCTL reads, POKEY timer 4, display lists rewritten
     mid-frame (text and pictures, a cartridge font, player 0 written
     directly), GTIA collisions (an approximation), the `dead:` line;
-    `tools/deadtest.py` (37 checks, `--static`, `--layout`, `--words`).
+    `tools/deadtest.py` (41 checks, `--static`, `--layout`, `--words`).
 - **0.14** (2026-11-19), against 0.13:
   - **A cartridge in the way** (the RAM test: the 8k, 16k and 32k+ RAM
     tapes, the disk set's RAM disk, the boot disk from 16K): when the RAM
