@@ -26,6 +26,15 @@
 	icl '../common/defs.asm'
 
 LDRFOLD	= 1			; report.asm: fold the loader area into bank 1
+	.ifndef ROM		; a cartridge over the RAM (as stage 1: CARTIN):
+	.ifdef ONE16		; never a pass. Not the diag cartridge (it tests
+CARTRAM	= 1			; the RAM under itself)
+	.else
+	.ifndef DISK
+CARTRAM	= 1
+	.endif
+	.endif
+	.endif
 	.ifdef ROM		; S skips the RAM test (as stage 1): on to the
 SKIPKEY	= 1			; system tests (tomenu; the 32k+ image: SYS32)
 SKIPTO	= tomenu
@@ -276,6 +285,12 @@ fin_lp	lda BADMASK,x
 	bne fin_bad
 	dex
 	bne fin_lp
+	.ifdef CARTRAM
+	lda CARTIN		; no fault, but 8K untested: not a pass
+	beq fin_ps
+	jmp cartend
+fin_ps
+	.endif
 	jmp pass
 fin_bad	jmp report
 
@@ -498,6 +513,21 @@ su_cn	dex
 	jsr putdec
 	lda CNT
 	bne su_det
+	.ifdef CARTRAM
+	lda CARTIN		; none failed, but 8K untested: no ALL PASSED
+	beq su_ok
+	PRINT 16, 0, s_cartln
+	.ifndef GOMENU
+	lda #17			; "NEXT: ...": s_nextok without "ALL PASSED. "
+	ldx #0
+	jsr at
+	lda #<[s_nextok+12]
+	ldy #>[s_nextok+12]
+	jsr puts
+	.endif
+	jmp su_end
+su_ok
+	.endif
 	PRINT 16, 0, s_nextok
 	jmp su_end
 su_det	sta CURBANK
@@ -549,6 +579,16 @@ bankhi	asl
 bankstat ldx CURBANK
 	lda BADMASK,x
 	bne bs_fail
+	.ifdef CARTRAM
+	cpx #3			; bank 3 under a cartridge: 8K of it untested
+	bne bs_ps
+	lda CARTIN
+	beq bs_ps
+	lda #<s_cartway
+	ldy #>s_cartway
+	jmp puts_st
+bs_ps
+	.endif
 	lda #<s_pass
 	ldy #>s_pass
 	jmp puts_st

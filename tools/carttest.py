@@ -58,6 +58,34 @@ CHECKS = {
                        (CART_T, 'BANK 3 $8000-$BFFF  CART IN WAY'),
                        (CART_T, 'CARTRIDGE IN: $A000-$BFFF NOT TESTED'),
                        ('ev', 0, CART_T, 0xD01A, 0xCC, 'max', 0)]),
+    # stage 2's summary (the 16k RAM tape): bank 3 CART IN WAY, the line in
+    # place of ALL PASSED (the next tape still named), the white ending
+    'ram16k-cart800': ('diag-16k-01-ram.cas', ['--basic', '@BASIC'],
+                       [('ev', 0, 6, 0xD01A, 0x0E, 'min', 9),
+                        (40, '5 BANK 3 $8000-$BFFF      CART IN WAY'),
+                        (40, 'CARTRIDGE IN: $A000-$BFFF NOT TESTED'),
+                        (40, 'NEXT: DIAG-16K-02-SYSTEM'), (40, '!ALL PASSED'),
+                        ('ev', 0, 40, 0xD01A, 0xCC, 'max', 0)]),
+    'ram16k-slotxl': ('diag-16k-01-ram.cas', ['--xl', '--basic', '@BASIC', '--slot'],
+                      [('ev', 0, 6, 0xD01A, 0x0E, 'min', 9),
+                       (50, '5 BANK 3 $8000-$BFFF      CART IN WAY'),
+                       (50, '!ALL PASSED'), (50, '!FIX THIS FIRST'),
+                       ('ev', 0, 50, 0xD01A, 0xCC, 'max', 0)]),
+    # the 8k RAM tape's part 2 (its own copy of the library), a key at 20 s
+    'ram8k-part2': ('diag-8k-01-ram.cas', ['--basic', '@BASIC', '--key', '20'],
+                    [(140, '5 BANK 3 $8000-$BFFF      CART IN WAY'),
+                     (140, 'CARTRIDGE IN: $A000-$BFFF NOT TESTED'),
+                     (140, 'NEXT: DIAG-8K-02-ROM'), (140, '!ALL PASSED'),
+                     ('ev', 0, 140, 0xD01A, 0xCC, 'max', 0)]),
+    # a fault wins: FIX THIS FIRST, red, and no white ending (only the
+    # warning's nine clicks)
+    'ram16k-fault': ('diag-16k-01-ram.cas', ['--basic', '@BASIC', '--stuck', '2:5:0'],
+                     [(40, 'FIX THIS FIRST'), ('ev', 0, 40, 0xD01A, 0x0E, 'max', 9),
+                      ('ev', 0, 40, 0xD01A, 0x34, 'min', 1)]),
+    # R at the summary: the RAM test again, the warning again, the same end
+    'ram16k-retest': ('diag-16k-01-ram.cas', ['--basic', '@BASIC', '--kb', '28:30:0.3'],
+                      [(31, 40, 'ram#test'), ('ev', 31, 40, 0xD01A, 0x0E, 'min', 9),
+                       (40, 70, 'CARTRIDGE IN: $A000-$BFFF NOT TESTED')]),
     # nothing hidden: no warning, and the RAM passes
     'ram8k-32kcart': ('diag-8k-01-ram.cas', ['--ram', '0x8000', '--basic', '@BASIC'],
                       [('ev', 0, CART_T, 0xD01A, 0x0E, 'max', 0),
