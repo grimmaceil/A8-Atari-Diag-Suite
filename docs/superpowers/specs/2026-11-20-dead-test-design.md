@@ -71,7 +71,7 @@ those two decide what else can run:
 
 On an XL/XE the 64K is soldered in and each data bit is one chip for all
 of it: a bad bit names the chip outright (see the bit-to-chip tables,
-open item 2). The RAM under the OS and the 130XE banks are the suite's
+decided item 2). The RAM under the OS and the 130XE banks are the suite's
 (it runs right after); the dead test covers them only if the plan finds
 room and storage for it (PORTB is then in use, so the DDRB trick below
 needs care).
