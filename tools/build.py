@@ -329,8 +329,8 @@ def build_car(fast, big=False):
     return raw if big else car
 
 
-DEADN = 4                       # the dead test's banks: start + stage B, the show,
-                                # stage A, the other chips (the words: 8 Mbit, later)
+DEADN = 5                       # the dead test's banks: start + stage B, the show,
+                                # stage A (three: one per good page)
 
 
 def build_dead(fast, deadbk=5, std=False):
@@ -340,9 +340,10 @@ def build_dead(fast, deadbk=5, std=False):
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkfont.py'),
                     str(ROOT / 'src' / 'deadtest' / 'font.txt'), str(BUILD / 'dtfont.bin')],
                    check=True)
-    subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkdtext.py'),
-                    str(ROOT / 'src' / 'deadtest' / 'text.txt'), str(BUILD / 'dtext.asm')],
-                   check=True)
+    for opt in ([], ['--std']):         # the lines, and the standalone's
+        subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkdtext.py'), *opt,
+                        str(ROOT / 'src' / 'deadtest' / 'text.txt'),
+                        str(BUILD / ('dtextstd.asm' if opt else 'dtext.asm'))], check=True)
     f = {'FAST': 1} if fast else {}
     if std:
         out = BUILD / 'deadstd'

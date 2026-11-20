@@ -47,8 +47,13 @@ def asm(entries):
 
 
 def main():
-    src, dst = sys.argv[1:3]
-    Path(dst).write_text(asm(lines(Path(src).read_text(encoding='utf-8'))), encoding='latin-1')
+    """--std: without the no-RAM OS lines (OS*: the standalone has no ROM
+    phase)."""
+    args = [a for a in sys.argv[1:] if a != '--std']
+    entries = lines(Path(args[0]).read_text(encoding='utf-8'))
+    if '--std' in sys.argv:
+        entries = [e for e in entries if not e[0].startswith('DT_OS')]
+    Path(args[1]).write_text(asm(entries), encoding='latin-1')
 
 
 if __name__ == '__main__':

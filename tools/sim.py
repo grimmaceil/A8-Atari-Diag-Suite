@@ -24,6 +24,8 @@ Cartridges and the empty bus:
                            while it is off
   --hole LO-HI             no RAM there (a pulled board): reads float, writes
                            are lost; more than one --hole may be given
+  --nochip D800|E000       a 400/800 OS chip pulled: its range floats
+  --rompoke ADDR=VAL,...   OS ROM bytes changed (a bad chip)
 The dead test (a .car whose start bank's $BFFD bit 7 is set) is entered at
 ($BFFE) with nothing set up; at its hand-over (a jump to the OS's reset
 entry) or at the end, the dead: line gives its results as the PIA and the
@@ -81,6 +83,7 @@ class Atari:
         self.dlw = []            # (line, register, value): DLISTL/DLISTH writes, the
                                  # last few frames (a display list chosen row by row)
         self.holes = []          # --hole: (lo, hi), no RAM there
+        self.nochip = []         # --nochip: (lo, hi), a 400/800 OS chip pulled
         self.busnoise = False    # an idle bus reads back anything (a real 800)
         self.slot = False        # --slot: --basic is a cartridge in the slot (XL/XE too)
         self.dmabus = False      # --dmabus: $A000-$BFFF's empty bus reads $00 with DMA on
@@ -220,6 +223,8 @@ class Atari:
                 return a >> 8    # e.g. a 16K 600XL: nothing under the OS
         elif a >= 0xC000:
             if self.xl or a >= 0xD800:
+                if any(lo <= a < hi for lo, hi in self.nochip):
+                    return a >> 8    # --nochip: the chip pulled, a floating bus
                 if a in self.romover:
                     return self.romover[a]
                 if self.osrom is not None:
@@ -837,6 +842,10 @@ def main():
     ap.add_argument('--basic', help='a real 8K BASIC ROM: XL/XE built in, or a 400/800 cartridge')
     ap.add_argument('--slot', action='store_true',
                     help='with --basic: a cartridge in the slot, on an XL/XE too (TRIG3 = 1)')
+    ap.add_argument('--nochip', action='append', default=[],
+                    help='D800 or E000: that 400/800 OS chip pulled (reads float)')
+    ap.add_argument('--rompoke', default='',
+                    help='ADDR=VAL,... (hex): OS ROM bytes changed (a bad chip)')
     ap.add_argument('--hole', action='append', default=[],
                     help='LO-HI (hex): no RAM there; reads float, writes are lost')
     ap.add_argument('--dmabus', action='store_true',
@@ -937,6 +946,11 @@ def main():
     hw.busnoise = a.busnoise
     hw.slot = a.slot
     hw.holes = [tuple(int(x, 16) for x in h.split('-')) for h in a.hole]
+    hw.nochip = [{'D800': (0xD800, 0xE000), 'E000': (0xE000, 0xF000)}[c.upper()]
+                 for c in a.nochip]
+    for kv in (x for x in a.rompoke.split(',') if x):
+        k, v = kv.split('=')
+        hw.romover[int(k, 16)] = int(v, 16)
     hw.dmabus = a.dmabus
     if car is not None:
         hw.skctl = 0x03                    # no SIO before a cartridge: the OS's 3

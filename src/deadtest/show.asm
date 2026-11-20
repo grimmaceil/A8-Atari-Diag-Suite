@@ -97,19 +97,27 @@ PMCOL	= 30			; the bit digits' first column (76543210)
 .endm
 
 ; ISFAULT target: to target (a jmp away) on any fault: bank 1 not all
-; good, bank 2 or 3 neither good nor empty. Uses A and X.
+; good, bank 2 or 3 neither good nor empty, or (stage A's R_ROMBAD) an OS
+; chip unknown or not there. Uses A and X.
 .macro ISFAULT
 	lda DDRA
-	bne @+1
+	bne @+2
 	lda DDRB
 	beq @+
 	cmp #$FF
-	bne @+1
+	bne @+2
 @	tsx
 	txa
-	beq @+1
+	beq @+
 	cmp #$FF
-	beq @+1
+	bne @+1
+@
+	.ifdef STANDALONE
+	jmp @+1
+	.else
+	lda $0400+$413		; the RAM passed, so stage A ran from $0400: an
+	beq @+1			; OS chip unknown or not there (R_ROMBAD)
+	.endif
 @	jmp :1
 @
 .endm
@@ -124,21 +132,24 @@ T_END	= 2
 T_J1	= 3
 T_DM1	= 8
 T_PAUSE	= 11
+T_RLONG	= 12			; the ROM test's code (test 1, item 3): lower
+T_RSHORT = 13			; tones, as report.asm's
 sk_frq	dta F_LONG, F_SHORT, F_END, F_J0, F_J1, F_J2, F_J3, F_LONG, F_D1, F_D1, F_D2, 0
+	dta F_RLONG, F_RSHORT
 sk_col	dta C_RED+4, C_RED+4, C_RED+4, C_GREEN+4, C_GREEN+4, C_GREEN+4, C_GREEN+4
-	dta C_GREEN+4, C_RED+4, C_RED+4, C_RED+4, C_RED
+	dta C_GREEN+4, C_RED+4, C_RED+4, C_RED+4, C_RED, C_RED+4, C_RED+4
 sk_lnl	dta <[37*1042-1], <[12*1042-1], <[37*1042-1], <[7*1042-1], <[7*1042-1]
 	dta <[7*1042-1], <[20*1042-1], <[37*1042-1], <[15*1042-1], <[15*1042-1]
-	dta <[55*1042-1], <[61*1042-1]
+	dta <[55*1042-1], <[61*1042-1], <[37*1042-1], <[12*1042-1]
 sk_lnh	dta >[37*1042-1], >[12*1042-1], >[37*1042-1], >[7*1042-1], >[7*1042-1]
 	dta >[7*1042-1], >[20*1042-1], >[37*1042-1], >[15*1042-1], >[15*1042-1]
-	dta >[55*1042-1], >[61*1042-1]
+	dta >[55*1042-1], >[61*1042-1], >[37*1042-1], >[12*1042-1]
 sk_gpl	dta <[12*1042-1], <[12*1042-1], <[12*1042-1], <[2*1042-1], <[2*1042-1]
 	dta <[2*1042-1], <[12*1042-1], <[12*1042-1], <[6*1042-1], <[6*1042-1]
-	dta <[25*1042-1], 0
+	dta <[25*1042-1], 0, <[12*1042-1], <[12*1042-1]
 sk_gph	dta >[12*1042-1], >[12*1042-1], >[12*1042-1], >[2*1042-1], >[2*1042-1]
 	dta >[2*1042-1], >[12*1042-1], >[12*1042-1], >[6*1042-1], >[6*1042-1]
-	dta >[25*1042-1], 0
+	dta >[25*1042-1], 0, >[12*1042-1], >[12*1042-1]
 
 ; TIMERX tlo, thi: POKEY's voices 3 and 4 joined, 64 kHz, counting table
 ; entry X (tlo,x and thi,x): IRQST bit 2 goes to 0 when it runs out (polled;
@@ -227,12 +238,20 @@ tk_od	sta DMACTL
 	beq tk_s
 	lda CONSOL
 	and #2
-	bne snd
+	bne tk_c
 tk_s	tya
 	and #$80
 	ora #$40
 	tay
 	jmp skind
+tk_c
+	.ifndef STANDALONE
+	tya			; on: the tune, or the ROM phase (bit 6 clear)
+	and #$40
+	bne tk_t
+	jmp rsnd
+	.endif
+tk_t	jmp snd
 
 ; snd: the note or the gap still running: another frame; else on.
 snd	lda IRQST
@@ -307,8 +326,11 @@ sk2c	tya
 	bcc sk_lg
 	sbc #2
 	jmp sk_k
-skf3	tsx			; bank 3
+skf3	tsx			; bank 3 (when it is the fault)
 	txa
+	beq skr
+	cmp #$FF
+	beq skr
 	ldx #1
 sk3b	lsr
 	bcs sk3c
@@ -324,6 +346,27 @@ sk3c	tya
 	bcc sk_lg
 	sbc #3
 	jmp sk_k
+skr	ldx #3			; the RAM is fine: an OS chip (test 1, item 3):
+	tya			; one long beep, three short, in the ROM test's
+	lsr			; tones
+	and #$1F
+	cmp #3
+	bcc sk_dm
+	sbc #3
+	cmp #1
+	bcc sk_rl
+	sbc #1
+sk_kr	cmp #0
+	beq sk_rs
+	sec
+	sbc #1
+	dex
+	bne sk_kr
+	jmp sk_kx
+sk_rl	ldx #T_RLONG
+	jmp skret
+sk_rs	ldx #T_RSHORT
+	jmp skret
 sk_dm	adc #T_DM1		; doom (C clear)
 	tax
 	jmp skret
@@ -336,7 +379,7 @@ sk_k	cmp #0
 	sbc #1
 	dex
 	bne sk_k
-	cmp #0			; X ran out: A = past the short beeps
+sk_kx	cmp #0			; X ran out: A = past the short beeps
 	beq sk_en
 	cmp #4
 	bcc sk_pa
@@ -345,7 +388,18 @@ sk_sh	ldx #T_BSHORT
 	jmp skret
 sk_en	ldx #T_END
 	jmp skret
-sk_pa	ldx #T_PAUSE
+sk_pa
+	.ifndef STANDALONE
+	lda DDRA		; a pause: with no RAM anywhere the OS chips
+	beq sk_p2		; are shown in its place (rphase)
+	lda DDRB
+	beq sk_p2
+	tsx
+	txa
+	beq sk_p2
+	jmp rphase
+	.endif
+sk_p2	ldx #T_PAUSE
 skret	tya
 	and #1
 	bne sk_gap
@@ -382,8 +436,180 @@ sd_f	tya
 	tay
 	jmp skind
 
-; rdisp: after a frame, to where Y says: the sound's ticks (bit 6).
+; rdisp: after a frame: the sound's ticks or the ROM phase's (tick sorts
+; them by Y bit 6 after the keys).
 rdisp	jmp tick
+
+	.ifndef STANDALONE	; (the standalone has no room for it)
+; rphase: with no RAM anywhere, in the fault round's pause: each OS chip in
+; turn, ~1.5 s each, in row 9 by its CRC-8 (romcrc8.asm: known, unknown, or
+; a floating bus: not there). While Y holds a CRC-8, the START-released bit
+; waits in PACTL bit 1; then Y = that bit, bit 6 clear, the chip (bits
+; 2-3: 0 $D800, 1 $E000, 2 $F000, 3 the XL/XE image) and its result (bits
+; 0-1: 0 known, 1 unknown, 2 not there), which row 9's fragment comes from.
+rphase	lda PACTL
+	and #$FD
+	sta PACTL
+	tya
+	bpl rp_m
+	lda PACTL
+	ora #2
+	sta PACTL
+rp_m	ldy #0			; the machine: page $C0 floating = a 400/800
+	ldx #0
+rp_c0	tya
+	eor.w $C000,x
+	tay
+	lda crc8t,y
+	tay
+	inx
+	bne rp_c0
+	cpy #C8FL_C0
+	beq rpch0
+	jmp rpchx
+
+; C8PAGES lo, hi: byte X of pages lo to hi-1 into the CRC-8 in Y.
+.macro C8PAGES
+	.rept :2-:1
+	tya
+	eor.w $100*[:1+.r],x
+	tay
+	lda crc8t,y
+	tay
+	.endr
+.endm
+
+; C8RES list, floating, chip: A = the result for the CRC-8 in Y (0 known,
+; 1 unknown, 2 not there), with the chip number, to rp_show.
+.macro C8RES
+	ldx :1
+@	tya
+	cmp :1,x
+	beq @+1
+	dex
+	bne @-
+	cpy #:2
+	bne @+
+	lda #2
+	jmp @+2
+@	lda #1
+	jmp @+1
+@	lda #0
+@	ora #4*:3
+	jmp rp_show
+.endm
+
+rpch0	ldy #0
+	ldx #0
+rp0	C8PAGES $D8,$E0
+	inx
+	beq *+5
+	jmp rp0
+	C8RES c8_d8,C8FL_D8,0
+rpch1	ldy #0
+	ldx #0
+rp1	C8PAGES $E0,$F0
+	inx
+	beq *+5
+	jmp rp1
+	C8RES c8_e0,C8FL_E0,1
+rpch2	ldy #0
+	ldx #0
+rp2	C8PAGES $F0,$100
+	inx
+	beq *+5
+	jmp rp2
+	C8RES c8_f0,C8FL_F0,2
+rpchx	ldy #0
+	ldx #0
+rpx	C8PAGES $C0,$D0
+	C8PAGES $D8,$100
+	inx
+	beq *+5
+	jmp rpx
+	C8RES c8_xl,C8FL_XL,3
+
+; rp_show: A = the chip and result: into Y with the START-released bit,
+; then ~1.5 s of frames (POKEY's 15 kHz clock: voices 3 and 4 joined).
+rp_show	tay
+	lda PACTL
+	and #2
+	beq rs_t
+	tya
+	ora #$80
+	tay
+rs_t	lda #$09
+	sta AUDCTL
+	lda #<23549
+	sta AUDF1+4
+	lda #>23549
+	sta AUDF1+6
+	lda #0
+	sta AUDC1+4
+	sta AUDC1+6
+	sta IRQEN
+	lda #4
+	sta IRQEN
+	sta STIMER
+	jmp frame
+
+; rsnd: the ROM phase after a frame (and the keys): the next chip when the
+; time is up; after the last, the code from the start.
+rsnd	lda IRQST
+	and #4
+	beq rn_n
+	jmp frame
+rn_n	lda PACTL		; the START-released bit to PACTL bit 1 again
+	and #$FD
+	sta PACTL
+	tya
+	bpl rn_c
+	lda PACTL
+	ora #2
+	sta PACTL
+rn_c	tya
+	and #$0C
+	bne rn_1
+	jmp rpch1
+rn_1	cmp #4
+	bne rn_e
+	jmp rpch2
+rn_e	tya			; done: the code again
+	and #$80
+	ora #$40
+	tay
+	jmp skind
+
+; rpfrag: row 9's fragment in the ROM phase, by Y bits 0-3.
+rpfl	dta <DT_OSD8_OK,<DT_OSD8_UNK,<DT_OSD8_NONE,<DT_BLANK
+	dta <DT_OSE0_OK,<DT_OSE0_UNK,<DT_OSE0_NONE,<DT_BLANK
+	dta <DT_OSF0_OK,<DT_OSF0_UNK,<DT_OSF0_NONE,<DT_BLANK
+	dta <DT_OSXL_OK,<DT_OSXL_UNK,<DT_OSXL_NONE,<DT_BLANK
+rpfh	dta >DT_OSD8_OK,>DT_OSD8_UNK,>DT_OSD8_NONE,>DT_BLANK
+	dta >DT_OSE0_OK,>DT_OSE0_UNK,>DT_OSE0_NONE,>DT_BLANK
+	dta >DT_OSF0_OK,>DT_OSF0_UNK,>DT_OSF0_NONE,>DT_BLANK
+	dta >DT_OSXL_OK,>DT_OSXL_UNK,>DT_OSXL_NONE,>DT_BLANK
+
+	.endif
+
+; OSROW off, done: rows 9-11 with a good page: the line stage A left at
+; B+off (B: the first good bank's); with none, on past it.
+.macro OSROW
+	lda DDRA
+	bne @+
+	SETDL [$0400+:1]
+	jmp :2
+@	lda DDRB
+	bne @+
+	SETDL [$4000+:1]
+	jmp :2
+@	tsx
+	txa
+	bne @+
+	SETDL [$8000+:1]
+	jmp :2
+@
+.endm
 
 ; frame: one frame of the results screen. From the vertical blank: the
 ; top fragment (blank lines and the title), then each row.
@@ -452,10 +678,43 @@ frame	lda #124
 @	sta GRAFP0
 	sta WSYNC
 	SETDL DT_BLANK
-	PLAIN 8,DT_BLANK
-	PLAIN 9,DT_BLANK
-	PLAIN 10,DT_BLANK
-	PLAIN 11,DT_BLANK
+	WAITROW 8		; row 8, then the first OS row
+	lda #0
+	sta COLPF2
+	sta GRAFP0
+	sta WSYNC
+	.ifndef STANDALONE
+	OSROW $3C0,fr_o9
+	tya			; no RAM: the ROM phase's line, or blank
+	and #$40
+	bne fr_n9
+	tya
+	and #$0F
+	tax
+	lda rpfl,x
+	sta DLISTL
+	lda rpfh,x
+	sta DLISTH
+	jmp fr_o9
+	.endif
+fr_n9	SETDL DT_BLANK
+fr_o9	WAITROW 9		; row 9, then the second
+	lda #0
+	sta COLPF2
+	sta WSYNC
+	.ifndef STANDALONE
+	OSROW $3C4,fr_o10
+	.endif
+	SETDL DT_BLANK
+fr_o10	WAITROW 10		; row 10, then the third
+	lda #0
+	sta COLPF2
+	sta WSYNC
+	.ifndef STANDALONE
+	OSROW $3C8,fr_o11
+	.endif
+	SETDL DT_BLANK
+fr_o11	PLAIN 11,DT_BLANK
 	PLAIN 12,DT_BLANK
 	PLAIN 13,DT_BLANK
 	PLAIN 14,DT_BLANK

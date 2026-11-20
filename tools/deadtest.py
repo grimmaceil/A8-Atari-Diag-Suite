@@ -51,8 +51,10 @@ CHECKS = {
     'b-stack': ('diag-cart-8mbit.car', ['--stuck', '0100-0200:1:0'],
                 [('out', 'ddra=$01 ddrb=$00 s=$00 pactl=$38 pbctl=$39')]),
     'b-mirror': ('diag-cart-8mbit.car', ['--mirror'], [('out', 'dead: '), ('out', '!s=$00 ')]),
+    # (PORTB: $FF, and $7F while stage A reads the self-test ROM as test 1
+    # does: bit 4 always 1, so never a 130XE bank; bit 0 1, the OS in)
     'b-xe': ('diag-cart-8mbit.car', ['--xe', '--xejunk'],
-             [('out', 'ddra=$00 ddrb=$00 s=$00 pactl=$38 pbctl=$38 portb=FF')]),
+             [('out', 'ddra=$00 ddrb=$00 s=$00 pactl=$38 pbctl=$38 portb=7F,FF')]),
     'b-std': ('diag-deadtest.car', ['--stuck', '2:5:0'],
               [('out', 'ddra=$00 ddrb=$10 s=$00 pactl=$38 pbctl=$38')]),
 
@@ -92,6 +94,31 @@ CHECKS = {
                   [('ev', 1, 5, 0xD200, 81, 'min', 1), ('ev', 1, 5, 0xD200, 60, 'min', 1),
                    ('ev', 1, 5, 0xD200, 47, 'min', 1), ('ev', 1, 5, 0xD200, 40, 'min', 1),
                    (40, FOUND48)]),
+
+    # stage A and the OS ROM chips. With a good page (anywhere): each chip's
+    # CRC32 named as test 1 names it (label, name at column 11, $CRC at 29);
+    # with none: each chip in turn, by its CRC-8, in the fault round's pause
+    'a-800': ('diag-cart-8mbit.car', [],
+              [(4, 'OS $D800   REV A/B, ANY      $6A5D766E'),
+               (4, 'OS $E000   REV B NTSC'), (4, 'OS $F000   REV B NTSC')]),
+    # an unknown or missing OS chip is a fault (test 1's item 3): the ROM
+    # test's code, one long (F_RLONG 96) and three short (F_RSHORT 47)
+    'a-poke': ('diag-cart-8mbit.car', ['--rompoke', 'E123=00'],
+               [(4, 'OS $E000   unknown'), (4, 'OS $F000   REV B NTSC'),
+                (4, 'DEAD TEST -- FAULT'), ('ev', 2, 9, 0xD200, 96, 'min', 1),
+                ('ev', 2, 9, 0xD200, 96, 'max', 1), ('ev', 2, 9, 0xD200, 47, 'min', 3),
+                ('ev', 2, 9, 0xD200, 47, 'max', 3), (20, '!FOUND:')]),
+    'a-nochip': ('diag-cart-8mbit.car', ['--nochip', 'E000'],
+                 [(4, 'OS $E000   NOT THERE'), (4, 'OS $D800   REV A/B, ANY'),
+                  (4, 'DEAD TEST -- FAULT')]),
+    'a-hole1': ('diag-cart-8mbit.car', ['--hole', '0000-4000'],
+                [(4, 'BANK 1 $0000-$3FFF  NO RAM'), (4, 'OS $E000   REV B NTSC')]),
+    'a-noram': ('diag-cart-8mbit.car', ['--ram', '0'],
+                [(14, 'OS $D800   OK'), (14, 'OS $E000   OK'), (14, 'OS $F000   OK')]),
+    'a-noram-nochip': ('diag-cart-8mbit.car', ['--ram', '0', '--nochip', 'D800'],
+                       [(14, 'OS $D800   NOT THERE'), (14, 'OS $E000   OK')]),
+    'a-xl': ('diag-cart-8mbit.car', ['--xl'],
+             [(4, 'OS XL/XE   REV 2')]),
 }
 
 TAIL_RUN = bytes.fromhex('A2009D00D54C00A0')     # $BFE0: bank 0's cold start

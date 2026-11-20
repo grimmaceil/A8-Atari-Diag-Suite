@@ -80,25 +80,51 @@ sbdone
 	ldy #0
 	jmp phase
 	.else
-	ldx #DEADBK+1
+	ldy #1			; a bank passed: stage A uses it, from the bank
+	ldx #DEADBK+2		; built for that page (DEADBK+2: bank 1's $0400,
+	lda DDRA		; +3: bank 2's $4000, +4: bank 3's $8000)
+	beq sb_a
+	inx
+	lda DDRB
+	beq sb_a
+	tsx
+	txa
+	bne sb_n
+	ldx #DEADBK+4
+sb_a	jmp XBANK
+sb_n	ldx #DEADBK+1		; none: straight to the results
 	ldy #0
 	jmp XBANK
 	.endif
 	icl 'stageb.asm'
 	.endif
-	.if DTBANK=DEADBK+1 .or .def STANDALONE
+	.if DTBANK=DEADBK+1
 	icl 'show.asm'
 	icl '../../build/dtext.asm'
+	icl 'romcrc8.asm'
+	.endif
+	.ifdef STANDALONE
+	icl 'show.asm'
+	icl '../../build/dtextstd.asm'
+	.endif
+	.if DTBANK>=DEADBK+2 .and DTBANK<=DEADBK+4
+SABASE	= [DTBANK-DEADBK-2]*$4000+[DTBANK=DEADBK+2]*$0400
+	icl 'stagea.asm'
 	.endif
 
-; phase: Y says which: 0 the results (the show bank).
+; phase: Y says which: 0 the results (the show bank), 1 stage A.
 phase
 	.if DTBANK=DEADBK+1 .or .def STANDALONE
 	cpy #0
 	bne *+5
 	jmp show
 	.endif
-	jmp *			; (no other phase yet)
+	.if DTBANK>=DEADBK+2 .and DTBANK<=DEADBK+4
+	cpy #1
+	bne *+5
+	jmp stagea
+	.endif
+	jmp *			; (no other phase)
 
 ; handover: the suite starts as it does without the dead test: this dead
 ; bank (an ordinary header) stays in, the OS's cold start runs it. $033D-
