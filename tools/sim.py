@@ -78,6 +78,8 @@ class Atari:
         self.carlog = []         # (line, 'bank n' / 'off')
         self.ddrb = 0xFF if xl else 0x00   # PIA port B direction, as the OS sets it
         self.ddra = 0x00                   # PIA port A direction (the dead test's storage)
+        self.dlw = []            # (line, register, value): DLISTL/DLISTH writes, the
+                                 # last few frames (a display list chosen row by row)
         self.holes = []          # --hole: (lo, hi), no RAM there
         self.busnoise = False    # an idle bus reads back anything (a real 800)
         self.slot = False        # --slot: --basic is a cartridge in the slot (XL/XE too)
@@ -100,6 +102,16 @@ class Atari:
             self.caron = on
             if on:
                 self.carbank = bank
+
+    def _t4lines(self):
+        """Timer 4's period in scan lines: AUDF4, or AUDF4:AUDF3 with voices
+        3 and 4 joined (AUDCTL bit 3), at 64 kHz (15 kHz with AUDCTL bit 0)."""
+        ctl = self.regs.get(0xD208, 0)
+        n = self.regs.get(0xD206, 0)
+        if ctl & 8:
+            n = n << 8 | self.regs.get(0xD204, 0)
+        clock = 15700 if ctl & 1 else 63921
+        return (n + 1) / clock * 1000 * LINES_PER_MS
 
     def peek(self, a):
         """What ANTIC sees: the cartridge ROM where it is mapped, else RAM."""
@@ -188,6 +200,9 @@ class Atari:
                     v &= ~0x80
                 if self.irqen & 1 and self.stimer is not None and ln - self.stimer > 63:
                     v &= ~1
+                if (self.irqen & 4 and self.stimer is not None
+                        and ln - max(self.stimer, self.irqen_line) > self._t4lines()):
+                    v &= ~4
                 return v
             if 0xD200 <= a < 0xD208:
                 return 228       # POTn: nothing plugged in
@@ -271,12 +286,19 @@ class Atari:
                 return
             if a == 0xD303:
                 self.regs[a] = v
+            if a in (0xD402, 0xD403):
+                self.dlw.append((self.line, a, v))
+                if len(self.dlw) > 400:
+                    self.dlw = [w for w in self.dlw if w[0] > self.line - 3 * self.frame_lines]
             if a == 0xD40A:
                 self.mpu.processorCycles = (self.line + 1) * 114
             elif a in (0xD01A, 0xD200, 0xD201, 0xD01F, 0xD40E, 0xD400,
                        0xD402, 0xD403, 0xD302, 0xD301, 0xD017, 0xD018,
                        0xD012, 0xD013, 0xD014, 0xD015, 0xD401, 0xD409,
-                       0xD016, 0xD019, 0xD01B, 0xD404, 0xD405):
+                       0xD016, 0xD019, 0xD01B, 0xD404, 0xD405,
+                       0xD000, 0xD001, 0xD002, 0xD003, 0xD008, 0xD009, 0xD00A, 0xD00B,
+                       0xD00D, 0xD00E, 0xD00F, 0xD010, 0xD011,
+                       0xD202, 0xD203, 0xD204, 0xD205, 0xD206, 0xD207, 0xD208):
                 if self.regs.get(a) != v:
                     self.events.append((self.line, a, v))
                 self.regs[a] = v
@@ -416,6 +438,10 @@ class Atari:
         if not self.regs.get(0xD400, 0) & 0x20:
             return '(ANTIC DMA off)'
         dl = self.regs[0xD402] | self.regs[0xD403] << 8
+        fl = self.frame_lines
+        f0 = (self.line // fl - 1) * fl        # the last whole frame
+        if any(f0 + 8 < ln < f0 + fl for ln, _, _ in self.dlw):
+            return self._screen_rewritten(f0)
         rows, addr, scan = [], 0, 8
         # SIM_PMKEEP=1: show the mask even after P/M is switched off (the auto
         # responder finishes the keyboard test before most snapshot times)
@@ -452,6 +478,55 @@ class Atari:
             addr += 40
             scan += 8
         return '\n'.join(f'{i:2d}|{r}' for i, r in enumerate(rows))
+
+
+def _dl_at(hw, t):
+    """The display-list pointer as the CPU had last written it by line t."""
+    lo = hi = None
+    for ln, r, v in hw.dlw:
+        if ln > t:
+            break
+        if r == 0xD402:
+            lo = v
+        else:
+            hi = v
+    lo = hw.regs.get(0xD402, 0) if lo is None else lo
+    hi = hw.regs.get(0xD403, 0) if hi is None else hi
+    return lo | hi << 8
+
+
+def _screen_rewritten(self, f0):
+    """The screen of the frame from line f0 when the CPU rewrote the
+    display-list pointer while it was drawn (the dead test picks each row's
+    line that way): ANTIC fetches each instruction at its row's first line,
+    from wherever the pointer was last set before that line."""
+    p = _dl_at(self, f0 + 7)
+    rows, scan, last = [], 8, f0 + 7
+    for _ in range(64):
+        t = f0 + scan
+        if any(last < ln < t for ln, _, _ in self.dlw):
+            p = _dl_at(self, t - 1)
+        last = t
+        op = self.peek(p)
+        if op in (0x41, 0x01) or scan >= 248:
+            break
+        if op & 0x0F == 0:
+            p += 1
+            scan += (op >> 4 & 7) + 1
+            continue
+        addr = self.peek(p + 1) | self.peek(p + 2) << 8 if op & 0x40 else addr
+        p += 3 if op & 0x40 else 1
+        row = ''
+        for c in [self.peek(addr + i) for i in range(40)]:
+            ch = c & 0x7F
+            ch = chr(ch + 32) if ch < 64 else '^v[]'[ch - 0x5C] if 0x5C <= ch < 0x60 else '~'
+            row += ch.lower() if c & 0x80 and ch.isalpha() else ('#' if c & 0x80 and ch == ' ' else ch)
+        rows.append(row.rstrip())
+        scan += 8
+    return '\n'.join(f'{i:2d}|{r}' for i, r in enumerate(rows))
+
+
+Atari._screen_rewritten = _screen_rewritten
 
 
 def forge(hw, spec):

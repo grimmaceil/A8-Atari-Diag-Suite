@@ -22,6 +22,8 @@
 FONTAT	= $BC00			; 1K-aligned for CHBASE; chars 0-63 = 512 bytes
 XBANK	= $BFF0			; the tail's bank switch: bank X, then its $A003
 C_LUM	= $0C			; text luminance, as the suite's C_TEXTLUM
+DDRA	= $D300			; PIA direction registers (PACTL/PBCTL bit 2 = 0):
+DDRB	= $D301			; stage B's results (stageb.asm)
 
 	opt h-f+
 	org $A000
@@ -84,21 +86,19 @@ sbdone
 	.endif
 	icl 'stageb.asm'
 	.endif
-
-; phase: Y says which. (For now: about a second, then the hand-over; the
-; standalone stays.)
-phase	ldy #60			; 60 frames, VCOUNT's wrap
-p_fr	lda VCOUNT
-	bne p_fr
-p_fr2	lda VCOUNT
-	beq p_fr2
-	dey
-	bne p_fr
-	.ifdef STANDALONE
-	jmp *			; no suite to hand over to
-	.else
-	jmp handover
+	.if DTBANK=DEADBK+1 .or .def STANDALONE
+	icl 'show.asm'
+	icl '../../build/dtext.asm'
 	.endif
+
+; phase: Y says which: 0 the results (the show bank).
+phase
+	.if DTBANK=DEADBK+1 .or .def STANDALONE
+	cpy #0
+	bne *+5
+	jmp show
+	.endif
+	jmp *			; (no other phase yet)
 
 ; handover: the suite starts as it does without the dead test: this dead
 ; bank (an ordinary header) stays in, the OS's cold start runs it. $033D-

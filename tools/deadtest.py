@@ -55,6 +55,32 @@ CHECKS = {
              [('out', 'ddra=$00 ddrb=$00 s=$00 pactl=$38 pbctl=$38 portb=FF')]),
     'b-std': ('diag-deadtest.car', ['--stuck', '2:5:0'],
               [('out', 'ddra=$00 ddrb=$10 s=$00 pactl=$38 pbctl=$38')]),
+
+    # the show bank: each row's line chosen by the display-list pointer,
+    # bit boxes (player 0 written directly: GRAFP0 $D00D), the verdict,
+    # START to go on from a fault
+    'show-pass': ('diag-cart-8mbit.car', [],
+                  [(4, 'BANK 1 $0000-$3FFF  OK'), (4, 'BANK 2 $4000-$7FFF  OK'),
+                   (4, 'BANK 3 $8000-$9FFF  OK'), (4, 'ZERO PAGE  OK'), (4, 'STACK      OK'),
+                   (4, 'DEAD TEST -- PASS'), (40, FOUND48)]),
+    'show-b2d4': ('diag-cart-8mbit.car', ['--stuck', '2:5:0'],
+                  [(4, 'BANK 2 $4000-$7FFF  BAD'), (4, 'DEAD TEST -- FAULT'),
+                   (4, 'START=GO ON  SELECT=TONES  OPTION=FLASH'),
+                   ('ev', 2, 6, 0xD00D, 0x10, 'min', 1), (30, '!FOUND:')]),
+    'show-b2d4-start': ('diag-cart-8mbit.car', ['--stuck', '2:5:0', '--con', 'START:10'],
+                        [(4, 'DEAD TEST -- FAULT'), (45, 'FOUND: 400/800')]),
+    'show-16k': ('diag-cart-8mbit.car', ['--ram', '0x4000'],
+                 [(4, 'BANK 2 $4000-$7FFF  NO RAM'), (4, 'BANK 3 $8000-$9FFF  NO RAM'),
+                  (4, 'DEAD TEST -- PASS')]),
+    'show-noram': ('diag-cart-8mbit.car', ['--ram', '0'],
+                   [(4, 'BANK 1 $0000-$3FFF  NO RAM'), (4, 'ZERO PAGE  BAD'),
+                    (4, 'STACK      BAD'), (4, 'DEAD TEST -- FAULT')]),
+    'show-std': ('diag-deadtest.car', ['--stuck', '2:5:0'],
+                 [(4, 'BANK 2 $4000-$7FFF  BAD'), (4, 'DEAD TEST -- FAULT'), (20, '!FOUND:')]),
+    'show-mixed': ('diag-cart-8mbit.car', ['--hole', '0000-4000', '--stuck', '2:5:0',
+                                           '--hole', '8000-A000'],
+                   [(4, 'BANK 1 $0000-$3FFF  NO RAM'), (4, 'BANK 2 $4000-$7FFF  BAD'),
+                    (4, 'BANK 3 $8000-$9FFF  NO RAM'), ('ev', 2, 6, 0xD00D, 0x10, 'min', 1)]),
 }
 
 TAIL_RUN = bytes.fromhex('A2009D00D54C00A0')     # $BFE0: bank 0's cold start

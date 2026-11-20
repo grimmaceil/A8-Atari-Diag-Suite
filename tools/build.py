@@ -340,6 +340,9 @@ def build_dead(fast, deadbk=5, std=False):
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkfont.py'),
                     str(ROOT / 'src' / 'deadtest' / 'font.txt'), str(BUILD / 'dtfont.bin')],
                    check=True)
+    subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkdtext.py'),
+                    str(ROOT / 'src' / 'deadtest' / 'text.txt'), str(BUILD / 'dtext.asm')],
+                   check=True)
     f = {'FAST': 1} if fast else {}
     if std:
         out = BUILD / 'deadstd'

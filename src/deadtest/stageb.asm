@@ -27,8 +27,6 @@
 ; $FF first, so a direction register's bits change nothing outside: an
 ; output driving 1 is what an input pulled up reads (on the XL/XE PORTB
 ; stays $FF: the OS in, BASIC and the self-test out, the 130XE's main RAM).
-DDRA	= $D300			; (PACTL bit 2 = 0)
-DDRB	= $D301			; (PBCTL bit 2 = 0)
 SB_CTL	= $38			; PACTL/PBCTL: the direction registers, motor off,
 				; command line high; +1: zero page / stack bad
 

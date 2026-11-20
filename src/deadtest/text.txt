@@ -1,0 +1,22 @@
+# The dead test's ready-made screen lines, each row's variants: the show
+# bank picks one per row by pointing ANTIC at it (tools/mkdtext.py makes a
+# 40-column line and a display-list fragment for each, DT_<NAME>_<VARIANT>).
+# NAME VARIANT then the text, exactly as shown (up to 40 columns; the bit
+# digits 76543210 sit in columns 30-37, under the bit boxes).
+BLANK  -
+ZP     OK     ZERO PAGE  OK
+ZP     BAD    ZERO PAGE  BAD
+STACK  OK     STACK      OK
+STACK  BAD    STACK      BAD
+B1     OK     BANK 1 $0000-$3FFF  OK          76543210
+B1     BAD    BANK 1 $0000-$3FFF  BAD         76543210
+B1     NONE   BANK 1 $0000-$3FFF  NO RAM
+B2     OK     BANK 2 $4000-$7FFF  OK          76543210
+B2     BAD    BANK 2 $4000-$7FFF  BAD         76543210
+B2     NONE   BANK 2 $4000-$7FFF  NO RAM
+B3     OK     BANK 3 $8000-$9FFF  OK          76543210
+B3     BAD    BANK 3 $8000-$9FFF  BAD         76543210
+B3     NONE   BANK 3 $8000-$9FFF  NO RAM
+VERDICT PASS  DEAD TEST -- PASS
+VERDICT FAULT DEAD TEST -- FAULT
+KEYS   -      START=GO ON  SELECT=TONES  OPTION=FLASH
