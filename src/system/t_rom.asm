@@ -328,16 +328,18 @@ sk_bad	sec
 sk_res	.byte $E3, $20, $BB, $DE	; (before CRC32's final inversion)
 
 ; basread: BASIC into BASICCRC. C clear: none to see. A cartridge, found as
-; the OS finds one: on a 400/800 no RAM at $A000 and $BFFC zero; on an
-; XL/XE TRIG3 (the slot's RD5). Or else the XL/XE's built-in BASIC (none
-; on a 1200XL).
+; the OS finds one: on a 400/800 no RAM at $A000 and $BFFC zero (slotrom:
+; eight reads with ANTIC off); on an XL/XE TRIG3 (the slot's RD5). Or else
+; the XL/XE's built-in BASIC (none on a 1200XL).
 basread	lda MACHINE
 	bne br_xl
 	lda RAMTOP		; 400/800
 	cmp #$A1
 	bcs br_no
-	lda $BFFC
-	bne br_no
+	jsr slotrom
+	lda SCRON		; ANTIC back on if the screen was ($22), else off
+	sta DMACTL		; (keeps C)
+	bcc br_no
 br_cart	jsr br_crc
 	sec
 	rts
@@ -382,6 +384,7 @@ br_put	lda CRC,x
 	dex
 	bpl br_put
 	rts
+	icl '../common/slotrom.asm'
 	.endif
 
 ; basname: name BASICCRC into BASID (A too).
