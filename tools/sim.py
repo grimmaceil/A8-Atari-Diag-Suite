@@ -82,7 +82,7 @@ class Atari:
         """AtariMax 128K: an access to $D500-$D50F selects bank n, $D510-$D51F
         switches the cartridge off. 1 MB (the 8 Mbit MaxFlash): $D500-$D57F
         bank n, $D580-$D5FF off."""
-        if self.car is None:
+        if self.car is None or len(self.car) == 0x2000:    # (a plain 8K: no banks)
             return
         big = len(self.car) > 0x20000
         if big or a & 0xFF < 0x20:
@@ -806,12 +806,13 @@ def main():
     elif a.tape.lower().endswith('.car'):
         # The OS's cold start finds the cartridge and runs it (CARTRUN at
         # $BFFA, in the bank it starts in: 0; an older 8 Mbit MaxFlash,
-        # type 42, starts in 127); RAMTOP stops below it.
+        # type 42, starts in 127); RAMTOP stops below it. A diag
+        # cartridge ($BFFD bit 7) is entered at ($BFFE) before any of that.
         raw = open(a.tape, 'rb').read()
         ctype = struct.unpack('>I', raw[4:8])[0]
-        assert raw[:4] == b'CART' and ctype in (41, 42, 75), 'not an AtariMax .car (41, 42, 75)'
+        assert raw[:4] == b'CART' and ctype in (1, 41, 42, 75), 'not a .car of type 1, 41, 42, 75'
         car = raw[16:]
-        assert len(car) == (0x20000 if ctype == 41 else 0x100000)
+        assert len(car) == {1: 0x2000, 41: 0x20000}.get(ctype, 0x100000)
         carstart = 127 if ctype == 42 else 0
         img = bytes(6)                     # (the image: whichever the menu copies)
     elif a.tape.lower().endswith('.atr'):
@@ -884,6 +885,28 @@ def main():
     mpu = MPU(memory=hw, pc=load + 6)
     hw.mpu = mpu
     mpu.sp = 0xF0
+    # The OS's reset entry (a real --osrom only): a jump there with a
+    # cartridge in (the dead test's hand-over) is the cold start again.
+    reset_pc = hw[0xFFFC] | hw[0xFFFD] << 8 if a.osrom else None
+
+    def car_cold():
+        """The OS's cold start with the cartridge in, as far as it matters
+        here: a diag cartridge ($BFFD bit 7, in the bank that is in) is
+        entered at ($BFFE) before the OS sets anything up; otherwise the
+        chips cleared, RAM as the OS leaves it for a cartridge (low RAM,
+        RAMTOP) and CARTRUN at ($BFFA)."""
+        b = hw.carbank * 0x2000 if len(car) > 0x2000 else 0
+        if car[b + 0x1FFD] & 0x80:
+            mpu.pc = car[b + 0x1FFE] | car[b + 0x1FFF] << 8
+            return
+        hw.regs.clear()
+        hw.ddrb = 0xFF if hw.xl else 0x00
+        for i in range(0x800):
+            hw.ram[i] = (i * 7 + 3) & 0xFF
+        hw.ram[0x6A] = min(a.ram, 0xA000) >> 8
+        mpu.sp = 0xF0
+        mpu.p |= mpu.INTERRUPT
+        mpu.pc = car[b + 0x1FFA] | car[b + 0x1FFB] << 8
     XSENT = 0x0700                         # where the "DOS" loader would be
     if xex is not None:
         hw.ram[0x2E7], hw.ram[0x2E8] = a.memlo & 0xFF, a.memlo >> 8
@@ -904,7 +927,7 @@ def main():
         xex_next()
     elif car is not None:
         hw.car, hw.caron, hw.carbank = car, True, carstart
-        mpu.pc = car[carstart * 0x2000 + 0x1FFA] | car[carstart * 0x2000 + 0x1FFB] << 8
+        car_cold()
         key, at = a.pick.split(':')
         hw.press(to_line(at), 'CON', {'START': 1, 'SELECT': 2}[key.upper()])
     else:
@@ -956,6 +979,10 @@ def main():
             continue
         if mpu.pc == SIOV:
             siov(mpu, hw, stream, disk, diskerr)
+            continue
+        if car is not None and mpu.pc == reset_pc and hw.caron:
+            car_cold()
+            print(f'cold start at {hw.line / LINES_PER_MS / 1000:.2f} s, bank {hw.carbank}')
             continue
         if mpu.pc == 0x2006 and 0x2006 not in entered and xex is None and car is None:   # (not .xex: its program has code there)
             entered.add(0x2006)

@@ -108,7 +108,7 @@ CHECKS = {
 }
 
 
-def sim(image, args, end):
+def sim(image, args, end, step=STEP):
     """Run the simulator: ({time: screen text}, [(line, reg, value)], stdout)."""
     xl = '--xl' in args or '--xe' in args
     with tempfile.TemporaryDirectory() as tmp:
@@ -116,7 +116,7 @@ def sim(image, args, end):
         cmd = [sys.executable, str(TOOLS / 'sim.py'), str(BUILD / image),
                *[str(BASIC) if x == '@BASIC' else x for x in args],
                '--osrom', str(OSXL if xl else OS800), '--events', str(ev),
-               '--snap', ','.join(str(t) for t in range(STEP, end + 1, STEP)),
+               '--snap', ','.join(str(round(step * i, 2)) for i in range(1, int(end / step) + 1)),
                '--until', str(end + 0.5), '--seconds', '9999']
         out = subprocess.run(cmd, capture_output=True, text=True).stdout
         events = [tuple(int(x, 16) if i else int(x) for i, x in enumerate(ln.split()))
@@ -131,7 +131,7 @@ def sim(image, args, end):
     return screens, events, out
 
 
-def run(checks, names):
+def run(checks, names, step=STEP):
     """Run the named checks (all of them if none): the misses, counted.
     A check: (image in build/, simulator options, [(time s, text) | (after
     s, time s, text) | ('ev', from s, to s, register, value, 'min'|'max',
@@ -144,7 +144,7 @@ def run(checks, names):
         evs = [w for w in want if w[0] == 'ev']
         outs = [w[1] for w in want if w[0] == 'out']
         end = max([t for _, t, _ in texts] + [w[2] for w in evs] + [STEP])
-        screens, events, out = sim(image, args, end)
+        screens, events, out = sim(image, args, end, step)
         seen = lambda t0, t, text: any(text in sc for at, sc in screens.items() if t0 < at <= t)
         miss = [f'by {t} s: {"seen" if text.startswith("!") else "never"} {text!r}'
                 for t0, t, text in texts

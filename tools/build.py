@@ -317,13 +317,49 @@ def build_car(fast, big=False):
          dict(common, WANT_JOY=1, WANT_PAD=1, WANT_POK=1, WANT_GTIA=1, OTHER=1, HASLDR=1))
     car = BUILD / (f'{CAR8M}.car' if big else f'{CAR}.car')
     raw = BUILD / f'{CAR8M}.bin'
+    deadbk = hellobk + 1                  # the dead test: after the "hello"
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkcar.py'), str(car),
                     *[x for b in ('ram', 'sysa', 'sysb')
                       for x in ('--bank', str(BUILD / f'{pre}-{b}.bin'))],
                     '--mem', *map(str, me), '--data', str(hello), '--data-at', str(hellobk),
+                    *[x for d in build_dead(fast, deadbk) for x in ('--deadbank', str(d))],
+                    '--dead-at', str(deadbk),
                     *(['--raw8m', str(raw)] if big else [])],
                    check=True)
     return raw if big else car
+
+
+DEADN = 4                       # the dead test's banks: start + stage B, the show,
+                                # stage A, the other chips (the words: 8 Mbit, later)
+
+
+def build_dead(fast, deadbk=5, std=False):
+    """The dead test (src/deadtest/main.asm), once per bank: build/dead<N>.bin
+    for banks deadbk on, or with std the standalone 8K (build/deadstd.bin).
+    The font first (tools/mkfont.py)."""
+    subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkfont.py'),
+                    str(ROOT / 'src' / 'deadtest' / 'font.txt'), str(BUILD / 'dtfont.bin')],
+                   check=True)
+    f = {'FAST': 1} if fast else {}
+    if std:
+        out = BUILD / 'deadstd'
+        mads('deadtest', 'main.asm', out, dict(f, DTBANK=0, DEADBK=0, STANDALONE=1))
+        return [Path(f'{out}.bin')]
+    outs = []
+    for n in range(deadbk, deadbk + DEADN):
+        out = BUILD / f'dead{n}'
+        mads('deadtest', 'main.asm', out, dict(f, DTBANK=n, DEADBK=deadbk))
+        outs.append(Path(f'{out}.bin'))
+    return outs
+
+
+def build_deadstd(fast):
+    """The standalone dead test: build/diag-deadtest.car (type 1) and .rom."""
+    car, rom = BUILD / 'diag-deadtest.car', BUILD / 'diag-deadtest.rom'
+    subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkcar.py'), str(car),
+                    '--std8k', str(rom), '--deadbank', str(build_dead(fast, std=True)[0])],
+                   check=True)
+    return [car, rom]
 
 
 def build_disk(fast, out=None):
@@ -477,6 +513,7 @@ def main():
                          f'A8 {name.upper()} FAULT {tag}')
     car = build_car(a.fast)
     car8m = build_car(a.fast, big=True)
+    dstd = build_deadstd(a.fast)        # the standalone dead test (.car, .rom)
     atr = build_disk(a.fast)            # the boot disk (Atari-diag-boot-disk-scope.md)
     dset, memdisk = build_diskset(a.fast)     # the 8k tapes as disks, and the 16k memtest's
     # BASCRC, the BASIC cartridge check: the BASIC program as a tape for
@@ -491,7 +528,7 @@ def main():
         return                      # so they stay in build/
     rel = []                        # the release files, named with the version
     for folder, files in ((CASSETTES, cas), (DISKS, [atr, memdisk, bdisk]), (DISKSET, dset),
-                          (CARTS, [car, car8m])):
+                          (CARTS, [car, car8m, *dstd])):
         folder.mkdir(exist_ok=True)
         for f in files:
             if 'FAULT' in f.name:   # fault-injection builds stay in build/

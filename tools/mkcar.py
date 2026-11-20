@@ -13,6 +13,8 @@ and a .car of type 75 for the simulator. The tests run from ROM
                     menu's loader copies it to RAM (src/cart/ldmem.asm)
   then              data banks (--data): one file each, from $A000, read
                     while that bank is switched in (src/cart/hello.asm)
+  then              the dead test's banks (--deadbank, from --dead-at:
+                    src/deadtest/main.asm), each a whole program at $A000
   every bank        the same 32-byte tail at $BFE0 (all 128 on the 8 Mbit:
                     it powers up in bank 0, or bank 127 on older ones): the
                     power-on jump to bank 0, the bank's sum, the bank
@@ -53,18 +55,54 @@ TAIL = bytes([0xA2, 0x00,              # $BFE0  ldx #0
 assert len(TAIL) == BANK - TAILAT
 
 
+def tail(deadbk, dead):
+    """The tail with the dead test (the plan's table): $BFE8 selects the
+    dead test's first bank and jumps to its cold start, which the OS's diag
+    jump reaches from every bank but the dead ones; those carry an ordinary
+    header whose init is the rts at $A006, so the OS's cold start after
+    the hand-over runs bank 0 as it always has."""
+    t = bytearray(TAIL)
+    t[0x08:0x0E] = bytes([0x8D, deadbk, 0xD5, 0x4C, 0x00, 0xA0])   # sta $D500+n, jmp $A000
+    t[0x1D:0x20] = bytes([0x04, 0x06, 0xA0]) if dead else bytes([0x80, 0xE8, 0xBF])
+    return bytes(t)
+
+
+def std8k(car, rom, path):
+    """The standalone dead test: one 8K bank, a diag header at $BFFA, no
+    bank switching: a .car of type 1 (standard 8K) and the raw 8K."""
+    code = Path(path).read_bytes()
+    if len(code) > CODEMAX:
+        sys.exit(f'{path}: {len(code)} bytes, the standalone holds {CODEMAX}')
+    b = bytearray(code + b'\xff' * (BANK - len(code)))
+    b[0x1FFA:0x2000] = bytes([0x00, 0xA0, 0x00, 0x80, 0x00, 0xA0])
+    Path(rom).write_bytes(b)
+    head = b'CART' + struct.pack('>II', 1, sum(b) & 0xFFFFFFFF) + bytes(4)
+    Path(car).write_bytes(head + b)
+    print(f'{car}: the standalone dead test, {len(code)} bytes of {CODEMAX}')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('car')
-    ap.add_argument('--bank', action='append', required=True, metavar='BIN',
+    ap.add_argument('--bank', action='append', metavar='BIN',
                     help='a code bank, assembled at $A000 (in bank order)')
-    ap.add_argument('--mem', nargs=2, metavar=('BIN', 'LAB'), required=True)
+    ap.add_argument('--mem', nargs=2, metavar=('BIN', 'LAB'))
     ap.add_argument('--data', action='append', default=[], metavar='BIN',
                     help='a data bank, after the memory test')
     ap.add_argument('--data-at', type=int, help='the bank the first --data must land in')
     ap.add_argument('--raw8m', metavar='BIN', help='the 8 Mbit MaxFlash: 128 banks, this raw '
                     'image too (the .car is then type 75)')
+    ap.add_argument('--deadbank', action='append', default=[], metavar='BIN',
+                    help="a dead test bank, assembled at $A000 (in bank order)")
+    ap.add_argument('--dead-at', type=int, help='the bank the first --deadbank must land in')
+    ap.add_argument('--std8k', metavar='ROM', help='the standalone dead test: the .car (type '
+                    '1) and this raw 8K, from the one --deadbank')
     a = ap.parse_args()
+    if a.std8k:
+        std8k(a.car, a.std8k, a.deadbank[0])
+        return
+    if not a.bank or not a.mem:
+        sys.exit('--bank and --mem are needed')
     nbanks = NBANKS8M if a.raw8m else NBANKS
 
     banks = []
@@ -89,13 +127,22 @@ def main():
         if len(d) > TAILAT:
             sys.exit(f'{path}: {len(d)} bytes, a bank holds {TAILAT}')
         banks.append(bytearray(d + b'\xff' * (TAILAT - len(d))))
+    deadbk = len(banks)
+    if a.deadbank and a.dead_at is not None and a.dead_at != deadbk:
+        sys.exit(f'the first dead bank is {deadbk}, the code was built for {a.dead_at}')
+    for path in a.deadbank:
+        code = Path(path).read_bytes()
+        if len(code) > CODEMAX:
+            sys.exit(f'{path}: {len(code)} bytes, a dead bank holds {CODEMAX}')
+        banks.append(bytearray(code + b'\xff' * (TAILAT - len(code))))
+    dead = range(deadbk, deadbk + len(a.deadbank))
     if len(banks) > NBANKS:            # (the code addresses banks 0-15 only)
         sys.exit('the programs do not fit in the cartridge')
     while len(banks) < nbanks:
         banks.append(bytearray(b'\xff' * TAILAT))
     for i, b in enumerate(banks):
-        b += TAIL
-        if i < ncode:
+        b += tail(deadbk, i in dead) if a.deadbank else TAIL
+        if i < ncode or i in dead:
             b[CRCAT:CRCAT + 4] = struct.pack('<I', zlib.crc32(bytes(b[:CODEMAX])))
         sm = sum(b) & 0xFFFF           # (the sum's own two bytes are 0 here)
         b[0x1FEE:0x1FF0] = struct.pack('<H', sm)
