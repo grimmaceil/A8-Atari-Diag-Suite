@@ -20,17 +20,19 @@ and goes on by itself, so a machine left alone runs on to the ROM test.
 
 ## Ways to run it
 
-All of them show the same tests, screens, colours and beeps. **Start with
-the boot disk**, the most convenient; **the cartridge** needs no loading
-at all, so it works when the RAM is too sick to load a program. The disk
-set and the cassettes are for a machine too sick for those, and need the
-least of it. All but the cartridge cost nothing, and they are the way in
-when the cartridge port itself is bad.
+All of them show the same tests, screens, colours and beeps. **The
+cartridge is the best test:** it runs from its own ROM, so it needs the
+least RAM and nothing loads: plug it in and switch on. It takes an
+AtariMax 128K flash cartridge, which you may have already. The disks and
+the cassettes are the free ways, and the way in when the cartridge port
+itself is bad: **the boot disk** is the most convenient of them; the disk
+set has one test to a disk, for a machine the boot disk can't get far on;
+the cassettes need no disk drive at all.
 
 | | File | Needs | What it is |
 |---|---|---|---|
-| **Boot disk** | `disks/diag-disk.atr` | any Atari (8K) with a disk drive or an SIO adapter (SIO2PC, SIO2SD, FujiNet) | the cartridge's menu from a disk you boot: no DOS; each test loads as you pick it; the long test and the "hello" with 16K |
-| **Cartridge** | `carts/diag-cart.car` | any Atari (8K); an AtariMax 128K flash cartridge | every test on one menu, run from ROM: no loading, and it works when the RAM is too sick to load a program into |
+| **Cartridge** | `carts/diag-cart.car` | any Atari (8K); an AtariMax 128K flash cartridge | the best test: every test on one menu, run from its own ROM: no loading, and it works when the RAM is too sick to load a program into |
+| **Boot disk** | `disks/diag-disk.atr` | any Atari (8K) with a disk drive or an SIO adapter (SIO2PC, SIO2SD, FujiNet) | the most convenient free way: the cartridge's menu from a disk you boot: no DOS; each test loads as you pick it; the long test and the "hello" with 16K |
 | **Disk set** | `disk-set/diag-8k-01-ram.atr` to `diag-8k-06-video.atr`, `diag-8k-memtest.atr` | any Atari (8K) with a disk drive or an SIO adapter | the 8k tapes as disks, the same programs: one test to a disk, no menu, no DOS. With 16K or more the RAM disk tests the rest by itself, the sound disk adds the "hello", and the memtest disk runs `diag-16k-memtest` |
 | **Memory test disk** | `disks/diag-16k-memtest.atr` | 16K; a disk drive or an SIO adapter | boots straight into the long memory test (`diag-16k-memtest`) |
 | **BASCRC disk** | `disks/diag-bascrc.atr` | the BASIC cartridge in (or an XL/XE's built-in BASIC); a disk drive or an SIO adapter | boots to the BASIC check on its own (BASCRC), no DOS; on it for DOS too: `BASCRC.XEX`, the same check, and `BASCRC.LST`, the BASIC listing |
@@ -51,18 +53,19 @@ title bar (`V0.13`). The names here leave the `-v0.13` out.
 
 ## Get started
 
-1. Pick a way: the boot disk if you have a disk drive or an SIO adapter
-   (any Atari with 8K or more); the cartridge if you have a flash
-   cartridge, or the RAM is too sick to load anything; otherwise the tapes
-   for the machine's RAM (a machine that won't get through its own set:
-   the 8k set). A tape that needs more RAM than the machine has stops at
+1. Pick a way: the cartridge if you have a flash cartridge (the best:
+   nothing to load); otherwise the boot disk if you have a disk drive or
+   an SIO adapter (any Atari with 8K or more); otherwise the tapes for the
+   machine's RAM (a machine that won't get through its own set: the 8k
+   set). A tape that needs more RAM than the machine has stops at
    once: red border, a low tone on and off.
-2. Take out any cartridge but BASIC, and load it: for the boot disk, put
+2. Load it: plug the cartridge in and switch on; for the boot disk, put
    it in drive 1 (or mount it as D1:) and switch on; for a tape, hold
-   START, switch on, start the tape and press a key when it beeps. BASIC
-   can stay in: the ROM test (test 1) then checks it too, but the 8K of
-   RAM under it can't be tested (a 48K 800 shows `RAM 40K`), so take it
-   out to test all the RAM.
+   START, switch on, start the tape and press a key when it beeps. With a
+   disk or a tape, take any cartridge out, BASIC too: the 8K of RAM under
+   it can't be tested while it's in (a 48K 800 shows `RAM 40K`), and out,
+   it can't be the cause of a fault. Check a BASIC cartridge on its own
+   with BASCRC (its own disk or tape).
 3. Watch and listen: green is good, red plus beeps is a fault. Long beeps
    say where (the RAM bank or the test), short beeps say what (the data
    bit or the item).
@@ -89,13 +92,13 @@ fails. It has a table of every test and the files that have it.
 
 ## Status
 
-Tried on a real 800 and a real 800XL with the executables (`.xex`, up to
-0.11) over an SIO adapter, where the joystick and paddle ports get their
-real test. Every format, the boot disk included, has also run on the
+Tried on a real 800 and a real 800XL over SIO2PC with AspeQt: the boot
+disk, and the executables (`.xex`) up to 0.11. The joystick and paddle
+ports get their real test there. Every format has also run on the
 author's development set-up, the MiSTer's Atari800 core, as a 400/800 and
-as an XL/XE (64K, and a 128K 130XE). Not tried on a real machine yet: the
-boot disk, the cartridge and the cassettes. Reports from other machines
-are welcome.
+as an XL/XE (64K, and a 128K 130XE). Not tried yet: a physical disk
+drive, and the cartridge and the cassettes on a real machine. Reports
+from other machines are welcome.
 
 ## New in 0.13 (2026-11-19)
 

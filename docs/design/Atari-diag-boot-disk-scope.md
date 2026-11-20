@@ -6,7 +6,8 @@ By **Michael Grimm**, written with Claude (Anthropic's AI). MIT license
 Status: built 2026-11-16, released in version 0.10 (2026-11-17) as the
 place to start. Run in the project's simulator (tools/disktest.py: 8K and
 64K XL, every piece, a disk error) and on the MiSTer (the development
-set-up); not yet on a real machine. The plan: docs/superpowers/plans/2026-11-16-boot-disk.md.
+set-up), and on a real 800 and 800XL over SIO2PC with AspeQt (not yet
+from a physical disk drive). The plan: docs/superpowers/plans/2026-11-16-boot-disk.md.
 Where the build settled a point differently from the text below: the boot
 is sectors 1-4 at $0600-$07FF (its loader already in place at $0700); the
 menu piece is 3.75K (30 sectors); the disk error has no status number and
@@ -26,9 +27,10 @@ Mike, 2026-11-16: the 8k tapes showed the tests can be split into small
 pieces; a disk can hold all the pieces and chain them ("a boot sequence
 between programs ram > rom > menu > other, each piece as a separate file
 on the same disk"), and the RAM test should be one part, as the long RAM
-test already is. (Written when the cartridge was the first choice; since
-0.10 the documents put this disk first: the most convenient, the likely
-start for most people.) This is the free way for anyone with a drive or an
+test already is. (Written when the cartridge was the first choice, as it
+is again since the 0.13 docs: the cartridge is the best test, from its
+own ROM with the least RAM; this disk is the most convenient of the free
+ways. From 0.10 until then the documents put this disk first.) This is the free way for anyone with a drive or an
 SIO adapter, and a way to
 test a machine whose cartridge port is bad. Mike can test it himself on
 the real 800 and 800XL over his SIO adapter, which plays disks but not

@@ -13,20 +13,25 @@ These programs test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
 800XL, 65XE, 800XE, 130XE and XE Game System. They report by colour and
 beeps first, and with text once the screen itself has been checked, so
 they still help when the picture is bad. No programming is needed. There
-are four ways to run them, all with the same screens, colours and beeps;
-**start with one of the first two**:
+are four ways to run them, all with the same screens, colours and beeps.
+**The cartridge is the best test:** it runs from its own ROM, so it needs
+the least RAM and nothing loads: plug it in and go. It takes an AtariMax
+128K flash cartridge, which you may have already. The disks and the
+cassettes are the free ways (and the way in when the cartridge port is
+bad); of those, start with the boot disk:
 
 | Way | File | Needs | What it is |
 |---|---|---|---|
-| **The boot disk** | `disks/diag-disk.atr` | 8K; a disk drive or an SIO adapter (SIO2PC, SIO2SD, FujiNet); no DOS | the most convenient: every test on one menu, each loaded from the disk as you pick it. See [From the boot disk](#from-the-boot-disk) |
-| **The cartridge** | `carts/diag-cart.car` | 8K; an AtariMax 128K flash cartridge | every test on one menu, run from ROM: nothing to load, so it works when the RAM is too sick to load a program. See [From the cartridge](#from-the-cartridge) |
+| **The cartridge** | `carts/diag-cart.car` | 8K; an AtariMax 128K flash cartridge | the best test: every test on one menu, run from its own ROM: nothing to load, so it works when the RAM is too sick to load a program. See [From the cartridge](#from-the-cartridge) |
+| **The boot disk** | `disks/diag-disk.atr` | 8K; a disk drive or an SIO adapter (SIO2PC, SIO2SD, FujiNet); no DOS | the most convenient free way: every test on one menu, each loaded from the disk as you pick it. See [From the boot disk](#from-the-boot-disk) |
 | **The disk set** | `disk-set/diag-8k-*.atr` | 8K; a disk drive or an SIO adapter | the 8k tapes as disks, one test to a disk, no menu: for a machine the boot disk can't get far on. See [The disk set](#the-disk-set) |
-| **Cassettes** | `cassettes/*.cas` | a cassette recorder, or a PC playing the tape | the least of the machine: a tape still loads where a disk won't boot. See [Cassettes](#cassettes) |
+| **Cassettes** | `cassettes/*.cas` | a cassette recorder, or a PC playing the tape | no disk drive needed: a tape still loads where a disk won't boot. See [Cassettes](#cassettes) |
 
-A BASIC cartridge can stay in: the ROM test checks it too (see
-[BASIC cartridges](#basic-cartridges)). BASCRC checks BASIC on its own,
-from its own disk or tape (see
-[BASCRC](#bascrc-the-basic-check-on-its-own)).
+With a disk or a tape, take any cartridge out, BASIC too: the RAM under
+it can't be tested while it's in, and out, it can't be the cause of a
+fault. Check a BASIC cartridge on its own with BASCRC, from its own disk
+or tape (see [BASCRC](#bascrc-the-basic-check-on-its-own)). The ROM test
+still reads a cartridge left in (see [BASIC cartridges](#basic-cartridges)).
 
 ## Contents
 
@@ -87,9 +92,9 @@ playing it until you answer.
 more; it needs no DOS. Mount it as D1: on an SIO adapter (AspeQt,
 RespeQt, SIO2SD, FujiNet), or write it to a single-density disk (90K,
 which every drive reads: 810, 1050, XF551) with a PC tool or a disk
-copier. Take any cartridge out, except a BASIC cartridge you want checked
-(the disk boots with one in, but the RAM under it can't be tested). You
-don't need to hold OPTION on an XL/XE. Switch on with it in drive 1:
+copier. Take any cartridge out, BASIC too (see
+[BASIC cartridges](#basic-cartridges)). You don't need to hold OPTION on
+an XL/XE. Switch on with it in drive 1:
 
 1. The RAM test starts at once. Its summary plays its code three times
    and goes on by itself (a key goes on at once; T or OPTION stops the
@@ -423,29 +428,39 @@ On an XL/XE the OS is one 16K chip, named as a whole:
 
 ### BASIC cartridges
 
-A BASIC cartridge can stay in while a tape or a disk runs: the OS boots
-the tape or disk before it would start BASIC, and the tests never hand
-the machine back to it. The ROM test then reads the cartridge
-($A000-$BFFF) and names it, as it does an XL/XE's built-in BASIC: `REV
-A`, `REV B` or `REV C`, with its CRC32.
+Take BASIC out for the tests, and check it on its own with BASCRC
+(below). With a cartridge in, the 8K of RAM under it can't be tested (a
+48K 800 shows `RAM 40K`): nothing can switch a plain cartridge out, on a
+400/800 or an XL/XE. And with it out, it can't be the cause of a fault.
 
-`UNKNOWN` (item 2) means it matches no revision: a failing BASIC
-cartridge, dirty contacts, or a cartridge that isn't BASIC (take that one
-out). Clean the contacts (see
+If one is left in, a tape or a disk still runs: the OS boots the tape or
+disk before it would start BASIC, and the tests never hand the machine
+back to it. The ROM test then reads the cartridge ($A000-$BFFF) and names
+it, as it does an XL/XE's built-in BASIC: `REV A`, `REV B` or `REV C`,
+with its CRC32. `UNKNOWN` (item 2) means it matches no revision: a
+failing BASIC cartridge, dirty contacts, or a cartridge that isn't BASIC
+(see below). Clean the contacts (see
 [When something fails](#when-something-fails)), reseat it, and test
-again.
-- With BASIC in, the 8K of RAM under it can't be tested: a 48K 800 shows
-  `RAM 40K`. Test the RAM with the cartridge out.
-- The diag cartridge can't check a BASIC cartridge: it takes the slot
-  itself, so its ROM test shows `BASIC NONE` on a 400/800. Use a tape, a
-  disk or BASCRC (below).
+again. The diag cartridge can't check a BASIC cartridge: it takes the
+slot itself, so its ROM test shows `BASIC NONE` on a 400/800.
+
+**Other 8K cartridges.** The ROM test reads any cartridge in the slot the
+same way, but its table has only BASIC, so another one shows `UNKNOWN`
+and fails item 2. Its CRC32 is still right: compare it with a good
+copy's (the CRC32 of an 8K `.rom` dump, or of a `.car` file without its
+16-byte header). Run the test twice: a CRC32 that changes means the
+cartridge reads unreliably. It works only with an 8K cartridge at
+$A000-$BFFF (of a 16K one, only the top 8K is read), and only when the
+tape or disk still loads with it in: many cartridges start themselves, or
+stop a disk from booting. As with BASIC, the RAM under it can't be tested
+meanwhile.
 
 ### BASCRC: the BASIC check on its own
 
 BASCRC checks a BASIC cartridge (or an XL/XE's built-in BASIC) and
 nothing else: it works out the CRC32 of $A000-$BFFF and names the
-revision, as the ROM test does. It is a second opinion, and the way in
-when you only want BASIC checked.
+revision, as the ROM test does. Check BASIC with it, then take the
+cartridge out for the other tests.
 
 **The BASCRC disk** (`disks/diag-bascrc.atr`), with a disk drive or an
 SIO adapter: put it in drive 1 (or mount it as D1:), the cartridge in,
@@ -848,10 +863,10 @@ blaming a chip.
 
 ## Other ways to run it
 
-The boot disk and the cartridge do everything on every machine. The disk
-set has the 8k tapes' tests, one to a disk. The cassettes need the least
-of the machine: no disk drive and no flash cartridge, only a cassette
-recorder (or a PC playing the tape) on the SIO port.
+The cartridge and the boot disk do everything on every machine. The disk
+set has the 8k tapes' tests, one to a disk. The cassettes need no disk
+drive and no flash cartridge, only a cassette recorder (or a PC playing
+the tape) on the SIO port.
 
 ### The disk set
 
@@ -891,13 +906,13 @@ The memory test has a disk of its own too, in the `disks` folder:
 
 ### Cassettes
 
-**Cassette, because it needs the least of the machine.** A cassette boot
-needs only the computer, its OS ROM, the first few K of RAM and the SIO
-port: no disk drive, no DOS, nothing else for the tape to depend on. So it
-runs on the smallest machine there is, a 400 with 8K, and on a machine too
-sick to boot a disk. Each tape loads into the bottom of RAM and tests
-everything else from there. The boot disk and the cartridge are quicker
-and do everything the tapes do, so use the tapes when there's only a
+**Why cassette.** A cassette boot needs only the computer, its OS ROM,
+the first few K of RAM and the SIO port: no disk drive, no DOS, no flash
+cartridge. So it runs on the smallest machine there is, a 400 with 8K,
+and on a machine too sick to boot a disk. Each tape loads into the bottom
+of RAM and tests everything else from there. The cartridge needs less
+still (it loads nothing into RAM), and it and the boot disk are quicker
+and do everything the tapes do; use the tapes when there's only a
 cassette recorder (or a PC playing the tape), or when the machine is too
 sick to boot a disk.
 
@@ -1055,9 +1070,9 @@ ROM test reads a BASIC cartridge in it.
 
 ### What has it been tried on?
 
-Real 800 and 800XL machines, with the executables (`.xex`, up to 0.11)
-over an SIO adapter, where the joystick and paddle ports get their real
-test. Every format, the boot disk included, has also run on the author's
+Real 800 and 800XL machines, over SIO2PC with AspeQt: the boot disk, and
+the executables (`.xex`) up to 0.11. The joystick and paddle ports get
+their real test there. Every format has also run on the author's
 development set-up, the MiSTer's Atari800 core, as a 400/800 and as an
-XL/XE (64K and a 128K 130XE). Not tried on a real machine yet: the boot
-disk, the cartridge and the cassettes.
+XL/XE (64K and a 128K 130XE). Not tried yet: a physical disk drive, and
+the cartridge and the cassettes on a real machine.

@@ -47,8 +47,9 @@ How a change is tested:
   file, tape (the cartridge is quickest to try). It is the development
   set-up, not a machine anyone diagnoses: the user documents name only
   real machines as ways to run the tests.
-- **Real hardware:** an 800 and an 800XL, with the disks over an SIO
-  adapter (the cassettes can't be played in that way). The joystick and
+- **Real hardware:** an 800 and an 800XL, with the disks over SIO2PC
+  with AspeQt (the cassettes can't be played in that way; no physical
+  disk drive yet). The joystick and
   paddle ports get their real test there; the MiSTer has no working
   paddle adapter.
 - **The video test** (test 7: the ramps, the moving ATARI sprites, the

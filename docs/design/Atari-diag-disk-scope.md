@@ -12,8 +12,8 @@ code is put together is in [docs/DEVELOPMENT.md](../DEVELOPMENT.md).
 
 ## 1. Why
 
-The boot disk is the likely starting point: one disk, the cartridge's
-menu, each test loaded as it is picked. But it starts with the RAM test
+The boot disk is the most convenient free way (the cartridge is the best
+test): one disk, the cartridge's menu, each test loaded as it is picked. But it starts with the RAM test
 and keeps loading pieces from the disk as you go, so a machine that is
 sick enough may not get far on it. The disk set gives such a machine more
 ways in (Mike: "in the case of failures they have more options that
@@ -32,8 +32,9 @@ joystick can still be tested when something else is failing.
   ROM disk, and the video disk's `LAST 8K TAPE`; only the RAM disk is
   rebuilt (`DSKLD`: `NOT ON DISK`).
 - **No DOS, no cartridge:** switch on with the disk in drive 1 (or
-  mounted as D1:). A BASIC cartridge can stay in, as for a tape: the OS
-  boots the disk before it would start the cartridge.
+  mounted as D1:). A BASIC cartridge left in does no harm, as for a tape:
+  the OS boots the disk before it would start the cartridge (the
+  documents say to take it out all the same).
 - **Needs 8K,** as the 8k tapes do. With 16K or more, three disks do more
   than their tapes (section 3).
 

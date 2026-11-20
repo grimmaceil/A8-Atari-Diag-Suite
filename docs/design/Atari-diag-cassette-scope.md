@@ -51,10 +51,10 @@ Memory decoding:
 
 | Format | Needs | Strengths |
 |---|---|---|
-| Boot disk (`diag-disk.atr`) | 8K of RAM, a disk drive or an SIO adapter; no DOS | The likely starting point: the cartridge's menu, each test loaded as it is picked; the long test and the "hello" with 16K |
-| Cartridge (`diag-cart.car`, AtariMax 128K) | 8K of RAM, a flash cartridge | No loading, every test on one menu, runs from ROM, tests the RAM under itself: for RAM too sick to load a program into |
+| Cartridge (`diag-cart.car`, AtariMax 128K) | 8K of RAM, a flash cartridge | The best test: no loading, every test on one menu, runs from ROM, tests the RAM under itself: for RAM too sick to load a program into |
+| Boot disk (`diag-disk.atr`) | 8K of RAM, a disk drive or an SIO adapter; no DOS | The most convenient free way: the cartridge's menu, each test loaded as it is picked; the long test and the "hello" with 16K |
 | Disk set (`disk-set/`) | 8K, a disk drive or an SIO adapter | The 8k tapes as disks, one test to a disk, no menu: for when the boot disk can't get far |
-| Cassettes (`.cas`) | 8K and up, by set | The least of the machine: no drive, no DOS; for an 8K 400 or a machine too sick to boot a disk |
+| Cassettes (`.cas`) | 8K and up, by set | No drive, no DOS, no flash cartridge: for an 8K 400 or a machine too sick to boot a disk |
 
 Sets by RAM, not by model: the 8k set needs 8K, the 16k set,
 `diag-controls` and `diag-16k-memtest` need 16K, `diag-32k-xl-xe` 32K.
@@ -71,9 +71,11 @@ the OS found; the long test and the "hello" need 16K).
   The suite diagnoses partly-bad RAM, not dead RAM (the cartridge needs
   the least: 8K, and runs its code from ROM).
 - **Boot:** hold START at power-on, wait for the beep, start the tape,
-  press a key. A BASIC cartridge can stay in: the OS boots a tape (START
-  held) or a disk before it would start the cartridge, and the program
-  never hands it back, so test 1 reads it. Any other cartridge out. The
+  press a key. A BASIC cartridge left in does no harm: the OS boots a tape
+  (START held) or a disk before it would start the cartridge, and the
+  program never hands it back, so test 1 reads it. But the documents say
+  to take every cartridge out (the RAM under it can't be tested) and to
+  check BASIC with BASCRC. The
   programs switch an XL/XE's BASIC off themselves.
 - **A BOOT ERROR during load is itself diagnostic:** the OS checks each
   record, so the error points at low RAM, the cassette buffer or the SIO
@@ -348,8 +350,9 @@ BASIC on its own against the same A, B and C values.
   130XE, from the schematics, so a RAM fault names its chip.
 - [ ] The 130XE's ANTIC-access check (PORTB bit 5): a pattern in an
   extended bank shown on screen.
-- [ ] The boot disk, the cartridge and the cassettes on a real machine
-  (so far the MiSTer; the executables, up to 0.11, ran on real machines).
+- [ ] The cartridge and the cassettes on a real machine, and a disk from
+  a physical drive (so far the MiSTer; the boot disk and the executables,
+  up to 0.11, ran on real machines over SIO2PC with AspeQt).
 - [ ] The BASCRC tape (`ENTER "C:"`) confirmed on a MiSTer or a real
   recorder; BASCRC runs on an 800 (0.13).
 - [ ] The refresh check seen to catch a real refresh fault (it catches
