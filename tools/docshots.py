@@ -59,6 +59,11 @@ RUNS = {
     # which the simulator's screen text doesn't match.)
     'video': ('diag-8k-06-video', ['--auto', '--until', '70'], [
         ('ANTIC 8: 40 WIDE', 1, 'av-03-modes')]),
+    # the dead test (0.15): its pass, and a fault (bank 2, D4: the bit box)
+    'dead-pass': ('diag-cart-8mbit.car', ['--until', '6'], [
+        ('DEAD TEST -- PASS', 0.3, 'dead-01-pass')]),
+    'dead-fault': ('diag-cart-8mbit.car', ['--stuck', '2:5:0', '--until', '8'], [
+        ('DEAD TEST -- FAULT', 0.3, 'dead-02-fault')]),
     'cart': ('diag-cart.car', ['--ram', '0x4000', '--con', 'START:8:0.4,START:22:0.4',
                                '--until', '32'], [   # (no --auto: it would run ALL)
         ('^START=RUN', 1, 'cart-01-menu')]),
@@ -126,6 +131,8 @@ ANNOT = {
     'memtest-03-sweep': [(14, 14, 1)],
     'memtest-04-xl': [(2, 2, 1), (23, 23, 2)],
     'ports-03-end': [(21, 22, 1), (23, 23, 2)],
+    'dead-01-pass': [(2, 3, 1), (5, 7, 2), (9, 11, 3), (12, 14, 4), (20, 20, 5)],
+    'dead-02-fault': [(2, 3, 1), (5, 7, 2), (9, 11, 3), (12, 14, 4), (20, 20, 5), (22, 22, 6)],
 }
 
 

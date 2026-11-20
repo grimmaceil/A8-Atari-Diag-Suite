@@ -32,7 +32,8 @@ at all.
 
 | | File | Needs | What it is |
 |---|---|---|---|
-| **Cartridge** | `carts/diag-cart.car` (AtariMax 128K), `carts/diag-cart-8mbit.bin` (8 Mbit MaxFlash, a raw 1 MB image) | any Atari (8K); an AtariMax flash cartridge | the best test: every test on one menu, run from its own ROM: no loading, and it works when the RAM is too sick to load a program into |
+| **Cartridge** | `carts/diag-cart.car` (AtariMax 128K), `carts/diag-cart-8mbit.bin` (8 Mbit MaxFlash, a raw 1 MB image) | any Atari (8K); an AtariMax flash cartridge | the best test: a dead test first that needs no RAM at all, then every test on one menu, run from its own ROM: no loading, and it works when the RAM is too sick to load a program into |
+| **Dead test on its own** | `carts/diag-deadtest.car` (standard 8K), `carts/diag-deadtest.rom` (raw 8K, for an EPROM) | any Atari; any 8K cartridge | the dead test alone: the RAM tested with no RAM, its screen and beeps |
 | **Boot disk** | `disks/diag-disk.atr` | any Atari (8K) with a disk drive or an SIO adapter (SIO2PC, SIO2SD, FujiNet) | the most convenient free way: the cartridge's menu from a disk you boot: no DOS; each test loads as you pick it; the long test and the "hello" with 16K |
 | **Disk set** | `disk-set/diag-8k-01-ram.atr` to `diag-8k-06-video.atr`, `diag-8k-memtest.atr` | any Atari (8K) with a disk drive or an SIO adapter | the 8k tapes as disks, the same programs: one test to a disk, no menu, no DOS. With 16K or more the RAM disk tests the rest by itself, the sound disk adds the "hello", and the memtest disk runs `diag-16k-memtest` |
 | **Memory test disk** | `disks/diag-16k-memtest.atr` | 16K; a disk drive or an SIO adapter | boots straight into the long memory test (`diag-16k-memtest`) |
@@ -102,6 +103,17 @@ run on the author's development set-up, the MiSTer's Atari800 core, as a
 physical disk drive, the 128K AtariMax cartridge on a real machine, and
 the cassettes on a real machine. Reports from other machines are
 welcome.
+
+## New in 0.15
+
+- **The dead test:** the cartridge starts in the OS's diagnostic mode,
+  before any RAM is used, and tests the machine with no RAM at all: the
+  RAM ($0000-$9FFF, zero page and the stack on their own lines), every
+  OS chip (named, or `NOT THERE` when pulled), ANTIC, GTIA, POKEY and the
+  PIA, the keys live. Its own font and screen, every result in colour,
+  bit boxes and the beep code, and on the 8 Mbit cartridge spoken
+  ("bank two bit four bad"). A pass goes straight on to the tests as
+  before. Also on its own, for any 8K cartridge or an EPROM.
 
 ## New in 0.14 (2026-11-19)
 

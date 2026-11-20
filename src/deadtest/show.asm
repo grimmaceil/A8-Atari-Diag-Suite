@@ -4,8 +4,9 @@
 ; ANTIC at its display-list fragment while the row before is drawn: the
 ; display list itself is never in RAM. The kernel also sets each row's
 ; background (COLPF2: green OK, red BAD, C_NONE for no RAM) and, on a bank's
-; row, player 0 straight from the bank's mask (GRAFP0, no P/M DMA): a red
-; box behind each bad bit's digit (quadruple width: one bit a column).
+; row, player 0 straight from the bank's mask (GRAFP0, no P/M DMA): a black
+; box at each bad bit's digit (quadruple width: one bit a column), the digit
+; still light on it, a gap in the BAD row's red.
 ;
 ; The kernel uses A and X; Y says where it returns to (rdisp): no stack.
 ; Rows: 0 title, 2 zero page, 3 stack, 5-7 banks 1-3, 20 the verdict, 22
@@ -250,10 +251,10 @@ show	lda #>FONTAT
 	sta SIZEP0
 	lda #48+PMCOL*4		; the digits' first column (a column = 4 clocks)
 	sta HPOSP0
-	lda #C_RED
+	lda #C_BLACK		; (on the BAD row's red: a dark gap)
 	sta COLPM0
 	lda #1			; players in front: the digit keeps PF1's
-	sta PRIOR		; brightness over the box's red
+	sta PRIOR		; brightness over the box
 	lda #$22
 	sta DMACTL
 	ldy #$40		; the tune from the start
@@ -987,9 +988,15 @@ fr_o12	WAITROW 12		; row 12, then the live input row (13)
 	OSROW $3D0,fr_o13
 	.endif
 	SETDL DT_BLANK
-fr_o13
-	PLAIN 13,DT_BLANK
-	PLAIN 14,DT_BLANK
+fr_o13	WAITROW 13		; row 13, then what ANTIC and GTIA measured (14)
+	lda #0
+	sta COLPF2
+	sta WSYNC
+	.ifndef STANDALONE
+	OSROW $3D4,fr_o14
+	.endif
+	SETDL DT_BLANK
+fr_o14	PLAIN 14,DT_BLANK
 	PLAIN 15,DT_BLANK
 	PLAIN 16,DT_BLANK
 	PLAIN 17,DT_BLANK

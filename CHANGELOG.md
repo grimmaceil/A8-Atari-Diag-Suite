@@ -3,6 +3,36 @@
 Every release, newest first. Each release file has its version in its
 name, and every screen shows it at the right of the title bar.
 
+- **0.15**, against 0.14:
+  - **The dead test** (the cartridge; `src/deadtest/`): every bank's header
+    carries the OS's diagnostic flag, so at power-on the OS jumps to the
+    cartridge before it touches RAM. The dead test (its own banks, from
+    bank 5; its own font) tests the RAM $0000-$9FFF with no RAM at all
+    (registers and the PIA's direction registers only: two passes, every
+    page written before any is read back, rising then falling, so pages
+    that answer for each other are caught; zero page and the stack page
+    flagged on their own), then, with any good RAM page found (zero page
+    not needed), each OS chip's CRC32 named as test 1 names it (`NOT
+    THERE` for a floating bus), ANTIC (VCOUNT), GTIA (PAL flag, a
+    collision), POKEY (RANDOM, a timer) and the PIA (ANTIC up to three
+    tries, its measurements on their own row); with none, each OS
+    chip by a CRC-8 in the fault round's pause. Rows picked by rewriting
+    ANTIC's display-list pointer between rows, bit boxes drawn straight
+    into player 0, the suite's colours and beep codes (a RAM bank and bit;
+    an OS chip as test 1's code; a chip by its test number), live keys.
+    A pass hands over (the OS cold-starts the suite as before); a fault
+    waits, START goes on. Test 1's self-check covers its banks.
+  - **Spoken results** (8 Mbit): 22 words (espeak-ng, `tools/mkwords.py`)
+    in a bank each, played through POKEY with no RAM: "dead test pass",
+    "bank two bit four bad", "ROM not there"...
+  - **The dead test on its own:** `carts/diag-deadtest.car` (standard 8K)
+    and `carts/diag-deadtest.rom` (raw 8K).
+  - The simulator: the diag start and the cold start at the OS's reset
+    entry, `.car` type 1, `--hole`, `--nochip`, `--rompoke`, `--carpoke`,
+    PIA DDRA and PACTL/PBCTL reads, POKEY timer 4, display lists rewritten
+    mid-frame (text and pictures, a cartridge font, player 0 written
+    directly), GTIA collisions (an approximation), the `dead:` line;
+    `tools/deadtest.py` (37 checks, `--static`, `--layout`, `--words`).
 - **0.14** (2026-11-19), against 0.13:
   - **A cartridge in the way** (the RAM test: the 8k, 16k and 32k+ RAM
     tapes, the disk set's RAM disk, the boot disk from 16K): when the RAM

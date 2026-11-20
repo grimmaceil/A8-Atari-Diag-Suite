@@ -376,7 +376,7 @@ class Atari:
         fl = self.frame_lines
         f0 = (self.line // fl - 1) * fl          # the last complete frame
         regs = (0xD01A, 0xD017, 0xD018, 0xD012, 0xD013, 0xD014, 0xD015, 0xD401, 0xD400,
-                0xD016, 0xD019, 0xD01B, 0xD404, 0xD405)
+                0xD016, 0xD019, 0xD01B, 0xD404, 0xD405, 0xD00D, 0xD000, 0xD008)
         cur = {r: 0 for r in regs}
         per = []                                   # register values per scan line
         ev = sorted((e for e in self.events if e[1] in regs), key=lambda e: e[0])
@@ -387,7 +387,8 @@ class Atari:
                 k += 1
             per.append(dict(cur))
         dl = self.regs.get(0xD402, 0) | self.regs.get(0xD403, 0) << 8
-        if any(p[0xD400] & 0x20 for p in per) and any(
+        rewritten = any(f0 + 8 < ln < f0 + fl for ln, _, _ in self.dlw)
+        if not rewritten and any(p[0xD400] & 0x20 for p in per) and any(
                 m != 2 for m, _, _, _ in antic.lines(self.peek, dl, per).values()):
             img = antic.draw(self.peek, dl, per, palette, font)
             img.resize((384 * scale, 240 * scale), Image.NEAREST).save(path)
@@ -397,7 +398,14 @@ class Atari:
         img = Image.new('RGB', (W, H))
         px = img.load()
         rows = {}                                  # scan line -> (text address, row in char)
-        if per[-1][0xD400] & 0x20 or any(p[0xD400] & 0x20 for p in per):
+        chb = self.regs.get(0xD409, 0xE0)
+        if 0xA0 <= chb < 0xC0:                     # a font in the cartridge (the dead test's)
+            font = bytes(self.peek((chb << 8) + i) for i in range(0x400))
+        if rewritten:                              # (the dead test's rows)
+            for scan, addr in self._rows_rewritten(f0):
+                for r in range(8):
+                    rows[scan + r] = (addr, r)
+        elif per[-1][0xD400] & 0x20 or any(p[0xD400] & 0x20 for p in per):
             dl = self.regs.get(0xD402, 0) | self.regs.get(0xD403, 0) << 8
             addr, scan = 0, 8
             for _ in range(64):
@@ -449,6 +457,15 @@ class Atari:
                 cb, cf = rgb(bg), rgb(fg)
                 for b in range(8):
                     px[32 + c * 8 + b, y] = cf if bits & 0x80 >> b else cb
+                if p[0xD00D] and not self.pm.get(0xD01D, 0):   # player 0, written directly:
+                    w = (1, 2, 1, 4)[p[0xD008] & 3]            # in front, the text keeps
+                    for b in range(8):                         # PF1's brightness over it
+                        cc = 48 + c * 4 + b // 2               # (this pixel's color clock)
+                        k = (cc - p[0xD000]) // w
+                        if 0 <= k < 8 and p[0xD00D] & 0x80 >> k:
+                            on = bits & 0x80 >> b
+                            pc = p[0xD012]
+                            px[32 + c * 8 + b, y] = rgb((pc & 0xF0) | (pf1 & 0x0E) if on else pc)
         img.resize((W * scale, H * scale), Image.NEAREST).save(path)
 
     def screen(self):
@@ -513,13 +530,13 @@ def _dl_at(hw, t):
     return lo | hi << 8
 
 
-def _screen_rewritten(self, f0):
-    """The screen of the frame from line f0 when the CPU rewrote the
-    display-list pointer while it was drawn (the dead test picks each row's
-    line that way): ANTIC fetches each instruction at its row's first line,
-    from wherever the pointer was last set before that line."""
+def _rows_rewritten(self, f0):
+    """The text rows (scan line, address) of the frame from line f0 when the
+    CPU rewrote the display-list pointer while it was drawn (the dead test
+    picks each row's line that way): ANTIC fetches each instruction at its
+    row's first line, from wherever the pointer was last set before then."""
     p = _dl_at(self, f0 + 7)
-    rows, scan, last, addr = [], 8, f0 + 7, 0
+    out, scan, last, addr = [], 8, f0 + 7, 0
     for _ in range(64):
         t = f0 + scan
         if any(last < ln < t for ln, _, _ in self.dlw):
@@ -534,17 +551,27 @@ def _screen_rewritten(self, f0):
             continue
         addr = self.peek(p + 1) | self.peek(p + 2) << 8 if op & 0x40 else addr
         p += 3 if op & 0x40 else 1
+        out.append((scan, addr))
+        addr += 40
+        scan += 8
+    return out
+
+
+def _screen_rewritten(self, f0):
+    """_rows_rewritten's rows as text."""
+    rows = []
+    for _, addr in _rows_rewritten(self, f0):
         row = ''
         for c in [self.peek(addr + i) for i in range(40)]:
             ch = c & 0x7F
             ch = chr(ch + 32) if ch < 64 else '^v[]'[ch - 0x5C] if 0x5C <= ch < 0x60 else '~'
             row += ch.lower() if c & 0x80 and ch.isalpha() else ('#' if c & 0x80 and ch == ' ' else ch)
         rows.append(row.rstrip())
-        scan += 8
     return '\n'.join(f'{i:2d}|{r}' for i, r in enumerate(rows))
 
 
 Atari._screen_rewritten = _screen_rewritten
+Atari._rows_rewritten = _rows_rewritten
 
 
 def forge(hw, spec):

@@ -426,3 +426,34 @@ suite in one go); each RAM board pulled in turn, and none; a bit fault if
 he has a board with one; the OS $D800 and $E000 chips pulled (rev B); a
 monitor unplugged (beeps and speech alone); the RESET key after the
 hand-over.
+
+## As built (0.15)
+
+Where the build differs from the design above (each a ruling in the
+plan's execution; DEVELOPMENT.md's "The dead test" describes it as built):
+
+- **Banks:** 5 start + stage B; 6 the show; 7, 8, 9 stage A, one per good
+  page ($0400, $4000, $8000: the RAM code is ~3K, too big for three copies
+  in one bank); the other chips' checks run at the end of stage A's RAM
+  code (they keep their results in the good page), not in a bank of their
+  own; 10-31 the words (8 Mbit). The 128K carries banks 5-9.
+- **Stage B:** every pass writes all 160 pages before any bank is checked
+  (rising, then falling), bank 3 first: a bank answering for another is
+  caught in both. The font sits at $BC00.
+- **The verdict** also fails on an OS chip unknown or not there, and on a
+  chip check (stage A's `R_ROMBAD`): beeps as test 1's ROM code (one long,
+  three short) or the chip's test number (7 ANTIC/GTIA, 6 POKEY, 4 the
+  PIA) and one short. The RAM's code beeps the first bad bank's lowest
+  bad bit only.
+- **With no RAM:** the OS chips show one at a time (row 9) in the fault
+  round's pause, not all at once; the other chips' row says `OTHER CHIPS
+  NEED RAM`. ANTIC is judged by VCOUNT, not NMIST, with up to three tries
+  (Mike's 800 read BAD once after a quick power off and on), and row 14
+  shows what was measured.
+- **The bit boxes** are black (a dark gap in a BAD row's red), at columns
+  30-37.
+- **Speech:** a word to a bank, 4-bit levels at 7.85 kHz; phrases are node
+  chains in ROM (Y the node); START or fire stops a word and goes on.
+- **The standalone** has no stage A and no CRC-8 phase (no room).
+- **Test 1's self-check** covers the dead test's five program banks, not
+  the word banks (data, as the hello's bank).

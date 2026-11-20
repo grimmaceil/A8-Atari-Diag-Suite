@@ -149,10 +149,13 @@ cartridge itself, not from RAM, so it works on any Atari, an 8K 400
 included, and on a machine whose RAM is too sick to load a program.
 Switch on with it in:
 
-1. The RAM test starts at once (green border and a chirp, then yellow
-   while it tests) and ends on the RAM summary, which plays its code three
-   times and then goes on by itself, as on the boot disk.
-2. The ROM test runs next and waits on its result. A key goes to the menu.
+1. The dead test runs first, a few seconds, with no RAM needed (see [The
+   dead test](#the-dead-test)). On a good machine it shows `DEAD TEST --
+   PASS` and goes on by itself; on a fault it stays and says what is wrong.
+2. The RAM test starts (green border and a chirp, then yellow while it
+   tests) and ends on the RAM summary, which plays its code three times
+   and then goes on by itself, as on the boot disk.
+3. The ROM test runs next and waits on its result. A key goes to the menu.
 
 The menu is the boot disk's, with `DIAG-CART` in the title bar (the lines
 are explained under [From the boot disk](#from-the-boot-disk)):
@@ -171,9 +174,9 @@ are explained under [From the boot disk](#from-the-boot-disk)):
   menu. The earlier results are gone by then (the test used that RAM), and
   line 0 shows `SKIPPED`.
 - **The ROM test's `DIAG CART` line** is the cartridge checking each of
-  its three program banks against the CRC32 stored in it. On an XL/XE it
-  also checks the built-in BASIC, switching itself off for the moment it
-  takes to read it.
+  its program banks (the tests' three and the dead test's five) against
+  the CRC32 stored in it. On an XL/XE it also checks the built-in BASIC,
+  switching itself off for the moment it takes to read it.
 
 #### On an 8 Mbit MaxFlash
 
@@ -195,7 +198,95 @@ Cycle Complete`. Things to know, from a 2.64 Studio:
 
 The 8 Mbit cartridge switches itself off at a different address from the
 128K one, which is why it has its own file; the tests and screens are
-the same, `DIAG-CART` in the title bar included.
+the same, `DIAG-CART` in the title bar included. Only the 8 Mbit one has
+room for the dead test's spoken results.
+
+### The dead test
+
+The cartridge starts in the OS's diagnostic mode: at power-on the OS jumps
+to it before it uses any RAM, so the dead test runs on a machine with no
+working RAM at all, with its own font and its own screen, both in the
+cartridge. All it needs is the CPU, the cartridge slot, and the OS chip
+the machine starts from (on a 400/800 with OS rev B the $F000 chip, with
+rev A the $E000 and $F000 chips; on an XL/XE its one OS chip): the reset
+vector and the jump to the cartridge are in it.
+
+![The dead test: a pass](img/dead-01-pass.png)
+
+It tests, in about three seconds:
+
+- **The RAM, $0000-$9FFF, with no RAM:** every page, each bit seen as 0 and
+  as 1, pages that answer for each other caught. Zero page and the stack
+  page get their own lines (much else needs them), then the banks as the
+  RAM test numbers them: bank 1 $0000-$3FFF, bank 2 $4000-$7FFF, bank 3
+  $8000-$9FFF (the cartridge covers $A000-$BFFF; the RAM test after it
+  tests that 8K). A bank's row is green when it is good, red when bits are
+  bad, with a dark box at each bad bit's digit (`76543210`), and grey with
+  `NO RAM` when nothing answers there at all: a 16K or 32K machine is
+  fine, so that isn't a fault, except in bank 1, which everything needs.
+- **The OS ROM chips:** with any good RAM page (anywhere: zero page may be
+  the bad one), each chip's CRC32 and its name, as the ROM test shows
+  them; a chip that reads as an empty socket is `NOT THERE`. An unknown or
+  missing chip is a fault.
+- **ANTIC, GTIA, POKEY and the PIA:** the frame and its line count, the
+  PAL/NTSC flag against it, a player's collision with the text, POKEY's
+  random numbers and a timer, the PIA's registers. `BAD` beside a chip is
+  a fault. The row under it shows what ANTIC and GTIA measured: VCOUNT's
+  top (130 on NTSC, 155 on PAL), GTIA's PAL/NTSC flag, and the tries ANTIC
+  took (up to three, so a glitch right after a quick power off and on
+  isn't taken for a bad chip).
+- **The keys and sticks**, live, on the `INPUT` row while a fault waits:
+  the last key (its code), the console keys, the sticks.
+
+![The dead test: bank 2, bit 4 bad](img/dead-02-fault.png)
+
+1. Zero page and the stack page. 2. The banks: green good, red bad (a
+dark box at each bad bit's digit: here D4), grey no RAM. 3. The OS chips:
+the name and the CRC32, as the ROM test shows them. 4. The other chips;
+the live input row; what ANTIC and GTIA measured. 5. The verdict. 6. The
+keys, on a fault.
+
+On a pass it shows `DEAD TEST -- PASS`, plays the charge (the 8 Mbit
+cartridge says "dead test pass") and goes on to the RAM test. On a fault
+it stays, red, and plays its code round after round:
+
+| The fault | Long beeps | Short beeps |
+|---|---|---|
+| A RAM bank (the first bad one) | the bank, 1-3 | its lowest bad bit + 1 (D0 = 1) |
+| An OS chip (the ROM test's tones, lower) | 1 | 3 |
+| ANTIC or GTIA / POKEY / the PIA | 7 / 6 / 4 | 1 |
+
+Each round starts with the fail tune and ends with the low end tone. The
+8 Mbit cartridge then says it: "bank two bit four bad", "bank one no
+RAM", "zero page bad", "stack bad", "ROM bad", "ROM not there", "antic
+bad", "G T I A bad", "pokey bad", "P I A bad". The keys, as everywhere:
+**START** or fire goes on to the RAM test anyway (a press counts after a
+release; it also stops the speech), **SELECT** or down plays the code
+again, **OPTION** or up turns the screen off while held (the whole screen
+is the border's flashes).
+
+With no good RAM anywhere, the OS chips' rows show one at a time in the
+round's pause, each by a shorter checksum: `OK` (a known chip),
+`UNKNOWN` or `NOT THERE`; the other chips' row says `OTHER CHIPS NEED
+RAM` (their results need somewhere to stay).
+
+**On an 800 with its boards out:** pull the RAM boards and switch on:
+with the first slot's board out, bank 1 reads `NO RAM` (a fault) and
+zero page and the stack `BAD`; a board that is in but answers nothing
+looks the same. Pull the OS board's $D800 or $E000 chip (rev B) and its
+row reads `NOT THERE`. Which chip on a RAM board holds which bit is being
+worked out ([the RAM chip map](design/ram-chip-map.md)); until it is
+confirmed the result names the bank and the bit.
+
+**Start from power-on.** The RESET key goes through the dead test too,
+but with bad RAM a program that was running may leave an interrupt on that
+fires before the dead test can stop it.
+
+**The standalone dead test**, `carts/diag-deadtest.car` (a standard 8K
+cartridge) and `carts/diag-deadtest.rom` (the raw 8K, for an EPROM), is
+the dead test on its own for any 8K cartridge: the RAM test with no RAM,
+its screen and its beeps. It has no suite to go on to: it stays on its
+result.
 
 ### A stuck joystick
 
@@ -1139,6 +1230,6 @@ their real test there. The cartridge, on an 8 Mbit MaxFlash (0.14), in a
 real 48K 800: every test, the results, the self-check, and the 8K under
 it (48K shown). Every format has also run on the author's development
 set-up, the MiSTer's Atari800 core, as a 400/800 and as an XL/XE (64K
-and a 128K 130XE). Not tried yet: a physical disk drive, the 128K
-AtariMax cartridge on a real machine, and the cassettes on a real
-machine.
+and a 128K 130XE). Not tried yet: the dead test (0.15) on real hardware,
+a physical disk drive, the 128K AtariMax cartridge on a real machine,
+and the cassettes on a real machine.

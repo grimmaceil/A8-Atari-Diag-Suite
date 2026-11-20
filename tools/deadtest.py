@@ -125,6 +125,10 @@ CHECKS = {
     'c-800': ('diag-cart-8mbit.car', [], [(4, 'ANTIC OK  GTIA OK  POKEY OK  PIA OK')]),
     'c-pal': ('diag-cart-8mbit.car', ['--pal'], [(4, 'ANTIC OK  GTIA OK  POKEY OK  PIA OK')]),
     'c-noram': ('diag-cart-8mbit.car', ['--ram', '0'], [(4, 'OTHER CHIPS NEED RAM')]),
+    # row 14: what the ANTIC/GTIA checks measured (up to three tries)
+    'c-vcount': ('diag-cart-8mbit.car', [], [(4, 'VCOUNT TOP 130  GTIA FLAG NTSC  TRIES 1')]),
+    'c-vcount-pal': ('diag-cart-8mbit.car', ['--pal'],
+                     [(4, 'VCOUNT TOP 155  GTIA FLAG PAL   TRIES 1')]),
     'c-live': ('diag-cart-8mbit.car', ['--stuck', '2:5:0', '--kb', '3F:5:3'],
                [(4, 'ANTIC OK  GTIA OK  POKEY OK  PIA OK'), (7, 'INPUT  KEY $3F')]),
 

@@ -230,6 +230,73 @@ at $BFF0 (`sta $D500,x` / `jmp $A003`: the instruction after the write
 comes from the new bank, which holds the same bytes), each code bank's
 CRC32 at $BFF6, and the cartridge header.
 
+### The dead test
+
+The cartridge's banks from `DEADBK` (5) on are the dead test
+(`src/deadtest/`, design `docs/superpowers/specs/2026-11-20-dead-test-design.md`,
+plan `docs/superpowers/plans/2026-11-20-dead-test.md`). Every other bank's
+tail carries the OS's diagnostic flag ($BFFD = $80) and an init address
+($BFE8) that selects bank 5 and jumps to its $A000; the dead banks carry an
+ordinary header (init: the `rts` at $A006). So at power-on, in whichever
+bank the cartridge starts, the OS jumps to the dead test before it reads
+RAM or sets a chip (checked in all seven OS ROMs: rev B's $F125 path writes
+one zero-page byte and two stack bytes, reads none), and the hand-over
+(`handover`: $033D-$033F cleared for the XL/XE's warm-start magic, then
+`jmp ($FFFC)` with a dead bank in) cold-starts the suite as before.
+
+`main.asm` is assembled once per dead bank (`build.py`'s `build_dead`,
+`DTBANK`): every bank has the entries `$A000` cold, `$A003` a phase (Y says
+which; banks pass control through the tail's XBANK) and `$A006` `rts`, and
+the font (`font.txt`, `tools/mkfont.py`: characters 0-63, our own) at
+`$BC00`.
+
+| Bank | What |
+|---|---|
+| 5 | start, stage B (`stageb.asm`): the RAM test with no RAM |
+| 6 | the show bank (`show.asm`): the results, the beeps, the keys, the hand-over; the spoken phrases on the 8 Mbit (`build/speech.asm`) |
+| 7, 8, 9 | stage A (`stagea.asm`, `ramcode.asm`, `chips.asm`), one per good page: $0400, $4000, $8000 |
+| 10-31 (8 Mbit) | the words (`speak.asm`, `words/`), one a bank |
+
+**Stage B** uses no instruction that touches RAM, the stack or the OS ROM
+but the unrolled test's own (`tools/deadtest.py --static` checks
+`SBBEG`-`SBEND`). Its results (the plan's "results interface") stay in
+non-RAM storage until the hand-over: DDRA bank 1's bad bits, DDRB bank 2's,
+the stack pointer bank 3's, PACTL/PBCTL bit 0 zero page / stack bad
+(PACTL/PBCTL bit 2 = 0: $D300/$D301 are the direction registers; ORA/ORB
+$FF first, so their bits change nothing outside, PORTB included). `$FF` is
+no RAM.
+
+**Stage A** runs when some bank passed: stage B goes to the bank built for
+the first good bank's page B (`SABASE`); it copies `ramcode.asm` (assembled
+for B+$500 with MADS's `org r:`) there and runs it, with no zero page and no
+stack (calls through `R_RET`, pointers as self-modified operands). It
+leaves in B: the OS rows' lines (B+$000), their display-list fragments
+(B+$3C0), its results (B+$400: `R_ROMBAD` at +$413 is the verdict's: bit 0
+an OS chip, 1-4 ANTIC, GTIA, POKEY, the PIA). On an XL/XE it reads the
+self-test ROM for $D000-$D7FF as test 1 does (PORTB bit 7 low needs DDRB
+an output: bank 2's result waits in B).
+
+**The show bank** picks each row's line by pointing ANTIC at its fragment
+(`DLISTL`/`DLISTH`) while the row before is drawn: the lines are
+`text.txt` (`tools/mkdtext.py`: 40 columns and a 4-byte fragment each,
+none crossing 4K or 1K); with a good page, rows 9-13 come from B. The
+frame kernel uses A and X; Y carries the state between frames (bit 7
+START released, bit 6 the tune or the ROM phase, the position). Notes are
+timed by POKEY's voices 3+4 joined, polled in IRQST. With no RAM at all,
+the fault round's pause shows each OS chip by a CRC-8 (`romcrc8.asm`,
+`tools/mkcrc8.py`: numbers only, from ROM dumps; `crc32tab.asm` too).
+
+**The words** (`tools/mkwords.py`, espeak-ng 1.52.0, the settings in
+`words/words.txt`; a `<name>.wav` there replaces a word) are 4-bit levels
+at 7.85 kHz, two to a byte; each word bank's player (`speak.asm`) runs
+with no RAM and the screen off, and stops on START or fire. A phrase is a
+chain of nodes (`build.py`'s `speech_asm`): Y holds the node from bank to
+bank.
+
+**The standalone** (`STANDALONE`, `carts/diag-deadtest.car`/`.rom`, CAR
+type 1): banks 5 and 6 in one, no stage A, no speech, no bank switching,
+no hand-over (`mkcar.py --std8k`).
+
 ### BASCRC
 
 `src/basic/bascrc.bas` is the author's BASIC program that checks a BASIC
@@ -443,9 +510,11 @@ These came from the author's direction over the sessions:
 | `src/tape2/` | the memory test (`diag-8k-memtest`, `diag-16k-memtest`, the cartridge's) |
 | `src/system/` | tests 1-7: `main.asm` builds a program from the tests `WANT_*` picks; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia` and `t_gtia2`, its video modes page); `common.asm` the flow, the menu and the end of a tape; `tlist.asm` the order; `kbmap.asm` the keyboard map (`tools/gen_kbmap.py`) |
 | `src/cart/` | the cartridge: `romsum.asm` (bank layout, sums), `ldmem.asm` (the long test's loader), `undercart.asm` (the RAM under it), `hello.asm` and `audio/` (the sampled "hello", made by `tools/mkhello.py`) |
+| `src/deadtest/` | the dead test (see [The dead test](#the-dead-test)): `main.asm`, `stageb.asm`, `show.asm`, `stagea.asm`, `ramcode.asm`, `chips.asm`, `speak.asm`, `font.txt`, `text.txt`, `romcrc8.asm`, `crc32tab.asm`, `words/` |
+| `src/common/romtab.asm` | the known ROMs' CRC32s and names (test 1 and the dead test) |
 | `src/disk/` | the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`); the disk set's two-program boot (`setboot.asm`) |
 | `src/basic/` | BASCRC: the BASIC listing and the machine code (its disk's boot, and its executable) |
-| `tools/` | `build.py`, `mkcas.py`, `mkcar.py`, `mkatr.py` (the disks), `mkbasic.py`, `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `carttest.py` (a cartridge over RAM, the slot read, the long test's fixes), `docshots.py`, `gen_kbmap.py` |
+| `tools/` | `build.py`, `mkcas.py`, `mkcar.py`, `mkatr.py` (the disks), `mkbasic.py`, `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `carttest.py` (a cartridge over RAM, the slot read, the long test's fixes), `deadtest.py` (the dead test's checks), `mkfont.py`, `mkdtext.py`, `mkcrc8.py`, `mkwords.py`, `docshots.py`, `gen_kbmap.py` |
 | `cassettes/`, `disks/` (the boot disk, the 16k memtest's, BASCRC's), `disk-set/` (the 8k tapes as disks), `carts/` | the release files |
 | `docs/design/Atari-diag-cassette-scope.md` | the design: constraints, feedback, sets, the ROM table, open items |
 | `docs/design/Atari-diag-disk-scope.md` | the disk set's design (and, at the tag `v0.11`, the executables') |
@@ -517,6 +586,20 @@ test with a cartridge over RAM (the warning counted in the `--events`
 log, `CART IN WAY`, never the green charge; a fault still fails; R warns
 again; no warning where nothing is hidden, nor on the diag cartridge),
 and the long test's two review fixes (`mem-xe-scr7c` takes minutes).
+
+`tools/deadtest.py` runs the dead test's checks the same way (carttest's
+`run`, a look every 0.5 s): the diag start on each cartridge (an older 8
+Mbit as `.car` type 42 starts in bank 127), stage B's results on the
+simulator's `dead:` line (no RAM, a hole, a stuck bit, zero page, the
+stack, a mirror, a 130XE), the rows and verdicts, the beep codes, the OS
+chips (`--rompoke`, `--nochip`, no RAM), the other chips, the speech, test
+1's self-check (`--carpoke`). `--static` scans stage B's code, `--layout`
+every bank's tail, `--words` the words. The simulator's options for it:
+`--hole LO-HI` (no RAM there), `--nochip D800|E000`, `--rompoke`,
+`--carpoke BANK:ADDR=VAL`; it starts a diag cartridge at ($BFFE), takes a
+jump to the OS's reset entry as a cold start, draws display lists the CPU
+rewrites mid-frame (text and pictures) and fonts in the cartridge, and
+approximates GTIA's collisions.
 
 ## Documentation pictures
 
@@ -610,6 +693,15 @@ Notes from the sessions, for whoever works on this next.
   after a screen changes.
 - The 8K images are tight: check the free bytes (`build/*.lab`) before
   adding to one, and expect the `.error` guard rather than a crash.
+- MADS reads `#>label+40` as `(>label)+40`, and an operand that starts with
+  `[` as something else: write `#>[label+40]` and `$100*[n]`. It also turns
+  `sta $0000,x` into zero page,X: `sta.w` keeps it absolute. `.rept`'s
+  counter is `.r`; `@`, `@+`, `@-` are anonymous labels (macros included).
+- With no RAM, storage is the CPU's registers, the stack pointer (TXS, as
+  long as nothing pushes), the V flag, and the PIA's direction registers
+  (ORA/ORB $FF first); every page needs its own instructions (no pointer),
+  a "call" returns by a register (or, with a RAM page, through a vector
+  there), and a sequence is a code path or a table walked by Y.
 
 ## Contributing
 

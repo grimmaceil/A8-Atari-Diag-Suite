@@ -161,6 +161,9 @@ s_chips	dta d'ANTIC OK  GTIA OK  POKEY OK  PIA OK'	; rows 12 and 13
 	:5 dta 0
 s_live	dta d'INPUT  KEY $--  CONSOL -  STICKS $--'
 	:4 dta 0
+s_vc	dta d'VCOUNT TOP ---  GTIA FLAG NTSC  TRIES -'	; row 14
+	:1 dta 0
+s_pal	dta d'PAL '
 
 	.local ra
 RB	= SABASE

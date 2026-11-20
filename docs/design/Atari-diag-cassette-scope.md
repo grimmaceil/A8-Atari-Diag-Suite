@@ -51,7 +51,8 @@ Memory decoding:
 
 | Format | Needs | Strengths |
 |---|---|---|
-| Cartridge (`diag-cart.car`, AtariMax 128K; `diag-cart-8mbit.bin`, 8 Mbit MaxFlash) | 8K of RAM, a flash cartridge | The best test: no loading, every test on one menu, runs from ROM, tests the RAM under itself: for RAM too sick to load a program into |
+| Cartridge (`diag-cart.car`, AtariMax 128K; `diag-cart-8mbit.bin`, 8 Mbit MaxFlash) | no RAM for the dead test, 8K for the rest; a flash cartridge | The best test: a dead test first (diag mode, no RAM: docs/superpowers/specs/2026-11-20-dead-test-design.md), then no loading, every test on one menu, runs from ROM, tests the RAM under itself: for RAM too sick to load a program into |
+| Dead test (`diag-deadtest.car` / `.rom`, standard 8K) | no RAM | The dead test alone, for any 8K cartridge or an EPROM |
 | Boot disk (`diag-disk.atr`) | 8K of RAM, a disk drive or an SIO adapter; no DOS | The most convenient free way: the cartridge's menu, each test loaded as it is picked; the long test and the "hello" with 16K |
 | Disk set (`disk-set/`) | 8K, a disk drive or an SIO adapter | The 8k tapes as disks, one test to a disk, no menu: for when the boot disk can't get far |
 | Cassettes (`.cas`) | 8K and up, by set | No drive, no DOS, no flash cartridge: for an 8K 400 or a machine too sick to boot a disk |
@@ -378,11 +379,12 @@ BASIC on its own against the same A, B and C values.
 
 ## 12. Shelved
 
-- **A RAM-less "dead test" cartridge:** the diagnostic-cart flag (bit 7 of
-  the option byte at $BFFD) makes the OS jump to the cartridge very early,
-  and a display could come from ROM with DMA off or by racing the beam.
-  The AtariMax cartridge took the other road: it needs 8K of RAM and the
-  OS, runs every test from ROM, and is the best way in all the same.
+- **A RAM-less "dead test" cartridge:** done in 0.15, in front of the
+  AtariMax cartridge (and on its own as a standard 8K): the
+  diagnostic-cart flag (bit 7 of the option byte at $BFFD) makes the OS
+  jump to the cartridge before it uses RAM; the screen comes from ROM, its
+  rows picked by rewriting ANTIC's display-list pointer between them
+  (docs/superpowers/specs/2026-11-20-dead-test-design.md).
 - **Executables (`.xex`), up to 0.11:** they needed DOS and 32K. The boot
   disk (0.10) boots with no DOS and needs 8K, so they went in 0.12
   (their design: [Atari-diag-disk-scope.md](Atari-diag-disk-scope.md) at
