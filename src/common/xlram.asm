@@ -52,14 +52,14 @@ oo_cp	lda (PTR),y
 	sta $FFFA		; from RAM, in page $FF
 	lda #>nmiraw
 	sta $FFFB
-	lda #$40
-	sta NMIEN
-	lda #$C0		; anything there? (a 600XL with 16K has nothing)
-	jsr ramat
+	lda #$C0		; anything there? (a 600XL with 16K has nothing:
+	jsr ramat		; no NMI until the vector is known to be in RAM)
 	bcs osin
 	lda #$E0
 	jsr ramat
 	bcs osin
+	lda #$40
+	sta NMIEN
 	inc OSRAM		; 2: there, the OS out
 	inc NBANKS
 	lda #8			; the font's block left out with the screen's
@@ -284,7 +284,8 @@ xw_by	jsr xe_val
 	lda #>LOAD		; copy A's half (tape 2's rwait), on the values
 	cmp #$08		; just written: the extended banks' own chips
 	bne xw_nr
-	jsr rwait
+	jsr xemain		; (main RAM in first: rwait prints, and a screen
+	jsr rwait		; at $7C00 would land in extended bank 3)
 xw_nr
 	.endif
 	inc INAIA
