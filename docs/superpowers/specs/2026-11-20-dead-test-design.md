@@ -1,245 +1,413 @@
-# The dead test: a diag-mode cartridge piece that needs no RAM
+# The dead test: a diag-mode start that tells all it can, with no RAM
 
-Design, 2026-11-20. For v0.15 (built locally; pushed only on Mike's word).
+Design, 2026-11-20, revised the same day with Mike's clarifications. For
+v0.15 (built locally; pushed only on Mike's word).
 
 ## Intent
 
-Mike wants the cartridge to start in **diagnostic mode** (the cartridge
-header's diag flag) and run a **dead test** before anything else: a test
-that works with no working RAM at all, with its own font, and that uses no
-RAM, no zero page, no stack and no OS ROM routines until it has proven the
-memory it would use. He will verify it on his real 800 by pulling the RAM
-boards (and OS chips) one by one.
+Mike's goal: **find every way possible to get as much information as
+possible about what works and what doesn't, and convey it to the user as
+clearly as possible**, starting from a machine that may have no working
+RAM at all.
 
-Why: the cartridge is the suite's "best test" because it runs from ROM, but
-today it still starts after the OS has set the machine up, which needs
-working RAM (zero page, stack, page 2-3 vectors) and all three OS chips. A
-machine with a dead first RAM board, or a dead OS chip, never reaches our
-code. The dead test closes that gap: it runs on a machine that can't run
-anything else, and says what is wrong.
+The cartridge starts in **diagnostic mode** (the header's diag flag: the
+OS jumps to the cartridge before it touches RAM). A **dead test** runs
+first, using no RAM, no zero page, no stack and no OS ROM routine or data
+(its own font), and tests everything it can that way. Then, all in one
+go, it rolls on into the existing suite:
 
-## What it does
+```
+power on
+  -> DEAD TEST: RAM, ROM chips, ANTIC/GTIA, POKEY, PIA, keys  (no RAM)
+  -> DEAD TEST -- PASS    (or the faults, shown, beeped and spoken)
+  -> the suite's RAM test -> its ROM test -> the menu      (as today)
+```
 
-1. **Power-on:** the OS jumps to the cartridge before it reads RAM or sets
-   up any chip (checked in all seven OS ROMs, see Facts). The dead test
-   sets every hardware register itself (interrupts off, NMIEN 0, GTIA,
-   POKEY, PIA), and shows a screen whose display list, text and font are
-   all in the cartridge ROM.
-2. **The RAM test, with no RAM (stage B):** every page from $0000 to $9FFF
-   (zero page and the stack page first in the order of results, as they
-   matter most), using only the CPU's registers. Each bank's bad data bits
-   are collected, not just the first fault. Banks as the suite numbers
-   them: bank 1 $0000-$3FFF, bank 2 $4000-$7FFF, bank 3 $8000-$9FFF (the
-   cartridge covers $A000-$BFFF; the suite tests that 8K under itself
-   later). A bank where nothing reads back at all is **no RAM there**, not
-   a fault (a 16K machine is normal).
-3. **The OS ROM chips (stage A), only when bank 1 passed:** zero page and
-   the stack are now proven, so the dead test uses them: a CRC32 of each
-   OS chip (400/800: $D800, $E000, $F000; XL/XE: the 16K image), named
-   from the known-ROM table where it matches, and the result screen moves
-   to RAM so it can print numbers.
-4. **The result:**
-   - Every bank good (or absent above the first good ones) and the ROMs
-     read: a short pass signal, then the dead test starts the OS cold with
-     its own bank (non-diag header) in, and **the suite runs exactly as
-     today**.
-   - A fault: it stays on the result, flashing and beeping its code,
-     forever (no timeouts, as everywhere in the suite). **START** goes on
-     to the OS and the suite anyway (the suite needs only 8K: a bad bank 2
-     or 3 still lets it run; with bank 1 bad it likely won't get far).
-   - No RAM in bank 1 is a fault (nothing else can run); no RAM in bank 2
-     or 3 is neutral.
-5. **Standalone:** the same 8K is also released on its own as a plain 8K
-   cartridge (for an EPROM or any flash cartridge without a menu). There it
-   has no suite to hand over to: it stays on its result, pass or fail.
+Mike will verify it on his real 800 by pulling RAM boards and OS chips.
+
+Why: the cartridge is the suite's "best test" because it runs from ROM,
+but today it still starts after the OS has set the machine up, which
+needs working RAM (zero page, stack, pages 2-3) and every OS chip. A
+machine with a dead first RAM board or a dead OS chip never reaches our
+code. The dead test closes that gap, and on a healthy machine it costs a
+few seconds before the suite.
+
+## Where it runs
+
+| Cartridge | What it carries |
+|---|---|
+| **8 Mbit MaxFlash** (1 MB, 128 banks) | everything below: the full dead test, its screens across banks, spoken results, then the suite |
+| **AtariMax 128K** (16 banks, 5 used by the suite) | the dead test in its 11 free banks: as much of the full one as fits (the plan sizes it; speech is the first thing to go) |
+| **Standalone 8K** (a plain 8K cartridge or EPROM, `.car` type 1 + raw `.rom`) | the core dead test in one bank: RAM, ROM sums, bit boxes, beeps; no suite to hand over to, so it stays on its result |
+| **A8PicoCart** | a separate, later project (see the end): our own firmware build from its source |
+
+Mike: "we can increase the cart size too": the 8 Mbit version is the full
+one; nothing in the suite has to shrink for it.
+
+## The flow, in detail
+
+### 1. Start (no RAM)
+
+The OS jumps to the cartridge (see Facts). The dead test turns interrupts
+off (SEI, NMIEN 0), sets every chip register itself (GTIA, POKEY, ANTIC,
+PIA), and shows its first screen from ROM: display list, text and font
+all in the cartridge. From here on nothing depends on the OS but its
+reset path.
+
+### 2. RAM, with no RAM (stage B)
+
+Every page from $0000 to $9FFF, using only the CPU's registers and the
+non-RAM storage listed in Facts. Results kept per bank (bank 1
+$0000-$3FFF, bank 2 $4000-$7FFF, bank 3 $8000-$9FFF, as the suite numbers
+them), and separately for **zero page** and **the stack page**, since
+those two decide what else can run:
+
+- each bank's bad data bits (all of them, not just the first fault);
+- **no RAM** (nothing reads back) told apart from **bad**: no RAM in bank
+  1 is a fault; in bank 2 or 3 it is neutral (a 16K or 32K machine);
+- address faults: each page carries a value tied to its page number, so
+  pages that alias each other are caught; the byte's own address bits
+  catch faults inside a page.
+
+On an XL/XE the 64K is soldered in and each data bit is one chip for all
+of it: a bad bit names the chip outright (see the bit-to-chip tables,
+open item 2). The RAM under the OS and the 130XE banks are the suite's
+(it runs right after); the dead test covers them only if the plan finds
+room and storage for it (PORTB is then in use, so the DDRB trick below
+needs care).
+
+### 3. Using what passed (stage A)
+
+The 6502 needs zero page only for pointer addressing ((zp),Y) and the
+stack only for JSR/RTS and interrupts. **Neither is needed**: code that
+names each page it reads (unrolled, as stage B is) and moves by JMP needs
+no pointer and no stack, and any byte of proven-good RAM, **anywhere**,
+can hold state through absolute addressing. So stage A takes the first
+good page stage B found, wherever it is (zero page, or a page in bank 2
+if bank 1 is dead), and uses it for:
+
+- the state of the ROM CRCs (step 4);
+- a **RAM text screen** (with any good 1K), so the results can show
+  numbers: addresses, CRCs, counts;
+- the dead test's own bookkeeping, so the later tests can be richer.
+
+Zero page and the stack are used only once proven, and only where they
+make something possible that otherwise isn't (nothing in this design
+needs them).
+
+### 4. The OS ROM chips
+
+- **A CRC with no RAM at all:** a CRC-16 (two bytes of state) fits in the
+  PIA's two direction registers, with its tables in the cartridge ROM:
+  each OS chip gets a CRC-16, compared with a table of the known chips'
+  values (computed at build time from the same published CRC32 list test
+  1 uses: no ROM images in the project, as now).
+- **With one good RAM page** (stage A): the full CRC32 of each chip, as
+  test 1 shows it, named from the known-ROM table.
+- 400/800: the $D800, $E000 and $F000 chips each; XL/XE: the 16K image
+  (and its two 8K halves). A chip that reads as floating bus is **not
+  there** (pulled), not just bad.
+
+### 5. The other chips, dead-test style
+
+What each can tell without RAM, using its own registers and the screen,
+the same way the suite's tests do with RAM:
+
+- **ANTIC:** VCOUNT runs and wraps (NTSC or PAL); WSYNC holds the CPU to
+  the line; NMIST shows the VBI (polled, no interrupt); the display list
+  runs (the screen itself, and the colour bars).
+- **GTIA:** PAL/NTSC flag; the colour and luminance bars; player/missile
+  collisions (players drawn by the CPU over the playfield, the collision
+  registers read back: GTIA's logic checked with no RAM); TRIG0-3;
+  CONSOL (START, SELECT, OPTION, and the console speaker).
+- **POKEY:** RANDOM changes; the timers count (IRQST polled, no
+  interrupt); SKSTAT; the keyboard (KBCODE, a key shown as it is
+  pressed); the four voices (tones, the user listens); the pot lines
+  (paddles: POT0-7 after a scan).
+- **PIA:** the direction and data registers read back what was written
+  (which also proves the storage trick); the joystick ports read.
+
+Interactive parts (keys, joystick) wait for the user only after the
+automatic part has shown its result, and are skipped by going on.
+
+### 6. The result: "DEAD TEST -- PASS", or the faults
+
+- **Everything good** (or neutral): `DEAD TEST -- PASS`, the pass jingle,
+  and it goes on by itself into the suite (the dead test keeps its own
+  bank in, with an ordinary header, and starts the OS cold: the suite
+  then runs exactly as today: its RAM test, its ROM test, the menu).
+- **A fault:** the result stays, flashing and beeping (and speaking) its
+  code, forever (no timeouts, as everywhere in the suite). **START** goes
+  on to the suite anyway (it needs only 8K; with bank 1 bad it likely
+  won't get far). SELECT replays the codes, OPTION flashes, as the suite's
+  keys do (and the joystick stands in for them, as everywhere).
+
+### 7. Into the suite
+
+The suite's own RAM test (the "short RAM" test) then tests what the dead
+test can't (the RAM under the cartridge and the OS, the 130XE banks,
+march patterns), then the ROM test, then the menu: unchanged. The OS's
+cold start clears RAM, so the dead test's results don't carry over; its
+PASS screen is shown before the hand-over.
+
+## How it tells the user
+
+Every channel the machine has, so a fault gets through even when one
+channel is broken:
+
+1. **Text from ROM** (no RAM): every message the dead test can give is a
+   ready-made 40-character line in the cartridge. ANTIC reads the screen
+   and the font straight from the cartridge.
+2. **Text from any bank, row by row:** every dead-test bank carries the
+   same code, font and display list at the same addresses, plus its own
+   library of text lines. The CPU switches the bank between rows (timed
+   by WSYNC/VCOUNT), so each row of the screen can come from any bank:
+   with 128 banks that is room for every bank-and-bit combination, every
+   chip name, every known ROM name, as whole lines. The 128K carries
+   fewer.
+3. **Text from RAM**, once stage A has a good 1K: a normal text screen
+   with numbers (addresses, CRCs), still in the dead test's own font.
+4. **Bit boxes:** eight boxes for D7-D0 per bank, drawn by the CPU
+   writing the player graphics registers directly on the right lines (no
+   P/M DMA, no RAM); row colours (green good, red bad, neutral no RAM)
+   set the same way.
+5. **Colour of the whole screen and border**, as the suite: green good,
+   red fault, yellow partial, white for a cartridge-related note.
+6. **Beep codes**, as the suite: long beeps for the bank (or the chip
+   number), short beeps for the bit (or the item); the fail tone first,
+   the jingle on a pass.
+7. **Spoken results** (8 Mbit): words played from the cartridge through
+   POKEY with no RAM ("bank two, bit five, bad"; "ROM E-zero-zero-zero
+   bad"; "dead test pass"), as the cartridge already plays its sampled
+   "hello". For a machine whose screen or monitor is the trouble. (Open
+   item 1: where the recordings come from.)
+8. **Chip names** where the bit-to-chip tables exist (open item 2): "800
+   16K BOARD, BIT 3: CHIP Z5" instead of only "BANK 1 BIT 3".
 
 ### The screen (sketch)
 
 ```
  DEAD TEST                         V0.15
+ ZERO PAGE  OK      STACK  OK
  BANK 1  $0000-$3FFF   OK
- BANK 2  $4000-$7FFF   BAD
-         D7 D6 D5 D4 D3 D2 D1 D0
-         .  .  .  ## .  .  .  .
+ BANK 2  $4000-$7FFF   BAD   D7 D6 D5 D4 D3 D2 D1 D0
+                             .  .  .  ## .  .  .  .
  BANK 3  $8000-$9FFF   NO RAM
- OS ROM  $D800 $E000 $F000  (stage A)
+ OS ROM  $D800 OK  $E000 OK  $F000 OK  REV B
+ ANTIC OK  GTIA OK  POKEY OK  PIA OK
+ DEAD TEST -- FAULT: BANK 2 BIT 4
+ START=GO ON  SELECT=TONES  OPTION=FLASH
 ```
 
-The text lines are fixed ROM text; which line shows where is picked by
-pointing ANTIC at ROM display lists (one per outcome, or per row). The bit
-boxes are players drawn by the CPU writing GRAFPn directly, no P/M DMA,
-timed by VCOUNT/WSYNC; the row colour (green good, red bad, neutral no RAM)
-is written per row the same way. Exact layout is the builder's; the suite's
-colours and words (OK, BAD, the D7-D0 order) are kept.
-
-### Sound
-
-The suite's beep codes: long beeps for the bank, short beeps for the bit
-(the lowest bad bit, as the suite does), fail tone first; the pass jingle
-on a pass. Timed by loops and VCOUNT, no RAM.
-
-## Goals
-
-- Starts and shows its screen with **no RAM installed** and with only the
-  OS chip that holds the reset path (rev B: the $F000 chip; rev A: also
-  $E000, which holds rev A's reset vector).
-- Stage B uses no RAM, zero page, stack, or OS ROM routine or data (the
-  OS font included).
-- Finds and names bad data bits per bank; tells "no RAM" from "bad RAM".
-- Hands over to the existing suite with no change to the suite's
-  behaviour on a good machine (beyond the dead test's few seconds first).
-- One 8K bank; the same bytes in the AtariMax images and the standalone
-  8K cartridge.
-
-## Non-goals
-
-- Replacing the suite's RAM test: the dead test is a quick pattern test
-  to get a sick machine diagnosed; the suite's march tests, the RAM under
-  the OS and the cartridge, the 130XE banks and the long test stay where
-  they are.
-- RAM under the OS on an XL/XE ($C000-$FFFF) in the dead test (v1).
-- Starting without the OS chip that holds the reset path: impossible. The
-  6502 reads its reset vector from $FFFC, in the OS ROM, and the jump to
-  a diag cartridge is OS code; Mike's notes item 6 ("test with motherboard
-  OS ROM disabled") can only mean the other chips.
-- The A8PicoCart and other menu cartridges: their menu runs on the Atari
-  first and needs working RAM, so they can carry the suite (`diag-cart.car`,
-  type 41, is on the A8PicoCart's list) but can't start a dead test.
-
-## Anti-goals
-
-- A dead test that reads RAM it hasn't just proven (stage B) or hasn't
-  proven at all (stage A).
-- A missing board above bank 1 reported as a fault in red (a 16K or 32K
-  machine is fine): neutral, as the suite's friendly signals are.
-- Anything that changes the suite's own results or screens on a machine
-  with good RAM.
+Layout is the builder's; words and colours are the suite's.
 
 ## Facts it rests on (checked 2026-11-20)
 
 - **OS rev B** ($F125 reset): `SEI, LDA #0, STA $08, CLD, LDX #$FF, TXS,
   JSR $F23F`; $F23F: `LDA $BFFC / BNE` (a cartridge?), `INC $BFFC / LDA
-  $BFFC / BNE` (ROM, not RAM), `LDA $BFFD / BPL / JMP ($BFFE)`. Before the
-  jump: one zero-page write and the JSR's two stack bytes, never read
-  back; no chip register written yet (the register clear, $F277, comes
-  after). The RESET key: NMI $E791 -> $E474 -> $F11B (reads COLDST, $0244)
-  -> $F12A -> the same JSR: RESET lands on the dead test too.
+  $BFFC / BNE` (ROM, not RAM), `LDA $BFFD / BPL / JMP ($BFFE)`. Before
+  the jump: one zero-page write and the JSR's two stack bytes, never read
+  back; no chip register written yet (the clear at $F277 comes after).
+  The RESET key: NMI $E791 -> $E474 -> $F11B (reads COLDST, $0244) ->
+  $F12A -> the same JSR: RESET lands on the dead test too.
 - **XL/XE OS** ($C2AA reset): a delay loop, a read of $033D-$033F (the
   warm-start magic), `JSR $C471`: TRIG3 bit 0, $BFFC = 0, $BFFD bit 7 ->
   `JMP ($BFFE)`. Every path through the magic check reaches $C471.
 - **All seven OS ROMs** on the share (400/800 rev A and B, 1200XL, 600XL,
-  800XL/130XE rev 2, 800XE rev 3, XEGS rev 4) have the `JMP ($BFFE)` diag
-  jump. Rev A's reset vector is $E477 (in the $E000 chip).
+  800XL/130XE rev 2, 800XE rev 3, XEGS rev 4) have the diag jump. Rev
+  A's reset vector is $E477, in the $E000 chip; rev B's is in $F000.
+- **What must work for the dead test to start:** the CPU, the bus, the
+  cartridge slot, and the OS chip holding the reset path (rev B: $F000;
+  rev A: $E000 and $F000; XL/XE: the one OS chip). Nothing else: no RAM,
+  no other OS chip. The 6502 reads its reset vector from $FFFC, in the
+  OS ROM, and the diag jump is OS code, so a dead test can't start
+  without that chip (Mike's notes, item 6, can only mean the others).
 - ANTIC fetches display lists, text and fonts from cartridge ROM like any
   memory; mode 2's font base is 1K-aligned (chars 0-63 are all the dead
-  test needs: 512 bytes; the other half can hold code or data).
-- Storage that isn't RAM: A, X, Y; the stack pointer S (TXS/TSX, as long
-  as nothing pushes); the V and D flags; and the PIA's two data direction
-  registers, readable and writable at $D300/$D301 with PACTL/PBCTL bit 2
-  = 0. With the output registers set to $FF first, a DDR's value changes
-  nothing outside (an output driving 1 = an input pulled up): on the XL/XE
-  PORTB stays $FF (OS in, BASIC and self-test out, 130XE main RAM). That's
-  24 bits besides the CPU registers.
+  test needs: 512 bytes; the other half can hold code or data). The font
+  must sit at the same address in every bank that is switched in while
+  the screen is drawn, as must the code that is running.
+- **Storage that isn't RAM:** A, X, Y; the stack pointer S (TXS/TSX, as
+  long as nothing pushes); the V and D flags; and the PIA's two data
+  direction registers, readable and writable at $D300/$D301 with
+  PACTL/PBCTL bit 2 = 0. With the output registers set to $FF first, a
+  DDR's value changes nothing outside (an output driving 1 = an input
+  pulled up): on the XL/XE PORTB stays $FF (OS in, BASIC and self-test
+  out, 130XE main RAM). That's 24 bits besides the CPU registers.
 - Without RAM, the 6502 can only address a page through an instruction
-  that names it (absolute or absolute,X/Y): every page tested needs its
-  own instructions. One X loop over the 256 bytes of a page, unrolled
-  across all 160 pages, costs ~5 bytes a page to write and ~13 to check
-  and collect: about 3K for $0000-$9FFF.
+  that names it (absolute, absolute,X or absolute,Y): every page tested
+  needs its own instructions. One X loop over a page's 256 bytes,
+  unrolled across all 160 pages, costs ~5 bytes a page to write and ~13
+  to check and collect: about 3K for $0000-$9FFF.
+- POKEY plays samples with no RAM: a voice in volume-only mode (AUDC bit
+  4) outputs its 4-bit volume; the cartridge's `hello` player does this
+  at one sample per scan line with the screen off.
+- The A8PicoCart's own menu runs on the Atari first and needs working
+  RAM: it can carry the suite (`diag-cart.car`, type 41, is on its list)
+  but not start a dead test, as it stands.
+
+## Goals
+
+- Starts, shows its screen, beeps and speaks with **no RAM installed**
+  and only the OS chip that holds the reset path.
+- Stage B uses no RAM, zero page, stack, or OS ROM routine or data (the
+  OS font included); stage A uses only RAM stage B proved, anywhere.
+- Per bank: bad bits, no RAM vs bad, address faults; zero page and stack
+  on their own lines.
+- Every OS chip checked (CRC-16 with no RAM, CRC32 with a good page),
+  named, and "not there" told from "bad".
+- ANTIC, GTIA, POKEY, PIA and the keys checked dead-test style.
+- Every result on every channel: text, colour, boxes, beeps, speech.
+- On a pass, one go into the suite with no change to the suite.
+
+## Non-goals
+
+- Replacing the suite's RAM test: the dead test gets a sick machine
+  diagnosed; the suite's march tests, the RAM under the OS and the
+  cartridge, the 130XE banks and the long test stay where they are.
+- Changing the suite's flow after the hand-over (its ROM test still waits
+  for a key, as now).
+- Starting without the OS chip that holds the reset path (impossible).
+- OS ROM images in the cartridge (copyrighted): only checksums.
+
+## Anti-goals
+
+- Reading RAM that hasn't just been proven.
+- A missing board above bank 1 shown as a red fault (a 16K or 32K
+  machine is fine): neutral, as the suite's friendly signals are.
+- Anything that changes the suite's results or screens on a machine with
+  good RAM, beyond the dead test's few seconds first.
+- A message that only one channel carries.
 
 ## Approaches considered
 
 - **A. Prove zero page and stack, then use them.** Small stage 1 with
   registers only; normal 6502 code after.
 - **B. No RAM at any point.** Registers (and the PIA DDRs) only;
-  unrolled per-page code; no CRCs, since a CRC needs memory.
-- **C. Fold it into the cartridge's existing RAM test (bank 0).** That code
-  expects the OS's set-up; it would need re-plumbing. Ruled out.
+  unrolled per-page code.
+- **C. Fold it into the cartridge's existing RAM test (bank 0).** That
+  code expects the OS's set-up. Ruled out.
 
-**Mike's pick: B and A together.** The whole RAM test is B (no RAM, ever);
-only after bank 1 (zero page and stack) has passed does the dead test use
-them, for the extras that need memory (A): the OS ROM CRCs and a RAM text
-screen for numbers.
+**Mike's pick: B and A together**, sharpened by his clarifications: the
+whole RAM test is B; A then uses **any** RAM page B proved (not only zero
+page and stack), and needs neither zero page nor the stack, since
+unrolled code and JMPs do without them.
+
+For conveying results, three layers, all used: ROM text lines (always),
+rows chosen from any bank (the 1 MB room), and a RAM screen once a good
+page exists; plus colours, boxes, beeps and speech on top.
 
 ## How it fits the cartridge (decided)
 
-- **Its own 8K bank** (`src/deadtest/`, assembled at $A000), after the
-  suite's banks (bank 5 today: after the RAM test, the two system banks,
-  the long test's image and the "hello"). The suite's bank numbers don't
-  move.
+- **The dead test's banks** sit after the suite's (bank 5 on, today); the
+  suite's bank numbers don't move. Each dead-test bank has the same code,
+  font and display list at the same addresses, and its own text lines or
+  sound.
 - **Every other bank's tail** gets the diag header: $BFFD = $80, $BFFE ->
-  a stub in the tail that only uses registers (`ldx #DEADBK / sta $D500,x
-  / jmp` the dead test). Whichever bank the cartridge powers up in (0, or
-  127 on an older 8 Mbit), the OS's diag check finds the flag and the stub
-  goes to the dead test.
-- **The dead test's own bank** has today's header ($BFFD = $04, run
-  address -> the tail's jump to bank 0's cold start). To hand over it
-  keeps its bank in and jumps through the reset vector: the OS's cold
-  start sees an ordinary cartridge and the suite starts as it does now.
+  a stub in the tail that only uses registers (`ldx #DEADBK / sta
+  $D500,x / jmp` the dead test). Whichever bank the cartridge powers up in
+  (0, or 127 on an older 8 Mbit), the OS's diag check finds the flag and
+  the stub goes to the dead test.
+- **The dead test's banks** have today's header ($BFFD = $04, run address
+  -> the tail's jump to bank 0's cold start). To hand over it keeps one of
+  them in, clears $033D-$033F (the XL/XE OS takes them for its warm-start
+  magic, and the RAM test just filled them with patterns), and jumps
+  through the reset vector: the OS's cold start sees an ordinary
+  cartridge and the suite starts as it does now.
 - **RESET in the suite** goes back through the dead test (every suite bank
-  carries the flag): the same as a power-on, a few seconds longer. (The
-  long test's loader switches the cartridge off, as today.)
-- **The files:** `carts/diag-cart-v0.15.car` and
-  `carts/diag-cart-8mbit-v0.15.bin` with the dead test in front;
-  `carts/diag-deadtest-v0.15.car` (type 1, standard 8K) and a raw 8K
-  `.rom` for an EPROM. One source, a define per output, as the 8 Mbit
-  build already does.
-- The ROM test's self-check (test 1) covers the dead test's bank too, so
-  its code and data stay in $A000-$BEFF like the other code banks (the
+  carries the flag): the same as a power-on, a few seconds longer. The
+  long test's loader switches the cartridge off, as today.
+- **The RESET key on a machine with bad RAM:** the OS reaches the diag
+  jump without reading RAM, but a VBI or DLI left on by the program that
+  was running could fire in the few cycles before the dead test turns
+  NMIs off (and during the XL OS's start-up delay), and the OS's NMI code
+  uses RAM vectors. Power-on is the clean start (NMIEN is 0); the guide
+  says so.
+- The ROM test's self-check (test 1) covers the dead-test banks too, so
+  their code and data stay in $A000-$BEFF like the other code banks (the
   CRC32 at $BFF6 covers that range).
 - **The standalone build** has no bank-switch writes at all ($D5xx): its
   header is $BFFD = $80 with $BFFE pointing straight at the dead test.
-- **Before the hand-over** the dead test clears $033D-$033F: the XL/XE
-  OS takes those three bytes for its warm-start magic, and the RAM test
-  has just filled them with patterns.
+- **The files:** `carts/diag-cart-8mbit-v0.15.bin` and
+  `carts/diag-cart-v0.15.car` with the dead test in front;
+  `carts/diag-deadtest-v0.15.car` (type 1, standard 8K) and
+  `carts/diag-deadtest-v0.15.rom` (raw 8K for an EPROM). One source, a
+  define per output, as the 8 Mbit build already does.
 - **Version 0.15**, built locally and deployed to `_diag` for Mike's
   hardware test; pushed only on his word.
 
-- **The RESET key on a machine with bad RAM:** the OS reaches the diag
-  jump without reading RAM, but a VBI or DLI left enabled by the program
-  that was running could fire in the few cycles before the dead test
-  turns NMIs off (and during the XL OS's start-up delay), and the OS's
-  NMI code uses RAM vectors. Power-on is the clean start (NMIEN is 0);
-  the guide says so.
-
 ## Constraints
 
-- One 8K bank: code, the 1K-aligned font, display lists, text lines, the
-  32-byte tail.
 - Stage B: no instruction that reads or writes RAM, the stack (no JSR,
   RTS, PHA, PLA, PHP, PLP, interrupts) or OS ROM; control flow by JMP and
-  branches only.
+  branches only. Stage A: RAM only where stage B proved it.
+- Each dead-test bank: code, the 1K-aligned font, display list(s), its
+  own lines or samples, the 32-byte tail, within $A000-$BEFF for the
+  code-bank CRC.
 - Results wait forever on a fault (no timeouts); START goes on.
-- The suite's colours, words and beep scheme; a missing bank is neutral.
-- Docs kept current with the change: the user
-  guide gets a dead test section (and how to read a pulled-board result on
-  an 800), README, CHANGELOG, DEVELOPMENT, the scope doc.
+- The suite's colours, words, keys and beep scheme; a missing bank is
+  neutral.
+- Docs kept current: a dead test section in the user guide (with how to
+  read a pulled-board or pulled-chip result on an 800), README, CHANGELOG,
+  DEVELOPMENT, the scope doc.
 
 ## Left to the builder (the plan)
 
 - The register allocation for stage B (which bank's bits go in DDRA, DDRB
-  or S; the phase counter), and the patterns: at least the byte's own
+  or S; the pattern phase), and the patterns: at least the byte's own
   address bits (in-page), their complement, and a per-page value (each
-  page gets the base XOR its page number, so pages that alias each other
-  are caught), so every bit is seen as 0 and as 1.
+  page gets the base XOR its page number), so every bit is seen as 0 and
+  as 1.
 - How "no RAM" is told from "bad" (e.g. every bit wrong across the whole
-  bank) on a 400/800 whose idle bus can read back what was last written.
-- The display: one display list per outcome or rows chosen per frame; the
-  player kernel; NTSC and PAL.
-- The OS ROM CRC table for stage A: the same values as test 1's
-  (`t_rom.asm`), carried in the dead test's own bank (stage A can't call
-  into another bank's code).
-- The simulator: start at ($BFFE) with no OS set-up; no RAM at all
-  (`--ram 0`), a missing bank, the bus noise of an empty slot; checks in
-  the style of `carttest.py`. The OS's own cold start after the hand-over
-  likely can't run in the simulator: check that the dead test jumps
-  through $FFFC with its own bank in, and leave the rest to the hardware
-  test.
+  bank) on a 400/800 whose idle bus can read back what was last written;
+  how a pulled OS chip is told from a bad one.
+- The display: display lists, the row-by-row bank kernel, the player
+  boxes; NTSC and PAL; what the 128K and the standalone 8K drop.
+- The CRC-16 polynomial and tables, and the table of known chips'
+  CRC-16s: computed once from the ROM images Mike has (open item 3) and
+  committed as numbers, so the build never needs a ROM file.
+- The order of the chip checks, and which are automatic and which wait
+  for the user.
+- The simulator: start at ($BFFE) with no OS set-up; no RAM at all, a
+  missing bank, the bus noise of an empty slot, a pulled OS chip; PIA
+  DDRA as well as DDRB; checks in the style of `carttest.py`. The
+  row-by-row bank switching and the OS's cold start after the hand-over
+  likely can't be seen in the simulator: check the bank writes' timing
+  and that the dead test jumps through $FFFC with its own bank in, and
+  leave the rest to the MiSTer and the hardware.
 - The suite's checks still pass (`carttest.py`, the cartridge's runs in
   `disktest.py`).
 
-## Mike's hardware test (what he'll do)
+## Open items for Mike
+
+1. **The spoken words:** recorded by Mike, taken from public-domain
+   recordings (as the "hello" was), or made with a speech synthesizer
+   (e.g. espeak-ng, whose output is free to use)? The word list is short:
+   zero to nine, A to F, bank, bit, bad, OK, pass, fail, ROM, RAM, chip,
+   dead test, no RAM.
+2. **Bit-to-chip tables** (already an open item in the scope doc): from
+   the schematics or the boards' silkscreen, for the 800's 16K and 8K
+   boards, the 400, the 800XL and the 130XE, so the result names the
+   chip. Mike can read them off his boards; without them the result
+   names the bank and bit, as the suite does.
+3. **The CRC-16 of each known OS chip:** computed once from the ROM
+   images Mike has (his `_sysroms` dumps match the published CRC32s) and
+   committed as numbers; a chip with no image gets its CRC32 only (stage
+   A) until one turns up.
+
+## A later project: the A8PicoCart
+
+Mike: with the A8PicoCart "we would do the same thing and write directly
+to the device and pull the project source and fix the 400/800
+compatibility timing issue". That is firmware for the cartridge's own
+microcontroller (from its open-source project), so that it serves our
+image at power-on with no menu (and so can start the dead test) and works
+on a 400/800. It is its own project with its own design, after this one.
+
+## Mike's hardware test
 
 On the real 800 with the 8 Mbit MaxFlash: all boards in (pass, then the
-suite); each RAM board pulled in turn, and none; a bit fault if he has a
-board with one; the OS $D800 and $E000 chips pulled (rev B); the RESET
-key after the hand-over.
+suite in one go); each RAM board pulled in turn, and none; a bit fault if
+he has a board with one; the OS $D800 and $E000 chips pulled (rev B); a
+monitor unplugged (beeps and speech alone); the RESET key after the
+hand-over.
