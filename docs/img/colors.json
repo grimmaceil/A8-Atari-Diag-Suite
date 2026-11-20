@@ -42,6 +42,12 @@
   "meaning": "a stuck joystick at switch-on, with a \"pew\" beep"
  },
  {
+  "name": "white",
+  "atari": "$0E",
+  "rgb": "#F2EAF7",
+  "meaning": "a cartridge in the way: the RAM under it untested, with a \"typing\" sound"
+ },
+ {
   "name": "black",
   "atari": "$00",
   "rgb": "#000000",

@@ -78,10 +78,10 @@ python tools/build.py --fast       # skip the $55/$AA march pass (quicker simula
 ```
 
 The version is `VERSION` in `tools/build.py`. It goes into every release
-file's name (`cassettes/diag-...-v0.13.cas`; `build/` keeps the plain
+file's name (`cassettes/diag-...-v0.14.cas`; `build/` keeps the plain
 names, which the simulator examples below use) and onto every title bar
 (`screen.asm`'s header: one digit before the point, one or two after, in
-five columns). A patch level (`0.13.1`, `VPAT`) would take seven, and the
+five columns). A patch level (`0.14.1`, `VPAT`) would take seven, and the
 longest titles (test 3 and test 7's modes page on `diag-16k-02-system`)
 would then leave the version out. A
 build removes the release files of other versions.
@@ -126,11 +126,11 @@ rebuilt for a disk: the same programs as its banks, each a "piece" loaded
 from the disk when it is needed. Design and reasons:
 [Atari-diag-boot-disk-scope.md](design/Atari-diag-boot-disk-scope.md).
 
-| Piece | Built from | Load | Sectors (0.13) |
+| Piece | Built from | Load | Sectors (0.14) |
 |---|---|---|---|
 | boot | `src/disk/boot.asm`: the short check, then the RAM piece for this machine | $0600-$07FF | 1-4 |
 | RAM8 | tape 1's stage 1 with `DISK` (no ONE16): RAM above it, then its own RAM page by page (`ownram`) | $0900-$1BFF | 38 |
-| RAM16 | tape 1 with `ONE16` and `DISK` (`build_one16(disk=True)`) | $0900-$24FF | 56 |
+| RAM16 | tape 1 with `ONE16` and `DISK` (`build_one16(disk=True)`) | $0900-$25FF | 58 |
 | MENU, ROM, INPUT, PORTS, SOUND, VIDEO | `src/system/main.asm` with `DISK` and the `WANT_*` of each (the menu: `MENUPC`) | $0900, at most $1BFF | 30-38 |
 | HELLO | the recording packed (`build/hello-pak.bin`, `hello_pak`), data | $1C00-$2AFF | 30 |
 | MEM | tape 2 with `BOUNCE`, `CART` and `DISK` | $0800 | 60 |
@@ -437,7 +437,7 @@ These came from the author's direction over the sessions:
 | `src/cart/` | the cartridge: `romsum.asm` (bank layout, sums), `ldmem.asm` (the long test's loader), `undercart.asm` (the RAM under it), `hello.asm` and `audio/` (the sampled "hello", made by `tools/mkhello.py`) |
 | `src/disk/` | the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`); the disk set's two-program boot (`setboot.asm`) |
 | `src/basic/` | BASCRC: the BASIC listing and the machine code (its disk's boot, and its executable) |
-| `tools/` | `build.py`, `mkcas.py`, `mkcar.py`, `mkatr.py` (the disks), `mkbasic.py`, `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `docshots.py`, `gen_kbmap.py` |
+| `tools/` | `build.py`, `mkcas.py`, `mkcar.py`, `mkatr.py` (the disks), `mkbasic.py`, `mkhello.py`, `sim.py`, `antic.py` (the simulator's picture of a screen with more than text: test 7's modes page), `disktest.py` (the boot disk's checks), `carttest.py` (a cartridge over RAM, the slot read, the long test's fixes), `docshots.py`, `gen_kbmap.py` |
 | `cassettes/`, `disks/` (the boot disk, the 16k memtest's, BASCRC's), `disk-set/` (the 8k tapes as disks), `carts/` | the release files |
 | `docs/design/Atari-diag-cassette-scope.md` | the design: constraints, feedback, sets, the ROM table, open items |
 | `docs/design/Atari-diag-disk-scope.md` | the disk set's design (and, at the tag `v0.11`, the executables') |
@@ -464,7 +464,10 @@ cycles a scan line and a floating bus. It models:
   keys (`--con KEY:SECS[:HOLD]`), joystick 1 (`--joy UP|DOWN|LEFT|RIGHT|FIRE:SECS[:HOLD]`),
   paddles, POKEY's interrupt latches
 - real OS and BASIC ROMs (`--osrom`, `--basic`), or made-up ROM bytes
-  without them; `--forge` gives the made-up 400/800 OS chips chosen CRC32s
+  without them; `--forge` gives the made-up 400/800 OS chips chosen CRC32s;
+  `--slot` puts `--basic` in an XL/XE's slot as a cartridge (TRIG3 = 1,
+  PORTB can't switch it out); `--dmabus` makes the empty bus at
+  $A000-$BFFF on a 400/800 read $00 while ANTIC's DMA is on
 
 It prints the screen as text (`--snap`), decodes the beep code, and saves
 pictures (`--shot`, `--shoton`). `--auto` answers the prompts and presses
@@ -494,7 +497,17 @@ without the "hello", a joystick button stuck from power-on (`stuckfire`)
 and stick up on a result (`stickup`). A check can ask for text between
 two times (`(after, by, text)`), and any run where the simulator reports
 a POKEY voice 3 or 4 turned on while SKCTL's serial mode holds it silent
-fails. All of them take about an hour.
+fails. The `cart*` checks put a cartridge in the slot: line 0 `CART IN WAY`
+on the menu and the results page, and S still `SKIPPED`. All of them take
+about an hour.
+
+`tools/carttest.py` runs the same kind of checks on the tapes and the
+cartridge, with the real OS ROMs: test 1's slot read (`--dmabus`, a BASIC
+cartridge on a 400/800 and in an XL/XE's slot, built-in BASIC), the RAM
+test with a cartridge over RAM (the warning counted in the `--events`
+log, `CART IN WAY`, never the green charge; a fault still fails; R warns
+again; no warning where nothing is hidden, nor on the diag cartridge),
+and the long test's two review fixes (`mem-xe-scr7c` takes minutes).
 
 ## Documentation pictures
 
@@ -542,7 +555,13 @@ Notes from the sessions, for whoever works on this next.
 - A cartridge in a 400/800 disables the RAM under it in hardware: no
   program can see it (a 48K 800 with BASIC shows 40K). An AtariMax can
   switch itself off ($D510) and back on (a bank select), which is how the
-  diag cartridge counts and tests that RAM.
+  diag cartridge counts and tests that RAM. Every other RAM test can only
+  say so: `CARTIN` (BADMASK's entry 15), set by tape 1's `cartchk`, read
+  by stage 1's results, stage 2's summary and the menu's line 0.
+- An empty address reads what was last on the bus, and with ANTIC
+  fetching a blank screen that can be $00: the OS's own cartridge test
+  ($BFFC = 0) took an empty 400/800 slot for a cartridge. `slotrom` reads
+  it eight times with ANTIC's DMA off, at different points of the line.
 - With a cartridge in, a 400/800 still boots a cassette (START held) or a
   disk (when the cartridge's $BFFD bit 0 asks for it, as BASIC's does):
   the OS's boot enters the program at load+6 before it would start the

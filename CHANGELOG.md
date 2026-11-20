@@ -3,6 +3,29 @@
 Every release, newest first. Each release file has its version in its
 name, and every screen shows it at the right of the title bar.
 
+- **0.14** (2026-11-19), against 0.13:
+  - **A cartridge in the way** (the RAM test: the 8k, 16k and 32k+ RAM
+    tapes, the disk set's RAM disk, the boot disk from 16K): when the RAM
+    reaches $A000 and a cartridge is there (TRIG3 on an XL/XE; on a
+    400/800 $BFFC read as 0 eight times with ANTIC off), the 8K under it
+    can't be tested. The test warns at once (white flashes, nine clicks of
+    noise like typing), tests the RAM it can reach, and with no fault
+    never passes: bank 3 says `CART IN WAY`, the result line `CARTRIDGE
+    IN: $A000-$BFFF NOT TESTED`, and the result plays the white and the
+    typing in place of the charge. The menu's line 0 says `CART IN WAY`,
+    and the final code is the partial one. A fault still fails as ever.
+    The diag cartridge tests the RAM under itself, so it never warns.
+  - **Test 1 on a 400/800** reads the slot's $BFFC eight times with ANTIC
+    off: with nothing there, the bus could read $00 and an empty slot
+    showed `BASIC UNKNOWN` (item 2) with 40K or less.
+  - **The long memory test:** on a 130XE whose screen had moved to $7C00
+    (both lower screen blocks bad), the refresh check printed into
+    extended bank 3, a false B8 fault; and on a 16K 600XL the clock's NMI
+    was switched on before the RAM under the OS was found to be missing,
+    a rare crash.
+  - The simulator: `--slot` (a cartridge in an XL/XE's slot) and
+    `--dmabus` (the empty bus reads $00 while ANTIC fetches);
+    `tools/carttest.py`.
 - **0.13** (2026-11-19), against 0.12:
   - **The disk set** (`disk-set/`, new): the 8k tapes as disks, named as
     the tapes (`diag-8k-01-ram.atr` to `diag-8k-06-video.atr`,

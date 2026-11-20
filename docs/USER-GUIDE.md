@@ -4,10 +4,10 @@ By **Michael Grimm**, written with Claude (Anthropic's AI). Free to use,
 copy, change and share under the [MIT license](../LICENSE); please keep
 the credit when you pass it on.
 
-Version 0.13. Every file has its version in its name
-(`diag-disk-v0.13.atr`), and every screen at the right of its title bar
-(`V0.13`). If the two don't match, or a screen shows none, the file is an
-older one. This guide leaves the `-v0.13` out of the names.
+Version 0.14. Every file has its version in its name
+(`diag-disk-v0.14.atr`), and every screen at the right of its title bar
+(`V0.14`). If the two don't match, or a screen shows none, the file is an
+older one. This guide leaves the `-v0.14` out of the names.
 
 These programs test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
 800XL, 65XE, 800XE, 130XE and XE Game System. They report by colour and
@@ -106,7 +106,8 @@ an XL/XE. Switch on with it in drive 1:
 
 1. `0 RAM`: the RAM test again; its summary comes back to the menu (by
    itself after three codes, or at a key). The other tests keep their
-   results.
+   results. Its line says `PASS`, `FAIL`, `SKIPPED` (S) or `CART IN WAY`
+   (see [A cartridge in the way](#a-cartridge-in-the-way)).
 2. Tests 1 to 7.
 3. `8`: the results and the final code.
 4. `9 LONG RAM TEST`: the memory test, pass after pass until a key. It
@@ -238,11 +239,12 @@ unreadable or the screen is switched off:
 |---|---|---|---|
 | ![](img/color-green.png) | green | `#009B58` | alive (just after loading); everything passed |
 | ![](img/color-green-flash.png) | bright green flash | `#4CE5AB` | a pass: the charge, then one long flash per RAM bank or test that passed |
-| ![](img/color-yellow.png) | yellow | `#F0C55A` | testing. If it stays yellow and silent, the machine hung in that test. Memory test: an intermittent fault has been seen. At the end, with the start-up chirp: nothing failed, but not every test ran. `diag-8k-memtest` on an XL/XE: use `diag-16k-memtest` |
+| ![](img/color-yellow.png) | yellow | `#F0C55A` | testing. If it stays yellow and silent, the machine hung in that test. Memory test: an intermittent fault has been seen. At the end, with the start-up chirp: nothing failed, but not every test ran (or a cartridge hid some RAM). `diag-8k-memtest` on an XL/XE: use `diag-16k-memtest` |
 | ![](img/color-red.png) | red | `#891104` | a fault; the beep code follows |
 | ![](img/color-red-flash.png) | bright red flash | `#D15D57` | a fault beep (see the beep code below) |
 | ![](img/color-purple.png) | purple | `#AD3C9F` | waiting for you: a question to answer |
 | ![](img/color-orange.png) | bright orange flash | `#C06A22` | at switch-on, with a "pew" beep: a stuck joystick (see [A stuck joystick](#a-stuck-joystick)) |
+| ![](img/color-white.png) | white flash | `#F2EAF7` | with a sound like typing: a cartridge in the way, the RAM under it untested (see [A cartridge in the way](#a-cartridge-in-the-way)) |
 | ![](img/color-black.png) | black | `#000000` | the short gap between two flashes, and the moment after you answer a question |
 | ![](img/color-text.png) | light grey on black | `#CBC3D0` | the text screens |
 
@@ -262,7 +264,8 @@ Every flash comes with a beep, so you can read the code by eye or by ear.
 |---|---|---|
 | the charge: four rising notes, da-da-da-DAH (twice for the final pass) | bright green | a pass |
 | impending doom: three notes, dun dun DUNNN (C, C, then the F-sharp below: the tritone) | bright red | a fail; any beep code follows |
-| one rising chirp (the start-up one) | steady yellow | the final result when nothing failed but not every test ran (skipped with X or S, or not run from the menu): no pass yet |
+| one rising chirp (the start-up one) | steady yellow | the final result when nothing failed but not every test ran (skipped with X or S, or not run from the menu), or a cartridge hid some RAM: no pass yet |
+| typing: nine quick clicks, unevenly spaced | white | a cartridge in the way: at the start of the RAM test, and in place of the charge at its result (see [A cartridge in the way](#a-cartridge-in-the-way)) |
 | long beep (about 0.6 s, 440 Hz) | bright red | group A: **where**, counted. The RAM bank (1-4; the 130XE's extra banks are 5-8), or the test number |
 | short beep (about 0.2 s, 880 Hz) | bright red | group B: **what**, counted. For RAM, the data bit, D0 = 1 up to D7 = 8; for a test, the item |
 | low beep (about 0.6 s, 220 Hz) | bright red | the end of the list |
@@ -276,7 +279,8 @@ no picture can still tell you about.
 - **The RAM test** runs first, before anyone has said they can see the
   screen. A fail flashes the border with every beep, holds red for 3 s and
   plays again, over and over, until you press a key. A pass plays the
-  charge, then one long green flash per bank every 5 s, until a key.
+  charge, then one long green flash per bank every 5 s, until a key. With
+  a cartridge in the way and no fault: the typing, in white, instead.
 - **The ROM test** (test 1) plays its code once, lower than the RAM's: one
   long beep (330 Hz), then one short beep (660 Hz) per failed item, then
   the low beep. T or SELECT plays it again.
@@ -389,6 +393,33 @@ moment), testing it and putting it back:
    address and bits, with a hint (one bit: one RAM chip).
 4. R runs the whole RAM test again; any other key plays the tones again.
 
+### A cartridge in the way
+
+A cartridge (BASIC, or any other) switches off the 8K of RAM it sits over,
+$A000-$BFFF, and nothing can switch it back on. So when the RAM reaches
+the cartridge (a 48K 400/800, or any XL/XE but a 16K 600XL), the RAM test
+can't test all of it, and says so:
+- at the start, white flashes and a sound like typing; then it tests the
+  RAM it can reach.
+- A fault there is reported as ever: red, the code, `FAIL`.
+- With no fault it never says PASS. Bank 3's line says `CART IN WAY`, the
+  result line `CARTRIDGE IN: $A000-$BFFF NOT TESTED` (a tape's summary
+  still names the next tape below it), and the result plays the typing
+  again, in white, instead of the charge.
+- On the menu, line 0 says `CART IN WAY`, and the final code is the
+  partial one (steady yellow and one chirp).
+
+![RAM summary with BASIC in](img/ram-06-cartway.png)
+
+1. Bank 3: its top 8K sits under the cartridge.
+2. The line in place of `ALL PASSED`, and the next tape.
+
+Take the cartridge out and test again; check BASIC on its own with
+[BASCRC](#bascrc-the-basic-check-on-its-own). (A 40K 800 with a
+cartridge in gets the warning too: the test can't tell it from a 48K one.)
+The diag cartridge never warns: it switches itself off to test the RAM
+under it.
+
 ### ROMs (test 1)
 
 The test reads every ROM chip, works out its CRC32 checksum and looks it
@@ -430,8 +461,10 @@ On an XL/XE the OS is one 16K chip, named as a whole:
 
 Take BASIC out for the tests, and check it on its own with BASCRC
 (below). With a cartridge in, the 8K of RAM under it can't be tested (a
-48K 800 shows `RAM 40K`): nothing can switch a plain cartridge out, on a
-400/800 or an XL/XE. And with it out, it can't be the cause of a fault.
+48K 800 shows `RAM 40K`, and the RAM test says `CART IN WAY`: see
+[A cartridge in the way](#a-cartridge-in-the-way)): nothing can switch a
+plain cartridge out, on a 400/800 or an XL/XE. And with it out, it can't
+be the cause of a fault.
 
 If one is left in, a tape or a disk still runs: the OS boots the tape or
 disk before it would start BASIC, and the tests never hand the machine
@@ -653,6 +686,9 @@ This picture is from version 0.9, when the video test was on the tape
 1. Each mode has a line of text above it saying what it is:
 
 ![Video modes](img/av-03-modes.png)
+
+This picture is from version 0.13; only the version in the title bar has
+changed since.
 
 1. `ANTIC 6` and `ANTIC 7`: big text, wide and white, then tall and green.
 2. The bitmaps `ANTIC 8`, `A`, `B`, `D` and `F`, from coarse to fine: each

@@ -74,6 +74,9 @@ RUNS = {
         ('^NUMBERS AFTER FAIL', 0.1, 'system-02-results')]),   # (--auto: menu at +0.25 s)
     '16k': ('build/t16-fast', ['--ram', '0x4000', '--key', '10', '--until', '400'], [
         ('^R=RETEST  ANY OTHER KEY', 2, '16k-01-summary')]),
+    # a 48K 800 with BASIC in: the cartridge in the way (white, CART IN WAY)
+    'cartway': ('build/t16-fast', ['--basic', '@BASIC', '--key', '10', '--until', '400'], [
+        ('^CARTRIDGE IN: $A000', 2, 'ram-06-cartway')]),
     '32k-sum': ('build/t32-fast', ['--xl', '--auto', '--basic', '@BASIC', '--key', '10',
                                    '--until', '600'], [   # (--auto: past stage 1's result;
         ('^T=TONES AND WAIT', 0.1, '32k-01-summary')]),   # it goes on at +0.25 s)
@@ -115,6 +118,7 @@ ANNOT = {
     'system-01-menu': [(4, 10, 1), (11, 11, 2), (18, 20, 3)],
     'system-02-results': [(4, 10, 1), (12, 16, 2)],
     '16k-01-summary': [(5, 6, 1), (7, 10, 2), (14, 16, 3), (23, 23, 4)],
+    'ram-06-cartway': [(9, 9, 1), (16, 17, 2)],
     '32k-01-summary': [(5, 6, 1), (7, 11, 2), (14, 16, 3), (22, 23, 4)],
     '32k-02-menu': [(4, 4, 1), (5, 11, 2), (12, 12, 3), (18, 20, 4)],
     'memtest-01-running': [(5, 5, 1), (6, 6, 2), (8, 9, 3), (23, 23, 4)],
@@ -156,6 +160,7 @@ COLORS = [
     ('red', 0x34, 'a fault: the beep code follows'),
     ('purple', 0x56, 'waiting for you: a question'),
     ('orange', 0x28, 'a stuck joystick at switch-on, with a "pew" beep'),
+    ('white', 0x0E, 'a cartridge in the way: the RAM under it untested, with a "typing" sound'),
     ('black', 0x00, 'the text background'),
     ('text', 0x0C, 'the text (luminance 12)'),
 ]
@@ -218,7 +223,7 @@ def main():
     for c in swatches(a.palette):
         print(f"{c['name']:10s} {c['atari']}  {c['rgb']}")
     names = a.only or list(RUNS)
-    if {'16k', '32k', '32k-sum'} & set(names) and not a.nofast:
+    if {'16k', 'cartway', '32k', '32k-sum'} & set(names) and not a.nofast:
         fastbuilds()
     with ThreadPoolExecutor(len(names)) as ex:
         for name, got, missing, err in ex.map(lambda n: run(n, a.sysroms, a.palette), names):

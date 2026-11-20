@@ -47,9 +47,9 @@ RAM, so the tapes still load on a machine too sick to boot a disk. Tape is
 slow (about 3K a minute), so they come in sets by RAM size: the more RAM,
 the fewer tapes.
 
-Version 0.13. Every file has its version in its name
-(`diag-disk-v0.13.atr`) and every screen shows it at the right of the
-title bar (`V0.13`). The names here leave the `-v0.13` out.
+Version 0.14. Every file has its version in its name
+(`diag-disk-v0.14.atr`) and every screen shows it at the right of the
+title bar (`V0.14`). The names here leave the `-v0.14` out.
 
 ## Get started
 
@@ -63,8 +63,8 @@ title bar (`V0.13`). The names here leave the `-v0.13` out.
    it in drive 1 (or mount it as D1:) and switch on; for a tape, hold
    START, switch on, start the tape and press a key when it beeps. With a
    disk or a tape, take any cartridge out, BASIC too: the 8K of RAM under
-   it can't be tested while it's in (a 48K 800 shows `RAM 40K`), and out,
-   it can't be the cause of a fault. Check a BASIC cartridge on its own
+   it can't be tested while it's in (a 48K 800 shows `RAM 40K`; the RAM
+   test says `CART IN WAY`), and out, it can't be the cause of a fault. Check a BASIC cartridge on its own
    with BASCRC (its own disk or tape).
 3. Watch and listen: green is good, red plus beeps is a fault. Long beeps
    say where (the RAM bank or the test), short beeps say what (the data
@@ -100,22 +100,18 @@ as an XL/XE (64K, and a 128K 130XE). Not tried yet: a physical disk
 drive, and the cartridge and the cassettes on a real machine. Reports
 from other machines are welcome.
 
-## New in 0.13 (2026-11-19)
+## New in 0.14 (2026-11-19)
 
-- **The disk set** (`disk-set/`): the 8k tapes as disks, one test to a
-  disk, for a machine the boot disk can't get far on.
-- **The long memory test on a disk of its own**
-  (`disks/diag-16k-memtest.atr`).
-- **The ROM test checks a BASIC cartridge** (rev A, B or C), as it does an
-  XL/XE's built-in BASIC.
-- **The long memory test is one march** over all the RAM (16K and up),
-  the RAM under an XL/XE's OS included, in place of a march per bank and
-  an address test; and **it checks the refresh:** once a pass the screen
-  goes off and the RAM is left alone for 5 seconds, twice.
-- `diag-16k-03-hello` is the whole sound test; the "hello" is packed to
-  half its size; the paddle test has no fast scan (it can't read
-  paddles); the video modes page's `VSCROL` line moves a scan line at a
-  time. BASCRC stays, on its disk and its tape.
+- **A cartridge in the way:** a cartridge (BASIC or any other) switches
+  off the 8K of RAM under it, so with one in, the RAM test can't test it
+  all. It now says so: white flashes and a sound like typing, then it
+  tests the RAM it can reach, and with no fault it never says PASS: bank
+  3 and the menu's line 0 say `CART IN WAY`. Take the cartridge out to
+  test all of the RAM.
+- **Fixes from a code review of 0.13:** test 1 on a 400/800 with 40K or
+  less and an empty slot could take the empty bus for a cartridge (`BASIC
+  UNKNOWN`); the long memory test could show false bank 8 errors on a
+  130XE whose screen had moved to $7C00, and could crash on a 16K 600XL.
 
 Every version, in full: [CHANGELOG.md](CHANGELOG.md).
 

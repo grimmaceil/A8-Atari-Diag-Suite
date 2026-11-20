@@ -12,7 +12,7 @@ diagnostic information as possible, first through border colours and
 beeps that work with no picture at all, then as plain text once the video
 hardware has proven itself.
 
-This document is the design as built at version 0.13: what is tested, how
+This document is the design as built at version 0.14: what is tested, how
 results are reported, and why. How the code is put together is in
 [docs/DEVELOPMENT.md](../DEVELOPMENT.md); how to use it, in the
 [user guide](../USER-GUIDE.md).
@@ -105,7 +105,9 @@ the OS found; the long test and the "hello" need 16K).
 - Green: alive, a pass. Bright green flash: a pass beep.
 - Yellow: testing (a hang shows which test it stopped in). Memory test:
   an intermittent fault seen. At the end with the start-up chirp: nothing
-  failed, but not every test ran.
+  failed, but not every test ran (or a cartridge hid some RAM).
+- White: a cartridge in the way (with the typing sound below).
+- Orange: a stuck joystick at switch-on (with a "pew").
 - Red: a fault. Bright red flash: a fault beep.
 - Purple: waiting for an answer.
 - Colour is never needed to read a result: every colour comes with a sound.
@@ -115,6 +117,11 @@ the OS found; the long test and the "hello" need 16K).
   it waits without text, one long green flash per 16K bank (RAM) every
   5 s.
 - **Fail:** "impending doom", C4 C4 F#3, then the code if it has one.
+- **A cartridge in the way** (it switches the 8K of RAM under it off, and
+  nothing switches it back on): nine clicks of noise, unevenly spaced like
+  typing, the border white on each; at the start of the RAM test, and with
+  no fault in place of the charge at its result, which then never says
+  PASS (`CART IN WAY`). A real fault still fails.
 - **The code:** group A, long beeps (~600 ms): where (the RAM bank 1-4,
   the 130XE's banks 5-8, or the test); group B, short beeps (~200 ms):
   what (the data bit counted 1-8, D0 = 1, or the item); one B group per
@@ -383,11 +390,11 @@ BASIC on its own against the same A, B and C values.
   transistors that empty the capacitors (Altirra Hardware Reference
   Manual, 5.9).
 
-## 13. Status at 0.13 (2026-11-19)
+## 13. Status at 0.14 (2026-11-19)
 
 All formats run on the MiSTer Atari800 core as a 400/800 and as an XL/XE
-(64K, and a 128K 130XE). The executables (up to 0.11) ran on a real 800
-and 800XL over an SIO adapter, where the joystick and paddle ports were
-tested. Where the author has tried them, the results have been right: the
+(64K, and a 128K 130XE). The executables (up to 0.11) and the boot disk
+ran on a real 800 and 800XL over SIO2PC with AspeQt, where the joystick
+and paddle ports were tested. Where the author has tried them, the results have been right: the
 RAM banks and their beeps, the ROM names, the self-checks, BASIC by test 1
 and by BASCRC on an 800.

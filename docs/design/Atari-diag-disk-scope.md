@@ -3,7 +3,7 @@
 By **Michael Grimm**, written with Claude (Anthropic's AI). MIT license
 (see [LICENSE](../../LICENSE)).
 
-Status at 0.13 (2026-11-19): built, and checked in the simulator on 8K
+Status at 0.14 (2026-11-19): built, and checked in the simulator on 8K
 and on 16K and up. The boot disk has its own design,
 [Atari-diag-boot-disk-scope.md](Atari-diag-boot-disk-scope.md); how the
 code is put together is in [docs/DEVELOPMENT.md](../DEVELOPMENT.md).
