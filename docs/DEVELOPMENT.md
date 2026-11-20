@@ -197,8 +197,15 @@ machine itself (`common/boot.asm`: POKEY, ANTIC, the motor).
 
 `carts/diag-cart.car` is an AtariMax 128K (`.car` type 41: 16 banks of 8K
 at $A000-$BFFF; a write to $D500+n selects bank n, $D510 switches the
-cartridge off). The tests run from ROM, so they need 8K of RAM and no
-loading. `build_car` assembles the code banks with `ROM=1` and
+cartridge off). `carts/diag-cart-8mbit.bin` is the same cartridge for the
+8 Mbit MaxFlash (128 banks: $D500-$D57F select, $D580-$D5FF off), the raw
+1 MB image Maxflash Cartridge Studio writes (Cartridge, Program, Maxflash
+8Mbit); `build_car(big=True)` assembles the three code banks again with
+`CART8M`, which sets `CARTOFF` (`romsum.asm`) to $D580 for the three
+writes that switch the cartridge off (`undercart`, `ldmem`, `t_rom`'s
+`bw_src`), and `mkcar.py --raw8m` fills banks 16-127 with the tail alone
+(a `.car` of type 75 stays in `build/` for the simulator). The tests run
+from ROM, so they need 8K of RAM and no loading. `build_car` assembles the code banks with `ROM=1` and
 `tools/mkcar.py` packs them (`src/cart/romsum.asm` has the layout):
 
 - **Bank 0, the RAM test:** `tape1/main.asm` with `stage2.asm` in the same
@@ -217,7 +224,8 @@ loading. `build_car` assembles the code banks with `ROM=1` and
 
 BSS is one page of RAM at $0800 shared by all the banks, so results travel
 with a bank switch. Every bank ends with the same 32 bytes (mkcar's
-`TAIL`): the power-on jump to bank 0, the bank's sum at $BFEE, the switch
+`TAIL`; on the 8 Mbit all 128, as it powers up in bank 0, or bank 127 on
+older ones): the power-on jump to bank 0, the bank's sum at $BFEE, the switch
 at $BFF0 (`sta $D500,x` / `jmp $A003`: the instruction after the write
 comes from the new bank, which holds the same bytes), each code bank's
 CRC32 at $BFF6, and the cartridge header.
@@ -448,8 +456,9 @@ These came from the author's direction over the sessions:
 `tools/sim.py` runs a program on a cycle-timed 6502 (py65), with 114
 cycles a scan line and a floating bus. It models:
 - the cassette boot, and later stages read through a stand-in for SIOV;
-  a `.xex` loaded as DOS loads it (`--memlo`); a `.car` (AtariMax 128K),
-  with the bank switches and the cartridge switching itself off; an `.atr`
+  a `.xex` loaded as DOS loads it (`--memlo`); a `.car` (AtariMax 128K,
+  or 1 MB: type 75 starts in bank 0, type 42 in bank 127), with the bank
+  switches and the cartridge switching itself off; an `.atr`
   (the OS's disk boot, disk reads through SIOV at an 810's pace, a sector
   that fails with `--diskerr SECTOR[:TIMES]`, and the OS's own VBI doing
   its shadow copies)
@@ -554,8 +563,9 @@ Notes from the sessions, for whoever works on this next.
   display list generator that got this wrong scrolled the whole page.
 - A cartridge in a 400/800 disables the RAM under it in hardware: no
   program can see it (a 48K 800 with BASIC shows 40K). An AtariMax can
-  switch itself off ($D510) and back on (a bank select), which is how the
-  diag cartridge counts and tests that RAM. Every other RAM test can only
+  switch itself off ($D510 on the 128K, $D580 on the 8 Mbit, where $D510
+  selects bank 16) and back on (a bank select), which is how the diag
+  cartridge counts and tests that RAM. Every other RAM test can only
   say so: `CARTIN` (BADMASK's entry 15), set by tape 1's `cartchk`, read
   by stage 1's results, stage 2's summary and the menu's line 0.
 - An empty address reads what was last on the bus, and with ANTIC

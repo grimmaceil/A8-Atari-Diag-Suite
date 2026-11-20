@@ -16,13 +16,13 @@ they still help when the picture is bad. No programming is needed. There
 are four ways to run them, all with the same screens, colours and beeps.
 **The cartridge is the best test:** it runs from its own ROM, so it needs
 the least RAM and nothing loads: plug it in and go. It takes an AtariMax
-128K flash cartridge, which you may have already. The disks and the
-cassettes are the free ways (and the way in when the cartridge port is
-bad); of those, start with the boot disk:
+flash cartridge (the 128K one, or the 8 Mbit MaxFlash), which you may
+have already. The disks and the cassettes are the free ways (and the way
+in when the cartridge port is bad); of those, start with the boot disk:
 
 | Way | File | Needs | What it is |
 |---|---|---|---|
-| **The cartridge** | `carts/diag-cart.car` | 8K; an AtariMax 128K flash cartridge | the best test: every test on one menu, run from its own ROM: nothing to load, so it works when the RAM is too sick to load a program. See [From the cartridge](#from-the-cartridge) |
+| **The cartridge** | `carts/diag-cart.car` (AtariMax 128K) or `carts/diag-cart-8mbit.bin` (8 Mbit MaxFlash) | 8K; an AtariMax flash cartridge | the best test: every test on one menu, run from its own ROM: nothing to load, so it works when the RAM is too sick to load a program. See [From the cartridge](#from-the-cartridge) |
 | **The boot disk** | `disks/diag-disk.atr` | 8K; a disk drive or an SIO adapter (SIO2PC, SIO2SD, FujiNet); no DOS | the most convenient free way: every test on one menu, each loaded from the disk as you pick it. See [From the boot disk](#from-the-boot-disk) |
 | **The disk set** | `disk-set/diag-8k-*.atr` | 8K; a disk drive or an SIO adapter | the 8k tapes as disks, one test to a disk, no menu: for a machine the boot disk can't get far on. See [The disk set](#the-disk-set) |
 | **Cassettes** | `cassettes/*.cas` | a cassette recorder, or a PC playing the tape | no disk drive needed: a tape still loads where a disk won't boot. See [Cassettes](#cassettes) |
@@ -141,9 +141,13 @@ DISK`.
 
 `carts/diag-cart.car` is an AtariMax 128K cartridge image (`.car` type
 41): write it to an AtariMax 128K flash cartridge with its own flasher.
-The tests run from the cartridge itself, not from RAM, so it works on any
-Atari, an 8K 400 included, and on a machine whose RAM is too sick to load
-a program. Switch on with it in:
+For the 8 Mbit MaxFlash (1 MB) use `carts/diag-cart-8mbit.bin` instead,
+the same cartridge laid out for that one (see [On an 8 Mbit
+MaxFlash](#on-an-8-mbit-maxflash)). Either way the cartridge holds only
+the diag tests, with no Maxflash menu in front. The tests run from the
+cartridge itself, not from RAM, so it works on any Atari, an 8K 400
+included, and on a machine whose RAM is too sick to load a program.
+Switch on with it in:
 
 1. The RAM test starts at once (green border and a chirp, then yellow
    while it tests) and ends on the RAM summary, which plays its code three
@@ -171,6 +175,28 @@ are explained under [From the boot disk](#from-the-boot-disk)):
   also checks the built-in BASIC, switching itself off for the moment it
   takes to read it.
 
+#### On an 8 Mbit MaxFlash
+
+`carts/diag-cart-8mbit.bin` is a raw 1 MB image: write it whole, as it
+is, so the cartridge starts the tests itself. With the Atarimax USB
+programmer and Maxflash Cartridge Studio: **Cartridge, Program, Maxflash
+8Mbit Flash Cartridge**, and pick the `.bin` (don't add it to a workbook:
+that puts the Maxflash menu in front of it). The log ends `Programming
+Cycle Complete`. Things to know, from a 2.64 Studio:
+
+- The Studio may want newer programmer firmware first ("Firmware update
+  required to perform this operation"): **Tools, Update Programmer
+  Firmware, Automatic Upgrade to Minimum Required Version** does it.
+- If the programmer starts dropping off USB and coming back over and over
+  (the log repeats `Programmer disconnected`, `Programmer connected`),
+  close the Studio, unplug the programmer and plug it back in. Reading
+  the cartridge back (Dump) right after programming set this off; the
+  real check is the Atari itself: switch on, and the RAM test starts.
+
+The 8 Mbit cartridge switches itself off at a different address from the
+128K one, which is why it has its own file; the tests and screens are
+the same, `DIAG-CART` in the title bar included.
+
 ### A stuck joystick
 
 A joystick switch connects its line to ground, so a switch that sticks, a
@@ -192,7 +218,8 @@ tape, the disks and the cartridge have it.
 
 ## Every test, and where to find it
 
-The boot disk and the cartridge have every test on their menu (above).
+The boot disk and the cartridge have every test on their menu (above);
+`diag-cart.car` below stands for the 8 Mbit `diag-cart-8mbit.bin` too.
 The tapes and the disk set have each one too. The columns are the RAM a
 file needs, and each cell lists the cartridge, then the disks, then the
 tapes. A machine can use everything in its own column and in the columns
@@ -1108,7 +1135,10 @@ ROM test reads a BASIC cartridge in it.
 
 Real 800 and 800XL machines, over SIO2PC with AspeQt: the boot disk, and
 the executables (`.xex`) up to 0.11. The joystick and paddle ports get
-their real test there. Every format has also run on the author's
-development set-up, the MiSTer's Atari800 core, as a 400/800 and as an
-XL/XE (64K and a 128K 130XE). Not tried yet: a physical disk drive, and
-the cartridge and the cassettes on a real machine.
+their real test there. The cartridge, on an 8 Mbit MaxFlash (0.14), in a
+real 48K 800: every test, the results, the self-check, and the 8K under
+it (48K shown). Every format has also run on the author's development
+set-up, the MiSTer's Atari800 core, as a 400/800 and as an XL/XE (64K
+and a 128K 130XE). Not tried yet: a physical disk drive, the 128K
+AtariMax cartridge on a real machine, and the cassettes on a real
+machine.

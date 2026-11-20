@@ -23,15 +23,16 @@ and goes on by itself, so a machine left alone runs on to the ROM test.
 All of them show the same tests, screens, colours and beeps. **The
 cartridge is the best test:** it runs from its own ROM, so it needs the
 least RAM and nothing loads: plug it in and switch on. It takes an
-AtariMax 128K flash cartridge, which you may have already. The disks and
-the cassettes are the free ways, and the way in when the cartridge port
-itself is bad: **the boot disk** is the most convenient of them; the disk
-set has one test to a disk, for a machine the boot disk can't get far on;
-the cassettes need no disk drive at all.
+AtariMax flash cartridge (the 128K one or the 8 Mbit MaxFlash), which you
+may have already. The disks and the cassettes are the free ways, and the
+way in when the cartridge port itself is bad: **the boot disk** is the
+most convenient of them; the disk set has one test to a disk, for a
+machine the boot disk can't get far on; the cassettes need no disk drive
+at all.
 
 | | File | Needs | What it is |
 |---|---|---|---|
-| **Cartridge** | `carts/diag-cart.car` | any Atari (8K); an AtariMax 128K flash cartridge | the best test: every test on one menu, run from its own ROM: no loading, and it works when the RAM is too sick to load a program into |
+| **Cartridge** | `carts/diag-cart.car` (AtariMax 128K), `carts/diag-cart-8mbit.bin` (8 Mbit MaxFlash, a raw 1 MB image) | any Atari (8K); an AtariMax flash cartridge | the best test: every test on one menu, run from its own ROM: no loading, and it works when the RAM is too sick to load a program into |
 | **Boot disk** | `disks/diag-disk.atr` | any Atari (8K) with a disk drive or an SIO adapter (SIO2PC, SIO2SD, FujiNet) | the most convenient free way: the cartridge's menu from a disk you boot: no DOS; each test loads as you pick it; the long test and the "hello" with 16K |
 | **Disk set** | `disk-set/diag-8k-01-ram.atr` to `diag-8k-06-video.atr`, `diag-8k-memtest.atr` | any Atari (8K) with a disk drive or an SIO adapter | the 8k tapes as disks, the same programs: one test to a disk, no menu, no DOS. With 16K or more the RAM disk tests the rest by itself, the sound disk adds the "hello", and the memtest disk runs `diag-16k-memtest` |
 | **Memory test disk** | `disks/diag-16k-memtest.atr` | 16K; a disk drive or an SIO adapter | boots straight into the long memory test (`diag-16k-memtest`) |
@@ -94,11 +95,13 @@ fails. It has a table of every test and the files that have it.
 
 Tried on a real 800 and a real 800XL over SIO2PC with AspeQt: the boot
 disk, and the executables (`.xex`) up to 0.11. The joystick and paddle
-ports get their real test there. Every format has also run on the
-author's development set-up, the MiSTer's Atari800 core, as a 400/800 and
-as an XL/XE (64K, and a 128K 130XE). Not tried yet: a physical disk
-drive, and the cartridge and the cassettes on a real machine. Reports
-from other machines are welcome.
+ports get their real test there. The cartridge on an 8 Mbit MaxFlash in a
+real 48K 800: every test, straight from power-on. Every format has also
+run on the author's development set-up, the MiSTer's Atari800 core, as a
+400/800 and as an XL/XE (64K, and a 128K 130XE). Not tried yet: a
+physical disk drive, the 128K AtariMax cartridge on a real machine, and
+the cassettes on a real machine. Reports from other machines are
+welcome.
 
 ## New in 0.14 (2026-11-19)
 
@@ -108,6 +111,11 @@ from other machines are welcome.
   tests the RAM it can reach, and with no fault it never says PASS: bank
   3 and the menu's line 0 say `CART IN WAY`. Take the cartridge out to
   test all of the RAM.
+- **The cartridge on the 8 Mbit MaxFlash:** `carts/diag-cart-8mbit.bin`
+  is a raw 1 MB image for Maxflash Cartridge Studio's Cartridge, Program:
+  the cartridge holds only the diag tests and starts them at power-on, no
+  Maxflash menu. Tried in a real 800: every test, and the 8K under the
+  cartridge tested (48K shown).
 - **Fixes from a code review of 0.13:** test 1 on a 400/800 with 40K or
   less and an empty slot could take the empty bus for a cartridge (`BASIC
   UNKNOWN`); the long memory test could show false bank 8 errors on a

@@ -51,7 +51,7 @@ Memory decoding:
 
 | Format | Needs | Strengths |
 |---|---|---|
-| Cartridge (`diag-cart.car`, AtariMax 128K) | 8K of RAM, a flash cartridge | The best test: no loading, every test on one menu, runs from ROM, tests the RAM under itself: for RAM too sick to load a program into |
+| Cartridge (`diag-cart.car`, AtariMax 128K; `diag-cart-8mbit.bin`, 8 Mbit MaxFlash) | 8K of RAM, a flash cartridge | The best test: no loading, every test on one menu, runs from ROM, tests the RAM under itself: for RAM too sick to load a program into |
 | Boot disk (`diag-disk.atr`) | 8K of RAM, a disk drive or an SIO adapter; no DOS | The most convenient free way: the cartridge's menu, each test loaded as it is picked; the long test and the "hello" with 16K |
 | Disk set (`disk-set/`) | 8K, a disk drive or an SIO adapter | The 8k tapes as disks, one test to a disk, no menu: for when the boot disk can't get far |
 | Cassettes (`.cas`) | 8K and up, by set | No drive, no DOS, no flash cartridge: for an 8K 400 or a machine too sick to boot a disk |
@@ -201,7 +201,7 @@ or disk runs with BASIC in.
 | Set | Files |
 |---|---|
 | Boot disk | `diag-disk.atr`: everything on the cartridge's menu, each test loaded as picked; the long memory test on line 9 (16K) |
-| Cartridge | `diag-cart.car`: everything; the long memory test on menu line 9 (16K) |
+| Cartridge | `diag-cart.car` (or `diag-cart-8mbit.bin`): everything; the long memory test on menu line 9 (16K) |
 | Other disks | `diag-16k-memtest.atr` (boots into the long memory test), `diag-bascrc.atr` (boots into BASCRC; also a DOS 2 disk with `BASCRC.XEX` and `BASCRC.LST`) |
 | Disk set | the 8k tapes as disks: `diag-8k-01-ram.atr` to `diag-8k-06-video.atr`, `diag-8k-memtest.atr`; on 16K the RAM disk loads its part 2 itself, the sound disk adds the "hello", the memtest disk runs `diag-16k-memtest` |
 | 8k set | `diag-8k-01-ram` (stage 2 on 16K and up: its own RAM, the XL/XE extras), `-02-rom`, `-03-input` (2, 3), `-04-ports` (4, 5), `-05-sound` (6), `-06-video` (7), `diag-8k-memtest` |
@@ -357,9 +357,11 @@ BASIC on its own against the same A, B and C values.
   130XE, from the schematics, so a RAM fault names its chip.
 - [ ] The 130XE's ANTIC-access check (PORTB bit 5): a pattern in an
   extended bank shown on screen.
-- [ ] The cartridge and the cassettes on a real machine, and a disk from
-  a physical drive (so far the MiSTer; the boot disk and the executables,
-  up to 0.11, ran on real machines over SIO2PC with AspeQt).
+- [ ] The 128K AtariMax cartridge and the cassettes on a real machine,
+  and a disk from a physical drive (so far the MiSTer; the boot disk and
+  the executables, up to 0.11, ran on real machines over SIO2PC with
+  AspeQt; the cartridge on an 8 Mbit MaxFlash ran in a real 48K 800 at
+  0.14).
 - [ ] The BASCRC tape (`ENTER "C:"`) confirmed on a MiSTer or a real
   recorder; BASCRC runs on an 800 (0.13).
 - [ ] The refresh check seen to catch a real refresh fault (it catches

@@ -420,7 +420,7 @@ cu_lp	lda CRC,x
 	.error "the low-RAM readers are too long for bwcopy"
 	.endif
 ; bw_src: runs at BWAT, with crcpg right behind it (copied along).
-bw_src	sta $D510		; the cartridge off
+bw_src	sta CARTOFF		; the cartridge off
 	lda PORTB
 	pha
 	and #$FD		; BASIC in

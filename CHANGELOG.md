@@ -15,6 +15,15 @@ name, and every screen shows it at the right of the title bar.
     typing in place of the charge. The menu's line 0 says `CART IN WAY`,
     and the final code is the partial one. A fault still fails as ever.
     The diag cartridge tests the RAM under itself, so it never warns.
+  - **The cartridge on the 8 Mbit MaxFlash** (`carts/diag-cart-8mbit.bin`,
+    new): the same cartridge as a raw 1 MB image for Maxflash Cartridge
+    Studio's Cartridge, Program (128 banks), with no Maxflash menu. That
+    cartridge switches itself off at $D580 ($D510 selects bank 16 there),
+    so its three code banks are built with `CART8M`; every bank carries
+    the power-on jump to bank 0 (older ones start in bank 127). Tried in
+    a real 48K 800: every test, the self-check, the 8K under it. The
+    128K `.car` is byte for byte as before. The simulator runs 1 MB
+    `.car` files (types 42 and 75).
   - **Test 1 on a 400/800** reads the slot's $BFFC eight times with ANTIC
     off: with nothing there, the bus could read $00 and an empty slot
     showed `BASIC UNKNOWN` (item 2) with 40K or less.

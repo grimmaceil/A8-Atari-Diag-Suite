@@ -67,7 +67,7 @@ class Atari:
         self.osrom = None        # --osrom: a real OS image (10K or 16K)
         self.basic = None        # --basic: a real 8K BASIC (or cartridge)
         self.pm = {}            # GRACTL, PMBASE: for the P/M color mask in screen()
-        self.car = None          # .car: an AtariMax 128K (16 x 8K at $A000)
+        self.car = None          # .car: an AtariMax 128K (16 x 8K at $A000) or 1 MB (128)
         self.carbank, self.caron = 0, False
         self.carlog = []         # (line, 'bank n' / 'off')
         self.ddrb = 0xFF if xl else 0x00   # PIA port B direction, as the OS sets it
@@ -79,10 +79,14 @@ class Atari:
                                  # SKCTL bit 4 (async receive) holds it silent
 
     def _carsel(self, a):
-        """AtariMax: an access to $D500-$D50F selects bank n, $D510-$D51F
-        switches the cartridge off."""
-        if self.car is not None and a & 0xFF < 0x20:
-            on, bank = not a & 0x10, a & 0x0F
+        """AtariMax 128K: an access to $D500-$D50F selects bank n, $D510-$D51F
+        switches the cartridge off. 1 MB (the 8 Mbit MaxFlash): $D500-$D57F
+        bank n, $D580-$D5FF off."""
+        if self.car is None:
+            return
+        big = len(self.car) > 0x20000
+        if big or a & 0xFF < 0x20:
+            on, bank = (not a & 0x80, a & 0x7F) if big else (not a & 0x10, a & 0x0F)
             if (on, bank) != (self.caron, self.carbank):
                 self.carlog.append((self.line, f'bank {bank}' if on else 'off'))
             self.caron = on
@@ -801,11 +805,14 @@ def main():
         img = max((d for _, d in xex), key=len)
     elif a.tape.lower().endswith('.car'):
         # The OS's cold start finds the cartridge and runs it (CARTRUN at
-        # $BFFA, in the bank it starts in: 0); RAMTOP stops below it.
+        # $BFFA, in the bank it starts in: 0; an older 8 Mbit MaxFlash,
+        # type 42, starts in 127); RAMTOP stops below it.
         raw = open(a.tape, 'rb').read()
-        assert raw[:4] == b'CART' and struct.unpack('>I', raw[4:8])[0] == 41, 'not an AtariMax 128K .car'
+        ctype = struct.unpack('>I', raw[4:8])[0]
+        assert raw[:4] == b'CART' and ctype in (41, 42, 75), 'not an AtariMax .car (41, 42, 75)'
         car = raw[16:]
-        assert len(car) == 0x20000
+        assert len(car) == (0x20000 if ctype == 41 else 0x100000)
+        carstart = 127 if ctype == 42 else 0
         img = bytes(6)                     # (the image: whichever the menu copies)
     elif a.tape.lower().endswith('.atr'):
         # The OS's disk boot: sector 1's header says how many sectors and
@@ -896,8 +903,8 @@ def main():
             print(f'xex loaded at {hw.line / LINES_PER_MS / 1000:.1f} s, run ${mpu.pc:04X}')
         xex_next()
     elif car is not None:
-        hw.car, hw.caron = car, True
-        mpu.pc = car[0x1FFA] | car[0x1FFB] << 8
+        hw.car, hw.caron, hw.carbank = car, True, carstart
+        mpu.pc = car[carstart * 0x2000 + 0x1FFA] | car[carstart * 0x2000 + 0x1FFB] << 8
         key, at = a.pick.split(':')
         hw.press(to_line(at), 'CON', {'START': 1, 'SELECT': 2}[key.upper()])
     else:

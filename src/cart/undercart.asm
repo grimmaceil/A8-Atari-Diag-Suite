@@ -1,7 +1,7 @@
 ; undercart: the 8K of RAM the cartridge sits over, $A000-$BFFF. With the
 ; cartridge in, that RAM is switched off, so the machine looks 8K smaller
 ; (48K shows as 40K, as with a BASIC cartridge). An AtariMax can switch
-; itself off ($D510) and on again (a bank select), so a loop in low RAM
+; itself off (CARTOFF) and on again (a bank select), so a loop in low RAM
 ; (ucsrc, copied to UCAT: the code in ROM is gone meanwhile) switches it
 ; off, tests the 8K and switches bank 0 back in. Only when the RAM reaches
 ; the cartridge (RAMTOP = $A000): a smaller machine has nothing there.
@@ -75,7 +75,7 @@ uc_x	rts
 ; ucsrc: runs at UCAT (branches, and jumps by their UCAT address). X 0:
 ; only the look, 1: the test too. Returns X = 1 if there is RAM (UCERR =
 ; its bad bits), 0 if not.
-ucsrc	sta $D510		; the cartridge off
+ucsrc	sta CARTOFF		; the cartridge off
 	ldy #0
 	sty UCERR
 	sty PTR

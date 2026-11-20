@@ -6,7 +6,8 @@
 ;   $A000  jmp cold    power-on (only bank 0's is used: the tail below
 ;                      takes every bank there)
 ;   $A003  jmp warm    from another bank, with XREQ saying what for
-; tools/mkcar.py writes the same tail into all 16 banks:
+; tools/mkcar.py writes the same tail into every bank (16, or 128 on the
+; 8 Mbit MaxFlash: whichever bank the cartridge powers up in leads to bank 0):
 ;   $BFE0  ldx #0 / sta $D500,x / jmp $A000   the OS's run address: bank
 ;                                             0's cold start
 ;   $BFE8  rts                                the OS's init address
@@ -16,11 +17,20 @@
 ;          the ROM test checks it, t_rom.asm)
 ;   $BFFA  the cartridge header
 ; A write to $D500+n selects bank n; the instruction after it comes from
-; the new bank, which holds the same bytes there.
+; the new bank, which holds the same bytes there. A write to CARTOFF
+; switches the cartridge off: the 128K AtariMax decodes $D500-$D51F (banks
+; 0-15, off at $D510-$D51F), the 8 Mbit MaxFlash $D500-$D5FF (banks 0-127,
+; off at $D580-$D5FF). Only these three writes differ between the two
+; (undercart, ldmem, t_rom's bw_src): CART8M, build.py's 8 Mbit build.
 ROMBASE	= $A000
 RSUMAT	= $BFEE
 RCRCAT	= $BFF6
 XBANK	= $BFF0
+	.ifdef CART8M
+CARTOFF	= $D580
+	.else
+CARTOFF	= $D510
+	.endif
 XREQ	= BSS+$FC		; what a bank is entered for: 0 the menu, 1-7 that
 				; test, 8 the long memory test's loader
 

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Build the cartridge: an AtariMax 128K (.car type 41), 16 banks of 8K at
-$A000-$BFFF. The tests run from ROM (src/cart/romsum.asm has the layout):
+$A000-$BFFF; or with --raw8m, the same programs on the 8 Mbit MaxFlash
+(128 banks: the code banks built with CART8M, romsum.asm), as the raw 1 MB
+image its flasher writes (Maxflash Cartridge Studio: Cartridge, Program)
+and a .car of type 75 for the simulator. The tests run from ROM
+(src/cart/romsum.asm has the layout):
 
   the code banks    one program each, assembled at $A000 (build.py):
                     0 the RAM test, 1 and 2 the system tests and the menu
@@ -9,10 +13,11 @@ $A000-$BFFF. The tests run from ROM (src/cart/romsum.asm has the layout):
                     menu's loader copies it to RAM (src/cart/ldmem.asm)
   then              data banks (--data): one file each, from $A000, read
                     while that bank is switched in (src/cart/hello.asm)
-  every bank        the same 32-byte tail at $BFE0: the power-on jump to
-                    bank 0, the bank's sum, the bank switch (XBANK), a
-                    code bank's CRC32 ($A000-$BEFF, for the ROM test's
-                    self-check) and the cartridge header
+  every bank        the same 32-byte tail at $BFE0 (all 128 on the 8 Mbit:
+                    it powers up in bank 0, or bank 127 on older ones): the
+                    power-on jump to bank 0, the bank's sum, the bank
+                    switch (XBANK), a code bank's CRC32 ($A000-$BEFF, for
+                    the ROM test's self-check) and the cartridge header
 """
 import argparse
 import struct
@@ -30,6 +35,8 @@ CODEMAX = 0x1F00               # a code bank's code: $A000-$BEFF, which its
 CRCAT = 0x1FF6                 # CRC32 at $BFF6 covers (t_rom.asm's selfchk)
 DATAPG = 0x1F                  # image pages in a data bank ($A000-$BEFF)
 CARTYPE = 41                   # AtariMax 128K
+CARTYPE8M = 75                 # AtariMax 1 MB (the 8 Mbit MaxFlash), new
+NBANKS8M = 128
 TAIL = bytes([0xA2, 0x00,              # $BFE0  ldx #0
               0x9D, 0x00, 0xD5,        #        sta $D500,x   (bank 0)
               0x4C, 0x00, 0xA0,        #        jmp $A000     its cold start
@@ -55,7 +62,10 @@ def main():
     ap.add_argument('--data', action='append', default=[], metavar='BIN',
                     help='a data bank, after the memory test')
     ap.add_argument('--data-at', type=int, help='the bank the first --data must land in')
+    ap.add_argument('--raw8m', metavar='BIN', help='the 8 Mbit MaxFlash: 128 banks, this raw '
+                    'image too (the .car is then type 75)')
     a = ap.parse_args()
+    nbanks = NBANKS8M if a.raw8m else NBANKS
 
     banks = []
     for path in a.bank:
@@ -79,9 +89,9 @@ def main():
         if len(d) > TAILAT:
             sys.exit(f'{path}: {len(d)} bytes, a bank holds {TAILAT}')
         banks.append(bytearray(d + b'\xff' * (TAILAT - len(d))))
-    if len(banks) > NBANKS:
+    if len(banks) > NBANKS:            # (the code addresses banks 0-15 only)
         sys.exit('the programs do not fit in the cartridge')
-    while len(banks) < NBANKS:
+    while len(banks) < nbanks:
         banks.append(bytearray(b'\xff' * TAILAT))
     for i, b in enumerate(banks):
         b += TAIL
@@ -91,9 +101,13 @@ def main():
         b[0x1FEE:0x1FF0] = struct.pack('<H', sm)
 
     rom = b''.join(bytes(b) for b in banks)
-    head = b'CART' + struct.pack('>II', CARTYPE, sum(rom) & 0xFFFFFFFF) + bytes(4)
+    head = b'CART' + struct.pack('>II', CARTYPE8M if a.raw8m else CARTYPE,
+                                 sum(rom) & 0xFFFFFFFF) + bytes(4)
     open(a.car, 'wb').write(head + rom)
-    print(f'{a.car}: AtariMax 128K, code banks 0-{membk - 1} ('
+    if a.raw8m:
+        open(a.raw8m, 'wb').write(rom)
+    kind = '8 Mbit MaxFlash (1 MB raw)' if a.raw8m else 'AtariMax 128K'
+    print(f'{a.raw8m or a.car}: {kind}, code banks 0-{membk - 1} ('
           + ', '.join(f'{len(Path(p).read_bytes())} bytes' for p in a.bank)
           + f' of {CODEMAX}), memtest {len(img) // 256} pages from bank {membk}'
           + ''.join(f', {Path(p).name} in bank {membk + -(-len(img) // 256 // DATAPG) + i}'
