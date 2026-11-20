@@ -135,7 +135,8 @@ def run(checks, names, step=STEP):
     """Run the named checks (all of them if none): the misses, counted.
     A check: (image in build/, simulator options, [(time s, text) | (after
     s, time s, text) | ('ev', from s, to s, register, value, 'min'|'max',
-    count) | ('out', text): text in the simulator's own output])."""
+    count) | ('out', text[, time s]): text in the simulator's own output by
+    then (5 s if no time), '!text': not in it])."""
     names = names or list(checks)
     bad = 0
     for name in names:
@@ -143,7 +144,8 @@ def run(checks, names, step=STEP):
         texts = [w if len(w) == 3 else (0, *w) for w in want if w[0] not in ('ev', 'out')]
         evs = [w for w in want if w[0] == 'ev']
         outs = [w[1] for w in want if w[0] == 'out']
-        end = max([t for _, t, _ in texts] + [w[2] for w in evs] + [STEP])
+        end = max([t for _, t, _ in texts] + [w[2] for w in evs] + [STEP]
+                  + [w[2] if len(w) > 2 else 5 for w in want if w[0] == 'out'])
         screens, events, out = sim(image, args, end, step)
         seen = lambda t0, t, text: any(text in sc for at, sc in screens.items() if t0 < at <= t)
         miss = [f'by {t} s: {"seen" if text.startswith("!") else "never"} {text!r}'
@@ -155,7 +157,10 @@ def run(checks, names, step=STEP):
             if (c < n) if op == 'min' else (c > n):
                 miss.append(f'{t0}-{t1} s: ${reg:04X} = ${val:02X} written {c} times '
                             f'({op} {n})')
-        miss += [f'not in the output: {o!r}' for o in outs if o not in out]
+        miss += [f'not in the output: {o!r}' for o in outs
+                 if not o.startswith('!') and o not in out]
+        miss += [f'in the output: {o[1:]!r}' for o in outs
+                 if o.startswith('!') and o[1:] in out]
         print(f'{name}: {"PASS" if not miss else "FAIL"}')
         for m in miss:
             bad += 1

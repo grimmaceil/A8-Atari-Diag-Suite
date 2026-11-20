@@ -20,6 +20,7 @@
 	icl '../common/hw.asm'
 
 FONTAT	= $BC00			; 1K-aligned for CHBASE; chars 0-63 = 512 bytes
+XBANK	= $BFF0			; the tail's bank switch: bank X, then its $A003
 C_LUM	= $0C			; text luminance, as the suite's C_TEXTLUM
 
 	opt h-f+
@@ -63,20 +64,41 @@ c_pk	sta $D200,x
 	sta COLBK
 	lda #$22		; normal playfield, display list DMA
 	sta DMACTL
-	ldy #60			; about a second: 60 frames, VCOUNT's wrap
-c_fr	lda VCOUNT
-	bne c_fr
-c_fr2	lda VCOUNT
-	beq c_fr2
+	.if DTBANK=DEADBK
+	jmp stageb		; the RAM test (stageb.asm), then sbdone
+	.else
+	jmp *			; (only the first dead bank is entered cold)
+	.endif
+
+; sbdone: stage B's results are in the PIA and S: on to the show bank
+; (phase 0), or in the standalone straight on.
+	.if DTBANK=DEADBK
+sbdone
+	.ifdef STANDALONE
+	ldy #0
+	jmp phase
+	.else
+	ldx #DEADBK+1
+	ldy #0
+	jmp XBANK
+	.endif
+	icl 'stageb.asm'
+	.endif
+
+; phase: Y says which. (For now: about a second, then the hand-over; the
+; standalone stays.)
+phase	ldy #60			; 60 frames, VCOUNT's wrap
+p_fr	lda VCOUNT
+	bne p_fr
+p_fr2	lda VCOUNT
+	beq p_fr2
 	dey
-	bne c_fr
+	bne p_fr
 	.ifdef STANDALONE
 	jmp *			; no suite to hand over to
 	.else
 	jmp handover
 	.endif
-
-phase	jmp cold		; (the phases come with their tasks)
 
 ; handover: the suite starts as it does without the dead test: this dead
 ; bank (an ordinary header) stays in, the OS's cold start runs it. $033D-
@@ -104,8 +126,8 @@ scr	dta d' DEAD TEST'*	; row 0: the title bar, the version at the right
 	dta d'V'*,[VMAJ+$90],d'.'*,[VMIN+$90]
 	.endif
 	:40 dta 0		; row 1
-	dta d'TESTING'		; row 2
-	:33 dta 0
+	dta d'TESTING THE RAM'	; row 2
+	:25 dta 0
 
 	.if *>FONTAT
 	.error "the dead test's code runs into its font"

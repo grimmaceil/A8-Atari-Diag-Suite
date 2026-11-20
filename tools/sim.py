@@ -22,6 +22,12 @@ Cartridges and the empty bus:
                            while ANTIC's DMA is on (DMACTL nonzero: the last
                            byte it fetched, a blank screen's), its high byte
                            while it is off
+  --hole LO-HI             no RAM there (a pulled board): reads float, writes
+                           are lost; more than one --hole may be given
+The dead test (a .car whose start bank's $BFFD bit 7 is set) is entered at
+($BFFE) with nothing set up; at its hand-over (a jump to the OS's reset
+entry) or at the end, the dead: line gives its results as the PIA and the
+stack pointer hold them, and every value written to PORTB until then.
 """
 import argparse
 import struct
@@ -71,6 +77,8 @@ class Atari:
         self.carbank, self.caron = 0, False
         self.carlog = []         # (line, 'bank n' / 'off')
         self.ddrb = 0xFF if xl else 0x00   # PIA port B direction, as the OS sets it
+        self.ddra = 0x00                   # PIA port A direction (the dead test's storage)
+        self.holes = []          # --hole: (lo, hi), no RAM there
         self.busnoise = False    # an idle bus reads back anything (a real 800)
         self.slot = False        # --slot: --basic is a cartridge in the slot (XL/XE too)
         self.dmabus = False      # --dmabus: $A000-$BFFF's empty bus reads $00 with DMA on
@@ -148,12 +156,17 @@ class Atari:
                     return int(self.car is not None and self.caron or self.slot)   # 4's button,
                 return 1         # not pressed
             if a == 0xD300:      # PORTA: sticks 1 and 2, 0 = pressed (--joy)
+                if not self.regs.get(0xD302, 0x3C) & 4:
+                    return self.ddra     # PACTL bit 2 = 0: the direction register
                 v = 0xFF
                 for bit in self.active('JOY'):
                     v &= ~bit
-                return v & 0xFF
+                ora = self.regs.get(0xD300, 0xFF)    # output pins read what they drive
+                return (v & ~self.ddra | ora & self.ddra) & 0xFF
             if a == 0xD010:      # TRIG0: fire on stick 1, 0 = pressed (--joy)
                 return 0 if self.active('FIRE') else 1
+            if a in (0xD302, 0xD303):   # PACTL/PBCTL: bits 0-5 as written (the
+                return self.regs.get(a, 0x3C) & 0x3F   # IRQ flags, 6-7: none)
             if a == 0xD301:
                 if not self.regs.get(0xD303, 0x3C) & 4:
                     return self.ddrb     # PBCTL bit 2 = 0: the direction register
@@ -209,6 +222,8 @@ class Atari:
         if self.basic is not None and 0xA000 <= a < 0xC000 and (
                 not self.xl or self.slot or not pb & 0x02):
             return self.basic[a - 0xA000]   # BASIC (XL/XE: PORTB bit 1 = 0) or a cartridge
+        if any(lo <= a < hi for lo, hi in self.holes):
+            return a >> 8        # --hole: floating bus
         if self.ramtop <= a < 0xC000:
             if self.dmabus and a >= 0xA000 and self.regs.get(0xD400, 0):
                 return 0x00      # --dmabus: ANTIC's last fetch, with its DMA on
@@ -248,6 +263,12 @@ class Atari:
             if a == 0xD301 and not self.regs.get(0xD303, 0x3C) & 4:
                 self.ddrb = v
                 return
+            if a == 0xD300:
+                if not self.regs.get(0xD302, 0x3C) & 4:
+                    self.ddra = v
+                else:
+                    self.regs[a] = v     # port A's output register
+                return
             if a == 0xD303:
                 self.regs[a] = v
             if a == 0xD40A:
@@ -265,6 +286,8 @@ class Atari:
                 self.ram[a] = v
             return
         if a >= self.ramtop or a >= 0xC000 or self.caron and a >= 0xA000:
+            return
+        if any(lo <= a < hi for lo, hi in self.holes):
             return
         x = self._ext(a)
         if x is not None:
@@ -739,6 +762,8 @@ def main():
     ap.add_argument('--basic', help='a real 8K BASIC ROM: XL/XE built in, or a 400/800 cartridge')
     ap.add_argument('--slot', action='store_true',
                     help='with --basic: a cartridge in the slot, on an XL/XE too (TRIG3 = 1)')
+    ap.add_argument('--hole', action='append', default=[],
+                    help='LO-HI (hex): no RAM there; reads float, writes are lost')
     ap.add_argument('--dmabus', action='store_true',
                     help='400/800: $A000-$BFFF with nothing there reads $00 while DMACTL is on')
     ap.add_argument('--palette', default='//TRUENAS/Media/games/ATARI800/ntsc.act',
@@ -836,6 +861,7 @@ def main():
     hw = Atari(a.ram, stuck, a.mirror, a.xl or a.xe, a.pal, keys, a.xe, xstuck)
     hw.busnoise = a.busnoise
     hw.slot = a.slot
+    hw.holes = [tuple(int(x, 16) for x in h.split('-')) for h in a.hole]
     hw.dmabus = a.dmabus
     if car is not None:
         hw.skctl = 0x03                    # no SIO before a cartridge: the OS's 3
@@ -888,6 +914,13 @@ def main():
     # The OS's reset entry (a real --osrom only): a jump there with a
     # cartridge in (the dead test's hand-over) is the cold start again.
     reset_pc = hw[0xFFFC] | hw[0xFFFD] << 8 if a.osrom else None
+    dead = []                              # the dead test's results at its hand-over
+
+    def dead_line():
+        portb = sorted({v for ln, r, v in hw.events if r == 0xD301})
+        return (f'dead: ddra=${hw.ddra:02X} ddrb=${hw.ddrb:02X} s=${mpu.sp:02X} '
+                f'pactl=${hw.regs.get(0xD302, 0x3C):02X} pbctl=${hw.regs.get(0xD303, 0x3C):02X} '
+                f'portb={",".join(f"{v:02X}" for v in portb) or "-"}')
 
     def car_cold():
         """The OS's cold start with the cartridge in, as far as it matters
@@ -901,6 +934,7 @@ def main():
             return
         hw.regs.clear()
         hw.ddrb = 0xFF if hw.xl else 0x00
+        hw.ddra = 0x00
         for i in range(0x800):
             hw.ram[i] = (i * 7 + 3) & 0xFF
         hw.ram[0x6A] = min(a.ram, 0xA000) >> 8
@@ -981,6 +1015,8 @@ def main():
             siov(mpu, hw, stream, disk, diskerr)
             continue
         if car is not None and mpu.pc == reset_pc and hw.caron:
+            if not dead:
+                dead.append(dead_line())
             car_cold()
             print(f'cold start at {hw.line / LINES_PER_MS / 1000:.2f} s, bank {hw.carbank}')
             continue
@@ -1040,6 +1076,8 @@ def main():
     if a.v:
         for t in ts:
             print(f'{t[0]:9.0f} ms {t[1]:5.0f} ms audf {t[2]:3d} colbk ${t[3]:02X}')
+    if car is not None:
+        print(dead[0] if dead else dead_line())
     if car is not None:                  # the image the menu copied to $0800
         print('cartridge:', ', '.join(f'{ln / LINES_PER_MS / 1000:.2f} s {w}' for ln, w in hw.carlog))
         img = bytes(hw.ram[0x801] * 128)

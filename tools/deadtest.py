@@ -32,6 +32,29 @@ CHECKS = {
     'skel-128k': ('diag-cart.car', [], [(1, '#dead#test'), (40, FOUND48)]),
     # the standalone 8K: no suite to hand over to
     'skel-std': ('diag-deadtest.car', ['--ram', '0'], [(1, '#dead#test'), (20, '!FOUND:')]),
+
+    # stage B, the RAM test with no RAM: its results as the simulator saw
+    # them at the hand-over (sim.py's dead: line): DDRA bank 1, DDRB bank
+    # 2, S bank 3 ($FF: no RAM); PACTL/PBCTL $38 with bit 0 set ($39) for a
+    # bad zero page / stack page; portb: every value written to PORTB
+    'b-good': ('diag-cart-8mbit.car', [], [('out', 'ddra=$00 ddrb=$00 s=$00 pactl=$38 pbctl=$38')]),
+    'b-b2d4': ('diag-cart-8mbit.car', ['--stuck', '2:5:0'],
+               [('out', 'ddra=$00 ddrb=$10 s=$00 pactl=$38 pbctl=$38')]),
+    'b-16k': ('diag-cart-8mbit.car', ['--ram', '0x4000'],
+              [('out', 'ddra=$00 ddrb=$FF s=$FF pactl=$38 pbctl=$38')]),
+    'b-noram': ('diag-cart-8mbit.car', ['--ram', '0'],
+                [('out', 'ddra=$FF ddrb=$FF s=$FF pactl=$39 pbctl=$39')]),
+    'b-hole1': ('diag-cart-8mbit.car', ['--hole', '0000-4000'],
+                [('out', 'ddra=$FF ddrb=$00 s=$00 pactl=$39 pbctl=$39')]),
+    'b-zp': ('diag-cart-8mbit.car', ['--stuck', '0000-0100:4:1'],
+             [('out', 'ddra=$08 ddrb=$00 s=$00 pactl=$39 pbctl=$38')]),
+    'b-stack': ('diag-cart-8mbit.car', ['--stuck', '0100-0200:1:0'],
+                [('out', 'ddra=$01 ddrb=$00 s=$00 pactl=$38 pbctl=$39')]),
+    'b-mirror': ('diag-cart-8mbit.car', ['--mirror'], [('out', 'dead: '), ('out', '!s=$00 ')]),
+    'b-xe': ('diag-cart-8mbit.car', ['--xe', '--xejunk'],
+             [('out', 'ddra=$00 ddrb=$00 s=$00 pactl=$38 pbctl=$38 portb=FF')]),
+    'b-std': ('diag-deadtest.car', ['--stuck', '2:5:0'],
+              [('out', 'ddra=$00 ddrb=$10 s=$00 pactl=$38 pbctl=$38')]),
 }
 
 TAIL_RUN = bytes.fromhex('A2009D00D54C00A0')     # $BFE0: bank 0's cold start
@@ -69,6 +92,47 @@ def layout(raw, name):
     return len(bad)
 
 
+SIZES = {'imp': 1, 'acc': 1, 'imm': 2, 'zpg': 2, 'zpx': 2, 'zpy': 2, 'inx': 2, 'iny': 2,
+         'rel': 2, 'abs': 3, 'abx': 3, 'aby': 3, 'ind': 3}
+STACKOPS = {0x00: 'BRK', 0x08: 'PHP', 0x20: 'JSR', 0x28: 'PLP', 0x40: 'RTI', 0x48: 'PHA',
+            0x60: 'RTS', 0x68: 'PLA'}
+
+
+def static():
+    """Stage B (SBBEG-SBEND in bank 5) uses no stack, no zero-page or
+    indirect addressing, no unknown opcode, and reads nothing at
+    $C000-$FFFF but the chips ($D000-$D7FF): every instruction, in order."""
+    from py65.devices.mpu6502 import MPU
+    lab = {}
+    for line in open(BUILD / 'dead5.lab', encoding='latin-1'):
+        p = line.split()
+        if len(p) == 3:
+            lab[p[2].upper()] = int(p[1], 16)
+    code = (BUILD / 'dead5.bin').read_bytes()
+    table = MPU().disassemble
+    pc, n, bad = lab['SBBEG'], 0, []
+    while pc < lab['SBEND']:
+        op = code[pc - 0xA000]
+        mnem, mode = table[op]
+        size = SIZES[mode]
+        arg = int.from_bytes(code[pc - 0xA000 + 1:pc - 0xA000 + size], 'little')
+        why = (STACKOPS.get(op) or ('an unknown opcode' if mnem == '???' else None)
+               or (f'{mode} addressing' if mode in ('zpg', 'zpx', 'zpy', 'inx', 'iny', 'ind')
+                   else None)
+               or ('an OS ROM read' if mode in ('abs', 'abx', 'aby') and arg >= 0xC000
+                   and not 0xD000 <= arg < 0xD800 and mnem not in ('STA', 'STX', 'STY', 'JMP')
+                   else None))
+        if why:
+            bad.append(f'${pc:04X} {mnem} ${arg:04X}: {why}')
+        n += 1
+        pc += size
+    print(f'stage B: {n} instructions, ${lab["SBBEG"]:04X}-${lab["SBEND"] - 1:04X}: '
+          f'{"PASS" if not bad else "FAIL"}')
+    for m in bad[:20]:
+        print(' ', m)
+    return len(bad)
+
+
 def old42():
     """build/scratch/old42.car: the 8 Mbit .car (type 75) as type 42."""
     src = BUILD / 'diag-cart-8mbit.car'
@@ -82,6 +146,8 @@ def old42():
 
 def main():
     args = sys.argv[1:]
+    if '--static' in args:
+        sys.exit(1 if static() else 0)
     if '--layout' in args:
         n = layout((BUILD / 'diag-cart-8mbit.bin').read_bytes(), 'diag-cart-8mbit.bin')
         n += layout((BUILD / 'diag-cart.car').read_bytes()[16:], 'diag-cart.car')
