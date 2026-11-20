@@ -86,6 +86,11 @@ CHECKS = {
     'ram16k-retest': ('diag-16k-01-ram.cas', ['--basic', '@BASIC', '--kb', '28:30:0.3'],
                       [(31, 40, 'ram#test'), ('ev', 31, 40, 0xD01A, 0x0E, 'min', 9),
                        (40, 70, 'CARTRIDGE IN: $A000-$BFFF NOT TESTED')]),
+    # the 32k+ tape's results page (8 on its menu): line 0 CART IN WAY, the
+    # string from tape 1's library
+    '32k-cartres': ('diag-32k-xl-xe.cas', ['--xl', '--basic', '@BASIC', '--slot', '--auto',
+                                           '--walk', '8'],
+                    [(40, 60, '0 RAM, BANKS      CART IN WAY')]),
     # nothing hidden: no warning, and the RAM passes
     'ram8k-32kcart': ('diag-8k-01-ram.cas', ['--ram', '0x8000', '--basic', '@BASIC'],
                       [('ev', 0, CART_T, 0xD01A, 0x0E, 'max', 0),

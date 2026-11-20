@@ -69,6 +69,11 @@ SKIPKEY	= 1
 	.elseif .def DISK
 SKIPKEY	= 1
 	.endif
+	.ifdef SKIPKEY		; common.asm: a cartridge over the RAM (CARTIN,
+	.ifndef ROM		; from the RAM test): line 0 CART IN WAY, the final
+CARTSYS	= 1			; code partial. (The diag cartridge tests the RAM
+	.endif			; under itself.)
+	.endif
 	.ifdef ROM		; common.asm: the long memory test on the menu (9):
 LONGT	= 1			; the cartridge and the boot disk (the .xex is a
 	.elseif .def DISK	; file of its own: it can't come back)

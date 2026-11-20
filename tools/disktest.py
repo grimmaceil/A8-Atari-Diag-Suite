@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+BASIC = '//TRUENAS/Media/games/ATARI800/_sysroms/BASIC - Revision A.rom'
 BUILD = ROOT / 'build'
 TOOLS = ROOT / 'tools'
 sys.path.insert(0, str(TOOLS))
@@ -105,6 +106,14 @@ CHECKS = {
     # the full-screen flashes (the ROM test's result waits from ~75 s)
     'stickup': (real_disk, ['--xl', '--key', '12', '--joy', 'UP:85:0.5'],
                 [(80, '#1#roms#'), (85, 90, '(ANTIC DMA off)')]),
+    # a cartridge in the slot (BASIC): the RAM's line 0 says CART IN WAY on
+    # the menu and on the results page; S skips as ever (SKIPPED wins)
+    'cartway': (real_disk, ['--xl', '--basic', BASIC, '--slot', '--auto'],
+                [(110, ' 0 RAM              CART IN WAY'), (110, '|START=RUN')]),
+    'cartres': (real_disk, ['--xl', '--basic', BASIC, '--slot', '--auto', '--walk', '8'],
+                [(40, 70, '0 RAM, BANKS      CART IN WAY')]),
+    'cartskip': (real_disk, ['--xl', '--basic', BASIC, '--slot', '--auto', '--kb', 'BE:2:8'],
+                 [(110, ' 0 RAM              SKIPPED')]),
 }
 
 

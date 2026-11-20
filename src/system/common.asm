@@ -517,6 +517,10 @@ fi_all
 	lda SKIPRAM		; (the RAM test, skipped with S)
 	bne partial
 	.endif
+	.ifdef CARTSYS
+	lda CARTIN		; (a cartridge hid 8K of the RAM: not all of it ran)
+	bne partial
+	.endif
 	jmp pass		; all passed: the charge, twice
 fi_bad	jmp report
 
@@ -842,6 +846,15 @@ md_gr
 	.endif
 	lda BADMASK+8
 	bne md_gf
+	.ifdef CARTSYS
+	lda CARTIN		; no fault, but a cartridge hid 8K: not a pass
+	beq md_ps
+	lda #<s_cartway
+	ldy #>s_cartway
+	jsr puts
+	jmp md_gx
+md_ps
+	.endif
 	lda #<s_pass
 	ldy #>s_pass
 	jsr puts
@@ -964,6 +977,15 @@ rz_rr
 	.endif
 	lda BADMASK+8
 	bne rz_rf
+	.ifdef CARTSYS
+	lda CARTIN		; no fault, but a cartridge hid 8K: not a pass
+	beq rz_ps
+	lda #<s_cartway
+	ldy #>s_cartway
+	jsr puts
+	jmp rz_rd
+rz_ps
+	.endif
 	lda #<s_pass
 	ldy #>s_pass
 	jsr puts
@@ -1110,6 +1132,15 @@ s_t8	dta d'0 RAM, BANKS',$FF
 s_skipd	dta d'SKIPPED',$FF
 	.elseif .not .def MENU
 s_skipd	dta d'SKIPPED',$FF
+	.endif
+	.ifdef CARTSYS		; (the 32k+ tape: the library's, from tape 1;
+	.ifndef SHLIB		; the boot disk: the menu's and the ROM test's
+	.ifdef MENUCODE		; pieces, which show line 0)
+s_cartway dta d'CART IN WAY',$FF
+	.elseif .def RESPAGE
+s_cartway dta d'CART IN WAY',$FF
+	.endif
+	.endif
 	.endif
 s_test	dta d'TEST ',$FF
 s_pass	dta d'PASS',$FF
