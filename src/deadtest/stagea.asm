@@ -107,6 +107,27 @@
 @
 .endm
 
+; FRAMES n: n frames (VCOUNT back to 0 n times). Uses A and X.
+.macro FRAMES
+	ldx #:1
+	lda VCOUNT
+	bne *-3
+	lda VCOUNT
+	beq *-3
+	dex
+	bne *-11
+.endm
+
+; BADAT col: BAD over row 12's OK at col.
+.macro BADAT
+	lda #$22
+	sta R_LINES+120+:1
+	lda #$21
+	sta R_LINES+121+:1
+	lda #$24
+	sta R_LINES+122+:1
+.endm
+
 ; COPYRUN from, to, length: the RAM code to the work page, run there.
 .macro COPYRUN
 	.rept [[:3]+255]/256
@@ -136,6 +157,10 @@ lbl_xl	dta d'OS XL/XE',$FF
 s_rev	dta d'REV ',$FF
 s_unk	dta d'UNKNOWN'*,$FF
 s_nt	dta d'NOT THERE',$FF
+s_chips	dta d'ANTIC OK  GTIA OK  POKEY OK  PIA OK'	; rows 12 and 13
+	:5 dta 0
+s_live	dta d'INPUT  KEY $--  CONSOL -  STICKS $--'
+	:4 dta 0
 
 	.local ra
 RB	= SABASE

@@ -25,6 +25,10 @@ Cartridges and the empty bus:
   --hole LO-HI             no RAM there (a pulled board): reads float, writes
                            are lost; more than one --hole may be given
   --nochip D800|E000       a 400/800 OS chip pulled: its range floats
+GTIA's collisions are an approximation (the dead test's GTIA check): every
+collision register reads 0 after a HITCLR write; a player's playfield
+collisions (P0PF-P3PF) read $0F once that player's GRAFPn is written nonzero
+while ANTIC's DMA is on.
   --rompoke ADDR=VAL,...   OS ROM bytes changed (a bad chip)
 The dead test (a .car whose start bank's $BFFD bit 7 is set) is entered at
 ($BFFE) with nothing set up; at its hand-over (a jump to the OS's reset
@@ -84,6 +88,7 @@ class Atari:
                                  # last few frames (a display list chosen row by row)
         self.holes = []          # --hole: (lo, hi), no RAM there
         self.nochip = []         # --nochip: (lo, hi), a 400/800 OS chip pulled
+        self.pfcoll = [0, 0, 0, 0]   # P0PF-P3PF (see the docstring)
         self.busnoise = False    # an idle bus reads back anything (a real 800)
         self.slot = False        # --slot: --basic is a cartridge in the slot (XL/XE too)
         self.dmabus = False      # --dmabus: $A000-$BFFF's empty bus reads $00 with DMA on
@@ -149,6 +154,10 @@ class Atari:
         if isinstance(a, slice):
             return [self[i] for i in range(*a.indices(0x10000))]
         if 0xD000 <= a < 0xD800:
+            if 0xD004 <= a < 0xD008:     # P0PF-P3PF
+                return self.pfcoll[a - 0xD004]
+            if 0xD000 <= a < 0xD004 or 0xD008 <= a < 0xD010:
+                return 0         # the other collision registers
             if a == 0xD01F:      # console keys, 0 = pressed
                 v = 0x0F
                 for bit in self.active('CON'):
@@ -291,6 +300,10 @@ class Atari:
                 return
             if a == 0xD303:
                 self.regs[a] = v
+            if a == 0xD01E:      # HITCLR
+                self.pfcoll = [0, 0, 0, 0]
+            if 0xD00D <= a < 0xD011 and v and self.regs.get(0xD400, 0):
+                self.pfcoll[a - 0xD00D] = 0x0F
             if a in (0xD402, 0xD403):
                 self.dlw.append((self.line, a, v))
                 if len(self.dlw) > 400:
@@ -506,7 +519,7 @@ def _screen_rewritten(self, f0):
     line that way): ANTIC fetches each instruction at its row's first line,
     from wherever the pointer was last set before that line."""
     p = _dl_at(self, f0 + 7)
-    rows, scan, last = [], 8, f0 + 7
+    rows, scan, last, addr = [], 8, f0 + 7, 0
     for _ in range(64):
         t = f0 + scan
         if any(last < ln < t for ln, _, _ in self.dlw):

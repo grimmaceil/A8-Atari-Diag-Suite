@@ -33,3 +33,5 @@ OSF0   NONE   OS $F000   NOT THERE
 OSXL   OK     OS XL/XE   OK
 OSXL   UNK    OS XL/XE   UNKNOWN
 OSXL   NONE   OS XL/XE   NOT THERE
+# the other chips with no RAM (row 12)
+NEEDRAM -     OTHER CHIPS NEED RAM

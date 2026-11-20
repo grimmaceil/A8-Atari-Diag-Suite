@@ -119,6 +119,14 @@ CHECKS = {
                        [(14, 'OS $D800   NOT THERE'), (14, 'OS $E000   OK')]),
     'a-xl': ('diag-cart-8mbit.car', ['--xl'],
              [(4, 'OS XL/XE   REV 2')]),
+
+    # the other chips, with a good page (row 12), and the live input row
+    # (row 13) while a fault waits; with no RAM, row 12 says they need it
+    'c-800': ('diag-cart-8mbit.car', [], [(4, 'ANTIC OK  GTIA OK  POKEY OK  PIA OK')]),
+    'c-pal': ('diag-cart-8mbit.car', ['--pal'], [(4, 'ANTIC OK  GTIA OK  POKEY OK  PIA OK')]),
+    'c-noram': ('diag-cart-8mbit.car', ['--ram', '0'], [(4, 'OTHER CHIPS NEED RAM')]),
+    'c-live': ('diag-cart-8mbit.car', ['--stuck', '2:5:0', '--kb', '3F:5:3'],
+               [(4, 'ANTIC OK  GTIA OK  POKEY OK  PIA OK'), (7, 'INPUT  KEY $3F')]),
 }
 
 TAIL_RUN = bytes.fromhex('A2009D00D54C00A0')     # $BFE0: bank 0's cold start

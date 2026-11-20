@@ -9,7 +9,7 @@
 ;   B+$000  the OS rows' lines, 40 columns each (rows 9, 10, 11)
 ;   B+$3C0  their display-list fragments, 4 bytes apart
 ;   B+$400  the work: below
-;   B+$500  this code
+;   B+$500  this code (to B+$13FF at most: inside the bank either way)
 R_LINES	= RB
 R_FRAG	= RB+$3C0
 R_SAVB	= RB+$400		; DDRB (a RAM result) while the self-test ROM is in
@@ -81,13 +81,14 @@ m800	CALL crcnew
 mb_lp	lda R_IDS,x
 	cmp #$FE
 	bcc mb_n
-	inc R_ROMBAD
+	lda #1
+	sta R_ROMBAD
 mb_n	dex
 	bpl mb_lp
 	LINE 0,lbl_d8
 	LINE 1,lbl_e0
 	LINE 2,lbl_f0
-	jmp sa_ret
+	jmp chips
 
 ; The XL/XE: the 16K image as test 1 reads it ($C000-$CFFF, the self-test
 ; ROM for $D000-$D7FF, $D800-$FFFF); the $C000 half (to $DFFF) and the
@@ -169,10 +170,10 @@ mx_k	LINE 0,lbl_xl
 	beq mx_h
 	BLANKLINE 1
 	BLANKLINE 2
-	jmp sa_ret
+	jmp chips
 mx_h	LINE 1,lbl_c0
 	LINE 2,lbl_e0
-	jmp sa_ret
+	jmp chips
 
 ; crcnew: a new CRC32, and no byte seen that isn't floating.
 crcnew	lda #$FF
@@ -217,6 +218,10 @@ cp_f	tya
 	dec R_N
 	bne cp_pg
 	jmp (R_RET)
+cp_end
+	.if [RB=$4000] .and [cp_end>$5000]
+	.error "crcpg runs while the XL's self-test ROM covers $5000: keep it below"
+	.endif
 
 ; crcput: the CRC32 (inverted, as CRC32 ends) to slot Y of R_CRCS.
 crcput	ldx #0
@@ -312,8 +317,9 @@ hx_e	sta $FFFF,y
 	cpy #8
 	bne hx_b
 	jmp (R_RET)
+	icl 'chips.asm'
 rend
-	.if rend-rstart>$B00
-	.error "stage A's RAM code is over $B00 bytes (the good page: B+$500-$FFF)"
+	.if rend-rstart>$F00
+	.error "stage A's RAM code is over $F00 bytes (the good page: B+$500-$13FF)"
 	.endif
 	org tmpl+[rend-rstart]

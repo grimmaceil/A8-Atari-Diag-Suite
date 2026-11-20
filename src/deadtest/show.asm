@@ -10,7 +10,6 @@
 ; The kernel uses A and X; Y says where it returns to (rdisp): no stack.
 ; Rows: 0 title, 2 zero page, 3 stack, 5-7 banks 1-3, 20 the verdict, 22
 ; the keys on a fault; the rest blank.
-GRAFP0	= $D00D
 C_NONE	= $04			; a bank with no RAM (not a fault above bank 1)
 PMCOL	= 30			; the bit digits' first column (76543210)
 
@@ -170,6 +169,67 @@ sk_gph	dta >[12*1042-1], >[12*1042-1], >[12*1042-1], >[2*1042-1], >[2*1042-1]
 	sta STIMER
 .endm
 
+; DIGIT: A (0-15) as a hex digit's screen code ('0' $10, 'A' $21).
+.macro DIGIT
+	cmp #10
+	bcc *+4
+	adc #6
+	adc #$10
+.endm
+
+; HEX2 addr: A as two digits at addr (the second's byte holds A meanwhile).
+.macro HEX2
+	sta :1+1
+	lsr
+	lsr
+	lsr
+	lsr
+	DIGIT
+	sta :1
+	lda :1+1
+	and #$0F
+	DIGIT
+	sta :1+1
+.endm
+
+; LIVEB base: the live input row's numbers in the work page at base (stage
+; A left the row's text at base+160): KBCODE (the last key), the console
+; keys (0 = pressed, bits 0-2), the sticks (PORTA: 0 = pressed).
+.macro LIVEB
+	lda KBCODE
+	HEX2 :1+160+12
+	lda CONSOL
+	and #7
+	ora #$10
+	sta :1+160+23
+	lda PACTL
+	ora #4
+	sta PACTL
+	ldx PORTA
+	lda PACTL
+	and #$FB
+	sta PACTL
+	txa
+	HEX2 :1+160+34
+.endm
+
+; LIVE: LIVEB for the first good bank's page; with none, nothing.
+.macro LIVE
+	lda DDRA
+	bne @+
+	LIVEB $0400
+	jmp @+2
+@	lda DDRB
+	bne @+
+	LIVEB $4000
+	jmp @+1
+@	tsx
+	txa
+	bne @+
+	LIVEB $8000
+@
+.endm
+
 ; show (phase 0): stage B's results, from the PIA and S, with their sound:
 ; a pass plays the charge and hands over; a fault plays its code (the
 ; suite's tones: doom, a long beep per the first bad bank's number, short
@@ -216,7 +276,11 @@ tk_sd	tya
 	.ifndef STANDALONE
 	jmp handover
 	.endif
-tk_o	lda PACTL		; the sticks (port A): up = OPTION, down = SELECT
+tk_o
+	.ifndef STANDALONE
+	LIVE			; the live input row, with a good page
+	.endif
+	lda PACTL		; the sticks (port A): up = OPTION, down = SELECT
 	ora #4
 	sta PACTL
 	ldx PORTA
@@ -346,16 +410,54 @@ sk3c	tya
 	bcc sk_lg
 	sbc #3
 	jmp sk_k
-skr	ldx #3			; the RAM is fine: an OS chip (test 1, item 3):
-	tya			; one long beep, three short, in the ROM test's
-	lsr			; tones
+sk_dm	adc #T_DM1		; doom (C clear)
+	tax
+	jmp skret
+sk_lg	ldx #T_ALONG
+	jmp skret
+; skr: the RAM is fine: stage A's fault (R_ROMBAD, in $0400's page: the
+; RAM passed): bit 0 an OS chip: test 1's code (one long), item 3 (three
+; short); bits 1-2 ANTIC or GTIA: test 7; bit 3 POKEY: test 6; bit 4 the
+; PIA: test 4 (its ports); one short beep each; the ROM test's tones.
+.macro SXPOS
+	tya
+	lsr
 	and #$1F
 	cmp #3
-	bcc sk_dm
-	sbc #3
-	cmp #1
-	bcc sk_rl
-	sbc #1
+	bcs @+
+	jmp sk_dm
+@	sbc #3
+.endm
+
+; SXLONG n: past n long beeps on to the short ones (sk_kr), or a long one.
+.macro SXLONG
+	cmp #:1
+	bcs @+
+	jmp sk_rl
+@	sbc #:1
+	jmp sk_kr
+.endm
+skr	lda $0400+$413
+	lsr
+	bcs sx_rom
+	lsr
+	bcs sx_7
+	lsr
+	bcs sx_7
+	lsr
+	bcs sx_6
+	ldx #1			; the PIA
+	SXPOS
+	SXLONG 4
+sx_rom	ldx #3
+	SXPOS
+	SXLONG 1
+sx_7	ldx #1
+	SXPOS
+	SXLONG 7
+sx_6	ldx #1
+	SXPOS
+	SXLONG 6
 sk_kr	cmp #0
 	beq sk_rs
 	sec
@@ -366,11 +468,6 @@ sk_kr	cmp #0
 sk_rl	ldx #T_RLONG
 	jmp skret
 sk_rs	ldx #T_RSHORT
-	jmp skret
-sk_dm	adc #T_DM1		; doom (C clear)
-	tax
-	jmp skret
-sk_lg	ldx #T_ALONG
 	jmp skret
 ; sk_k: A = the position after the long beeps, X = the short beeps' count.
 sk_k	cmp #0
@@ -714,8 +811,25 @@ fr_o10	WAITROW 10		; row 10, then the third
 	OSROW $3C8,fr_o11
 	.endif
 	SETDL DT_BLANK
-fr_o11	PLAIN 11,DT_BLANK
-	PLAIN 12,DT_BLANK
+fr_o11	WAITROW 11		; row 11, then the other chips' line (row 12)
+	lda #0
+	sta COLPF2
+	sta WSYNC
+	.ifndef STANDALONE
+	OSROW $3CC,fr_o12
+	SETDL DT_NEEDRAM	; (no RAM: they need it)
+	.else
+	SETDL DT_BLANK
+	.endif
+fr_o12	WAITROW 12		; row 12, then the live input row (13)
+	lda #0
+	sta COLPF2
+	sta WSYNC
+	.ifndef STANDALONE
+	OSROW $3D0,fr_o13
+	.endif
+	SETDL DT_BLANK
+fr_o13
 	PLAIN 13,DT_BLANK
 	PLAIN 14,DT_BLANK
 	PLAIN 15,DT_BLANK

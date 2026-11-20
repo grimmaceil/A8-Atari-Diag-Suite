@@ -24,6 +24,9 @@ XBANK	= $BFF0			; the tail's bank switch: bank X, then its $A003
 C_LUM	= $0C			; text luminance, as the suite's C_TEXTLUM
 DDRA	= $D300			; PIA direction registers (PACTL/PBCTL bit 2 = 0):
 DDRB	= $D301			; stage B's results (stageb.asm)
+GRAFP0	= $D00D			; player 0, written directly (no P/M DMA)
+HITCLR	= $D01E			; clears the collision registers
+P0PF	= $D004			; player 0's playfield collisions
 
 	opt h-f+
 	org $A000
