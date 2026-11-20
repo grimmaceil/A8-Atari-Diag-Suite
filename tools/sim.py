@@ -14,6 +14,14 @@ Real hardware faults can be simulated, independent of the FAULT build flag:
   --leak LO-HI:SECS        e.g. 8000-9000:3 = a refresh fault: a page there
                            forgets (reads $00) once SECS pass with no CPU
                            access to it (any access refreshes its row)
+Cartridges and the empty bus:
+  --basic FILE --slot      the 8K ROM is a cartridge in the slot on an XL/XE
+                           too: TRIG3 reads 1 and PORTB bit 1 can't switch it
+                           out (without --slot, an XL/XE's --basic is built in)
+  --dmabus                 400/800: an empty address at $A000-$BFFF reads $00
+                           while ANTIC's DMA is on (DMACTL nonzero: the last
+                           byte it fetched, a blank screen's), its high byte
+                           while it is off
 """
 import argparse
 import struct
@@ -64,6 +72,8 @@ class Atari:
         self.carlog = []         # (line, 'bank n' / 'off')
         self.ddrb = 0xFF if xl else 0x00   # PIA port B direction, as the OS sets it
         self.busnoise = False    # an idle bus reads back anything (a real 800)
+        self.slot = False        # --slot: --basic is a cartridge in the slot (XL/XE too)
+        self.dmabus = False      # --dmabus: $A000-$BFFF's empty bus reads $00 with DMA on
         self.skctl = 0x13        # SKCTL as an OS load leaves it (main: 3 for a .car)
         self.mute34 = []         # (line, AUDC, value): voice 3 or 4 turned on while
                                  # SKCTL bit 4 (async receive) holds it silent
@@ -131,7 +141,7 @@ class Atari:
                 return 0x01 if self.pal else 0x0F
             if a == 0xD013:      # TRIG3: XL/XE, 1 = a cartridge in the slot (the
                 if self.xl:      # diag cartridge while it is on); 400/800: stick
-                    return int(self.car is not None and self.caron)   # 4's button,
+                    return int(self.car is not None and self.caron or self.slot)   # 4's button,
                 return 1         # not pressed
             if a == 0xD300:      # PORTA: sticks 1 and 2, 0 = pressed (--joy)
                 v = 0xFF
@@ -193,9 +203,11 @@ class Atari:
         if self.caron and 0xA000 <= a < 0xC000:
             return self.car[self.carbank * 0x2000 + a - 0xA000]
         if self.basic is not None and 0xA000 <= a < 0xC000 and (
-                not self.xl or not pb & 0x02):
+                not self.xl or self.slot or not pb & 0x02):
             return self.basic[a - 0xA000]   # BASIC (XL/XE: PORTB bit 1 = 0) or a cartridge
         if self.ramtop <= a < 0xC000:
+            if self.dmabus and a >= 0xA000 and self.regs.get(0xD400, 0):
+                return 0x00      # --dmabus: ANTIC's last fetch, with its DMA on
             return a >> 8        # floating bus
         x = self._ext(a)
         if x is not None:
@@ -721,6 +733,10 @@ def main():
                     help='TEXT@SECS@FILE.png : a picture SECS after TEXT first shows on screen (^TEXT: at a row start)')
     ap.add_argument('--osrom', help='a real OS ROM file (10K 400/800 or 16K XL/XE) instead of the stand-in')
     ap.add_argument('--basic', help='a real 8K BASIC ROM: XL/XE built in, or a 400/800 cartridge')
+    ap.add_argument('--slot', action='store_true',
+                    help='with --basic: a cartridge in the slot, on an XL/XE too (TRIG3 = 1)')
+    ap.add_argument('--dmabus', action='store_true',
+                    help='400/800: $A000-$BFFF with nothing there reads $00 while DMACTL is on')
     ap.add_argument('--palette', default='//TRUENAS/Media/games/ATARI800/ntsc.act',
                     help='768-byte RGB palette for --shot (the MiSTer core palette)')
     ap.add_argument('--flaky', help='BANK:BIT:P  a bit that reads wrong with chance P per read')
@@ -811,6 +827,8 @@ def main():
     snaps = sorted(to_line(t) for t in a.snap.split(',') if t)
     hw = Atari(a.ram, stuck, a.mirror, a.xl or a.xe, a.pal, keys, a.xe, xstuck)
     hw.busnoise = a.busnoise
+    hw.slot = a.slot
+    hw.dmabus = a.dmabus
     if car is not None:
         hw.skctl = 0x03                    # no SIO before a cartridge: the OS's 3
     for k in (x for x in a.kb.split(',') if x):

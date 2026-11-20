@@ -35,7 +35,7 @@ SHARE = Path('//TRUENAS/Media/games/ATARI800/_diag')   # the tapes, in the MiSTe
 # matched. One digit before the point, one or two after, and a patch level
 # (one digit after a second point) when there is one (screen.asm).
 # build/ keeps the plain names.
-VERSION = '0.13'
+VERSION = '0.14'
 VDEFS = dict(zip(('VMAJ', 'VMIN', 'VPAT'), VERSION.split('.') + ['0']))
 
 # Each tape: source dir, name, stages (first = boot), defines. A later stage
