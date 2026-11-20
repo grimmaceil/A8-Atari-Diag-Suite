@@ -859,6 +859,8 @@ def main():
                     help='D800 or E000: that 400/800 OS chip pulled (reads float)')
     ap.add_argument('--rompoke', default='',
                     help='ADDR=VAL,... (hex): OS ROM bytes changed (a bad chip)')
+    ap.add_argument('--carpoke', default='',
+                    help='BANK:ADDR=VAL,... (hex address and value): a .car byte changed')
     ap.add_argument('--hole', action='append', default=[],
                     help='LO-HI (hex): no RAM there; reads float, writes are lost')
     ap.add_argument('--dmabus', action='store_true',
@@ -933,8 +935,12 @@ def main():
         raw = open(a.tape, 'rb').read()
         ctype = struct.unpack('>I', raw[4:8])[0]
         assert raw[:4] == b'CART' and ctype in (1, 41, 42, 75), 'not a .car of type 1, 41, 42, 75'
-        car = raw[16:]
+        car = bytearray(raw[16:])
         assert len(car) == {1: 0x2000, 41: 0x20000}.get(ctype, 0x100000)
+        for kv in (x for x in a.carpoke.split(',') if x):
+            bk, rest = kv.split(':')
+            ad, v = rest.split('=')
+            car[int(bk) * 0x2000 + int(ad, 16) - 0xA000] = int(v, 16)
         carstart = 127 if ctype == 42 else 0
         img = bytes(6)                     # (the image: whichever the menu copies)
     elif a.tape.lower().endswith('.atr'):

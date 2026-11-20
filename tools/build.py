@@ -308,16 +308,17 @@ def build_car(fast, big=False):
     hello = hello_pak()
     hellopg = len(hello.read_bytes()) // 256
     hellobk = CARMEMBK + -(-mempg // CARDATAPG)                  # after the memory test
+    deadbk = hellobk + 1                  # the dead test: after the "hello"
     common = dict(f, **c8, ROM=1, MENU=1, SETNO=0, TAPENO=0, MEMBK=CARMEMBK, MEMPG=mempg,
                   DATAPG=CARDATAPG, HELLOBK=hellobk, HELLOPG=hellopg,
-                  CODEBK=3)                  # (the ROM test's self-check: banks 0-2)
+                  CODEBK=3,                  # (the ROM test's self-check: banks 0-2,
+                  DEADBK=deadbk, DEADCODE=DEADN)   # and the dead test's program banks)
     mads('system', 'main.asm', BUILD / f'{pre}-sysa',
          dict(common, WANT_ROM=1, WANT_KB=1, WANT_CON=1, OTHER=2))
     mads('system', 'main.asm', BUILD / f'{pre}-sysb',
          dict(common, WANT_JOY=1, WANT_PAD=1, WANT_POK=1, WANT_GTIA=1, OTHER=1, HASLDR=1))
     car = BUILD / (f'{CAR8M}.car' if big else f'{CAR}.car')
     raw = BUILD / f'{CAR8M}.bin'
-    deadbk = hellobk + 1                  # the dead test: after the "hello"
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'mkcar.py'), str(car),
                     *[x for b in ('ram', 'sysa', 'sysb')
                       for x in ('--bank', str(BUILD / f'{pre}-{b}.bin'))],

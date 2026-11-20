@@ -303,6 +303,15 @@ sk_bk	stx MTMP
 	ldx MTMP
 	dex
 	bpl sk_bk
+	.ifdef DEADBK
+	ldx #DEADBK+DEADCODE-1	; the dead test's program banks too (its word
+sk_db	stx MTMP		; banks are data, as the hello's bank)
+	jsr BWAT+bk_src-bw_src
+	ldx MTMP
+	dex
+	cpx #DEADBK-1
+	bne sk_db
+	.endif
 	lda BWHAVE
 	cmp #1
 	rts

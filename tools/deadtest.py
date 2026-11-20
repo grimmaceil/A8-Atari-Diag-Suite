@@ -137,6 +137,12 @@ CHECKS = {
                    [('ev', 2, 14, 0xD201, 0x18, 'max', 0)]),
     'speak-pass': ('diag-cart-8mbit.car', [],
                    [('ev', 2, 6, 0xD201, 0x18, 'min', 100), (40, FOUND48)]),
+
+    # test 1's self-check (the suite's ROM test, after the RAM test) covers
+    # the dead test's program banks too: a byte changed in bank 9
+    'self-ok': ('diag-cart-8mbit.car', [], [(80, 'DIAG CART  SELF-CHECK OK')]),
+    'self-poke': ('diag-cart-8mbit.car', ['--carpoke', '9:A800=00'],
+                  [(80, 'DIAG CART  self-check#failed')]),
 }
 
 WORDDIR = Path(__file__).resolve().parent.parent / 'src' / 'deadtest' / 'words'
