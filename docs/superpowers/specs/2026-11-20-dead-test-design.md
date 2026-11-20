@@ -97,11 +97,12 @@ needs them).
 
 ### 4. The OS ROM chips
 
-- **A CRC with no RAM at all:** a CRC-16 (two bytes of state) fits in the
-  PIA's two direction registers, with its tables in the cartridge ROM:
-  each OS chip gets a CRC-16, compared with a table of the known chips'
-  values (computed at build time from the same published CRC32 list test
-  1 uses: no ROM images in the project, as now).
+- **A CRC with no RAM at all:** the RAM results already fill the non-RAM
+  storage (the PIA's direction registers and the stack pointer), so each
+  OS chip gets a CRC-8, one register of state, with its table in the
+  cartridge ROM, compared with a table of the known chips' CRC-8s
+  (computed once from Mike's ROM dumps and committed as numbers, never
+  the ROMs; revised in planning from the CRC-16 first written here).
 - **With one good RAM page** (stage A): the full CRC32 of each chip, as
   test 1 shows it, named from the known-ROM table.
 - 400/800: the $D800, $E000 and $F000 chips each; XL/XE: the 16K image
@@ -129,6 +130,12 @@ the same way the suite's tests do with RAM:
 
 Interactive parts (keys, joystick) wait for the user only after the
 automatic part has shown its result, and are skipped by going on.
+
+These checks keep their results in RAM, so they need one good page
+(anywhere, stage A). With no good RAM at all there is nowhere to keep
+them: the display, its colours and the sound are then the check of
+ANTIC, GTIA and POKEY (if the result can be seen and heard, they work),
+and the screen says the rest needs RAM.
 
 ### 6. The result: "DEAD TEST -- PASS", or the faults
 
@@ -158,13 +165,14 @@ channel is broken:
 1. **Text from ROM** (no RAM): every message the dead test can give is a
    ready-made 40-character line in the cartridge. ANTIC reads the screen
    and the font straight from the cartridge.
-2. **Text from any bank, row by row:** every dead-test bank carries the
-   same code, font and display list at the same addresses, plus its own
-   library of text lines. The CPU switches the bank between rows (timed
-   by WSYNC/VCOUNT), so each row of the screen can come from any bank:
-   with 128 banks that is room for every bank-and-bit combination, every
-   chip name, every known ROM name, as whole lines. The 128K carries
-   fewer.
+2. **Text chosen row by row:** each row has its variants (OK, BAD, NO
+   RAM, ...) as ready-made lines, and the CPU picks one per row by
+   rewriting ANTIC's display-list pointer between rows (timed by
+   WSYNC/VCOUNT): every combination of results, from one bank, with no
+   RAM, on the plain 8K cartridge too. (Revised in planning: switching
+   the cartridge bank between rows, as first written here, does the same
+   with more room; it stays in reserve for when one bank's lines run
+   out.)
 3. **Text from RAM**, once stage A has a good 1K: a normal text screen
    with numbers (addresses, CRCs), still in the dead test's own font.
 4. **Bit boxes:** eight boxes for D7-D0 per bank, drawn by the CPU
