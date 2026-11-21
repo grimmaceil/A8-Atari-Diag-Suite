@@ -78,10 +78,10 @@ python tools/build.py --fast       # skip the $55/$AA march pass (quicker simula
 ```
 
 The version is `VERSION` in `tools/build.py`. It goes into every release
-file's name (`cassettes/diag-...-v0.14.cas`; `build/` keeps the plain
+file's name (`cassettes/diag-...-v0.15.cas`; `build/` keeps the plain
 names, which the simulator examples below use) and onto every title bar
 (`screen.asm`'s header: one digit before the point, one or two after, in
-five columns). A patch level (`0.14.1`, `VPAT`) would take seven, and the
+five columns). A patch level (`0.15.1`, `VPAT`) would take seven, and the
 longest titles (test 3 and test 7's modes page on `diag-16k-02-system`)
 would then leave the version out. A
 build removes the release files of other versions.

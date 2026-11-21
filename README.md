@@ -49,9 +49,9 @@ RAM, so the tapes still load on a machine too sick to boot a disk. Tape is
 slow (about 3K a minute), so they come in sets by RAM size: the more RAM,
 the fewer tapes.
 
-Version 0.14. Every file has its version in its name
-(`diag-disk-v0.14.atr`) and every screen shows it at the right of the
-title bar (`V0.14`). The names here leave the `-v0.14` out.
+Version 0.15. Every file has its version in its name
+(`diag-disk-v0.15.atr`) and every screen shows it at the right of the
+title bar (`V0.15`). The names here leave the `-v0.15` out.
 
 ## Get started
 
@@ -97,14 +97,16 @@ fails. It has a table of every test and the files that have it.
 Tried on a real 800 and a real 800XL over SIO2PC with AspeQt: the boot
 disk, and the executables (`.xex`) up to 0.11. The joystick and paddle
 ports get their real test there. The cartridge on an 8 Mbit MaxFlash in a
-real 48K 800: every test, straight from power-on. Every format has also
+real 48K 800: every test, straight from power-on; its dead test (0.15)
+in that 800 (with its first RAM board out too: the fault, round after
+round) and in a real 800XL. Every format has also
 run on the author's development set-up, the MiSTer's Atari800 core, as a
 400/800 and as an XL/XE (64K, and a 128K 130XE). Not tried yet: a
 physical disk drive, the 128K AtariMax cartridge on a real machine, and
 the cassettes on a real machine. Reports from other machines are
 welcome.
 
-## New in 0.15
+## New in 0.15 (2026-11-20)
 
 - **The dead test:** the cartridge starts in the OS's diagnostic mode,
   before any RAM is used, and tests the machine with no RAM at all: the

@@ -3,7 +3,7 @@
 Every release, newest first. Each release file has its version in its
 name, and every screen shows it at the right of the title bar.
 
-- **0.15**, against 0.14:
+- **0.15** (2026-11-20), against 0.14:
   - **The dead test** (the cartridge; `src/deadtest/`): every bank's header
     carries the OS's diagnostic flag, so at power-on the OS jumps to the
     cartridge before it touches RAM. The dead test (its own banks, from

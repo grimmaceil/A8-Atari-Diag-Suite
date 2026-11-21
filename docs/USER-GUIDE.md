@@ -4,10 +4,10 @@ By **Michael Grimm**, written with Claude (Anthropic's AI). Free to use,
 copy, change and share under the [MIT license](../LICENSE); please keep
 the credit when you pass it on.
 
-Version 0.14. Every file has its version in its name
-(`diag-disk-v0.14.atr`), and every screen at the right of its title bar
-(`V0.14`). If the two don't match, or a screen shows none, the file is an
-older one. This guide leaves the `-v0.14` out of the names.
+Version 0.15. Every file has its version in its name
+(`diag-disk-v0.15.atr`), and every screen at the right of its title bar
+(`V0.15`). If the two don't match, or a screen shows none, the file is an
+older one. This guide leaves the `-v0.15` out of the names.
 
 These programs test any Atari 8-bit computer: the 400, 800, 1200XL, 600XL,
 800XL, 65XE, 800XE, 130XE and XE Game System. They report by colour and
@@ -36,7 +36,7 @@ still reads a cartridge left in (see [BASIC cartridges](#basic-cartridges)).
 ## Contents
 
 1. [Keys](#keys)
-2. [Starting up: the boot disk, the cartridge, a stuck joystick](#starting-up)
+2. [Starting up: the boot disk, the cartridge and its dead test, a stuck joystick](#starting-up)
 3. [Every test, and where to find it](#every-test-and-where-to-find-it)
 4. [Reading the results: the screen, colours, beeps, items](#reading-the-results)
 5. [The tests, screen by screen](#the-tests-screen-by-screen)
