@@ -21,7 +21,9 @@ name, and every screen shows it at the right of the title bar.
     into player 0, the suite's colours and beep codes (a RAM bank and bit;
     an OS chip as test 1's code; a chip by its test number), live keys.
     A pass hands over (the OS cold-starts the suite as before); a fault
-    waits, START goes on. Test 1's self-check covers its banks.
+    waits, START goes on. Test 1's self-check covers its banks. An 8K
+    machine passes (bank 1 `$0000-$1FFF`); RAM at $C000 (a 400/800's 64K
+    upgrade) isn't taken for an XL/XE; with ANTIC bad, GTIA isn't judged.
   - **Spoken results** (8 Mbit): 22 words (espeak-ng, `tools/mkwords.py`)
     in a bank each, played through POKEY with no RAM: "dead test pass",
     "bank two bit four bad", "ROM not there"...
@@ -29,10 +31,11 @@ name, and every screen shows it at the right of the title bar.
     and `carts/diag-deadtest.rom` (raw 8K).
   - The simulator: the diag start and the cold start at the OS's reset
     entry, `.car` type 1, `--hole`, `--nochip`, `--rompoke`, `--carpoke`,
+    `--vcounttop`, `--ramc000`,
     PIA DDRA and PACTL/PBCTL reads, POKEY timer 4, display lists rewritten
     mid-frame (text and pictures, a cartridge font, player 0 written
     directly), GTIA collisions (an approximation), the `dead:` line;
-    `tools/deadtest.py` (41 checks, `--static`, `--layout`, `--words`).
+    `tools/deadtest.py` (48 checks, `--static`, `--layout`, `--words`).
 - **0.14** (2026-11-19), against 0.13:
   - **A cartridge in the way** (the RAM test: the 8k, 16k and 32k+ RAM
     tapes, the disk set's RAM disk, the boot disk from 16K): when the RAM

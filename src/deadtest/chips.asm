@@ -57,8 +57,13 @@ ch_vx	lda R_ROMBAD
 
 ; GTIA: its PAL flag agrees with the frame ANTIC makes (PAL: VCOUNT's top
 ; 155, NTSC 130), and player 0 over a text row sets its playfield
-; collision, which HITCLR clears.
-ch_g	lda PAL
+; collision, which HITCLR clears. Both need ANTIC: with ANTIC bad, GTIA
+; isn't judged (row 12 shows -- for it).
+ch_g	lda R_ROMBAD
+	and #2
+	beq ch_g1
+	jmp ch_gk
+ch_g1	lda PAL
 	and #$0E
 	beq ch_gp
 	cmp #$0E
@@ -136,8 +141,8 @@ ch_t	lda #0
 	lda #1
 	sta IRQEN
 	sta STIMER
-	FRAMES 1
-	lda IRQST
+	FRAMES 2		; (a whole frame at least: FRAMES 1 begun as
+	lda IRQST		; VCOUNT turns 0 is over in a line or two)
 	and #1
 	beq ch_pk
 ch_pb	lda R_ROMBAD
@@ -228,8 +233,14 @@ ch_fx
 	BADAT 6
 ch_l1	lda R_ROMBAD
 	and #4
-	beq ch_l2
+	beq ch_l1n
 	BADAT 15
+ch_l1n	lda R_ROMBAD		; ANTIC bad: GTIA not judged
+	and #2
+	beq ch_l2
+	lda #$0D		; ('--')
+	sta R_LINES+120+15
+	sta R_LINES+120+16
 ch_l2	lda R_ROMBAD
 	and #8
 	beq ch_l3

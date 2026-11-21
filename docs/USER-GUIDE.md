@@ -224,6 +224,9 @@ It tests, in about three seconds:
   bad, with a dark box at each bad bit's digit (`76543210`), and grey with
   `NO RAM` when nothing answers there at all: a 16K or 32K machine is
   fine, so that isn't a fault, except in bank 1, which everything needs.
+  An 8K machine shows bank 1 as `$0000-$1FFF OK`: its upper 8K is empty,
+  which isn't a fault either; RAM above an empty $2000-$3FFF is (bank 1
+  `NO RAM`, red).
 - **The OS ROM chips:** with any good RAM page (anywhere: zero page may be
   the bad one), each chip's CRC32 and its name, as the ROM test shows
   them; a chip that reads as an empty socket is `NOT THERE`. An unknown or
@@ -231,7 +234,8 @@ It tests, in about three seconds:
 - **ANTIC, GTIA, POKEY and the PIA:** the frame and its line count, the
   PAL/NTSC flag against it, a player's collision with the text, POKEY's
   random numbers and a timer, the PIA's registers. `BAD` beside a chip is
-  a fault. The row under it shows what ANTIC and GTIA measured: VCOUNT's
+  a fault; with ANTIC bad, GTIA shows `--` (both its checks need ANTIC).
+  The row under it shows what ANTIC and GTIA measured: VCOUNT's
   top (130 on NTSC, 155 on PAL), GTIA's PAL/NTSC flag, and the tries ANTIC
   took (up to three, so a glitch right after a quick power off and on
   isn't taken for a bad chip).
@@ -256,7 +260,10 @@ it stays, red, and plays its code round after round:
 | An OS chip (the ROM test's tones, lower) | 1 | 3 |
 | ANTIC or GTIA / POKEY / the PIA | 7 / 6 / 4 | 1 |
 
-Each round starts with the fail tune and ends with the low end tone. The
+Bank 1 with no RAM beeps as bank 1, D0 (one long, one short), and a bad
+zero page or stack page as bank 1 and its bad bit; the screen and the
+words tell them apart. Each round starts with the fail tune and ends with
+the low end tone. The
 8 Mbit cartridge then says it: "bank two bit four bad", "bank one no
 RAM", "zero page bad", "stack bad", "ROM bad", "ROM not there", "antic
 bad", "G T I A bad", "pokey bad", "P I A bad". The keys, as everywhere:

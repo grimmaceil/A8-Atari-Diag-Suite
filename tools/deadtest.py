@@ -50,6 +50,12 @@ CHECKS = {
              [('out', 'ddra=$08 ddrb=$00 s=$00 pactl=$39 pbctl=$38')]),
     'b-stack': ('diag-cart-8mbit.car', ['--stuck', '0100-0200:1:0'],
                 [('out', 'ddra=$01 ddrb=$00 s=$00 pactl=$38 pbctl=$39')]),
+    # an 8K machine: bank 1's upper 8K empty, nothing above (not a fault);
+    # RAM above an empty $2000-$3FFF is (bank 1 NO RAM, as before)
+    'b-8k': ('diag-cart-8mbit.car', ['--ram', '0x2000'],
+             [('out', 'ddra=$00 ddrb=$FF s=$FF pactl=$38 pbctl=$38')]),
+    'b-hole2': ('diag-cart-8mbit.car', ['--hole', '2000-4000'],
+                [('out', 'ddra=$FF ddrb=$00 s=$00 pactl=$38 pbctl=$38')]),
     'b-mirror': ('diag-cart-8mbit.car', ['--mirror'], [('out', 'dead: '), ('out', '!s=$00 ')]),
     # (PORTB: $FF, and $7F while stage A reads the self-test ROM as test 1
     # does: bit 4 always 1, so never a 130XE bank; bit 0 1, the OS in)
@@ -74,6 +80,11 @@ CHECKS = {
     'show-16k': ('diag-cart-8mbit.car', ['--ram', '0x4000'],
                  [(4, 'BANK 2 $4000-$7FFF  NO RAM'), (4, 'BANK 3 $8000-$9FFF  NO RAM'),
                   (4, 'DEAD TEST -- PASS')]),
+    'show-8k': ('diag-cart-8mbit.car', ['--ram', '0x2000'],
+                [(4, 'BANK 1 $0000-$1FFF  OK'), (4, 'BANK 2 $4000-$7FFF  NO RAM'),
+                 (4, 'OS $E000   REV B NTSC'), (4, 'DEAD TEST -- PASS')]),
+    'show-hole2': ('diag-cart-8mbit.car', ['--hole', '2000-4000'],
+                   [(4, 'BANK 1 $0000-$3FFF  NO RAM'), (4, 'DEAD TEST -- FAULT')]),
     'show-noram': ('diag-cart-8mbit.car', ['--ram', '0'],
                    [(4, 'BANK 1 $0000-$3FFF  NO RAM'), (4, 'ZERO PAGE  BAD'),
                     (4, 'STACK      BAD'), (4, 'DEAD TEST -- FAULT')]),
@@ -117,6 +128,12 @@ CHECKS = {
                 [(14, 'OS $D800   OK'), (14, 'OS $E000   OK'), (14, 'OS $F000   OK')]),
     'a-noram-nochip': ('diag-cart-8mbit.car', ['--ram', '0', '--nochip', 'D800'],
                        [(14, 'OS $D800   NOT THERE'), (14, 'OS $E000   OK')]),
+    # an 800 with RAM at $C000 (a 64K upgrade) is no XL/XE: the RAM takes a
+    # write, ROM doesn't
+    'a-ramc000': ('diag-cart-8mbit.car', ['--ramc000'],
+                  [(4, 'OS $E000   REV B NTSC'), (4, 'DEAD TEST -- PASS')]),
+    'a-noram-ramc000': ('diag-cart-8mbit.car', ['--ram', '0', '--ramc000'],
+                        [(14, 'OS $D800   OK'), (14, 'OS $F000   OK')]),
     'a-xl': ('diag-cart-8mbit.car', ['--xl'],
              [(4, 'OS XL/XE   REV 2')]),
 
@@ -125,6 +142,11 @@ CHECKS = {
     'c-800': ('diag-cart-8mbit.car', [], [(4, 'ANTIC OK  GTIA OK  POKEY OK  PIA OK')]),
     'c-pal': ('diag-cart-8mbit.car', ['--pal'], [(4, 'ANTIC OK  GTIA OK  POKEY OK  PIA OK')]),
     'c-noram': ('diag-cart-8mbit.car', ['--ram', '0'], [(4, 'OTHER CHIPS NEED RAM')]),
+    # ANTIC bad (VCOUNT's top wrong): GTIA can't be judged without it ('--'),
+    # not called bad
+    'c-antic': ('diag-cart-8mbit.car', ['--vcounttop', '128'],
+                [(4, 'ANTIC BAD GTIA --  POKEY OK  PIA OK'), (4, 'TRIES 3'),
+                 (4, 'DEAD TEST -- FAULT')]),
     # row 14: what the ANTIC/GTIA checks measured (up to three tries)
     'c-vcount': ('diag-cart-8mbit.car', [], [(4, 'VCOUNT TOP 130  GTIA FLAG NTSC  TRIES 1')]),
     'c-vcount-pal': ('diag-cart-8mbit.car', ['--pal'],

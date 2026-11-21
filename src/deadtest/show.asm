@@ -711,7 +711,15 @@ rphase	lda PACTL
 	lda PACTL
 	ora #2
 	sta PACTL
-rp_m	ldy #0			; the machine: page $C0 floating = a 400/800
+rp_m	lda $C000		; the machine: RAM at $C000 (it takes a write)
+	tax			; or page $C0 floating = a 400/800
+	eor #$FF
+	sta $C000
+	cmp $C000
+	stx $C000
+	bne rp_mf
+	jmp rpch0
+rp_mf	ldy #0
 	ldx #0
 rp_c0	tya
 	eor.w $C000,x
@@ -894,9 +902,21 @@ frame	lda #124
 	lda #0
 	sta COLPF2
 	sta WSYNC
-	lda DDRA
-	PICK3 DT_B1_OK,DT_B1_BAD,DT_B1_NONE
-	lda DDRA		; row 5: bank 1
+	lda DDRA		; (good, and $3F00 doesn't keep what's written:
+	bne fr_b1		; an 8K machine, $0000-$1FFF: main.asm's sbdone)
+	lda #$55
+	sta $3F00
+	cmp $3F00
+	bne fr_b18
+	lda #$AA
+	sta $3F00
+	cmp $3F00
+	bne fr_b18
+	lda #0
+fr_b1	PICK3 DT_B1_OK,DT_B1_BAD,DT_B1_NONE
+	jmp fr_b1x
+fr_b18	SETDL DT_B1_OK8
+fr_b1x	lda DDRA		; row 5: bank 1
 	MASKCOL C_RED
 	WAITROW 5
 	stx COLPF2

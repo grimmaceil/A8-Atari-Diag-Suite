@@ -263,7 +263,8 @@ Layout is the builder's; words and colours are the suite's.
   OS font included); stage A uses only RAM stage B proved, anywhere.
 - Per bank: bad bits, no RAM vs bad, address faults; zero page and stack
   on their own lines.
-- Every OS chip checked (CRC-16 with no RAM, CRC32 with a good page),
+- Every OS chip checked (CRC-16 with no RAM, CRC32 with a good page; as
+  built, CRC-8 with no RAM: see As built),
   named, and "not there" told from "bad".
 - ANTIC, GTIA, POKEY, PIA and the keys checked dead-test style.
 - Every result on every channel: text, colour, boxes, beeps, speech.
@@ -454,6 +455,13 @@ plan's execution; DEVELOPMENT.md's "The dead test" describes it as built):
   30-37.
 - **Speech:** a word to a bank, 4-bit levels at 7.85 kHz; phrases are node
   chains in ROM (Y the node); START or fire stops a word and goes on.
-- **The standalone** has no stage A and no CRC-8 phase (no room).
+- **The standalone** has no stage A and no CRC-8 phase (no room); its
+  start-up screen sits after the font.
+- **From the final review:** bank 1's upper 8K is checked on its own (with
+  bank 3) and left out when nothing answers there, so an 8K machine passes
+  (`$0000-$1FFF`) and RAM above an empty $2000-$3FFF is still a fault; an
+  XL/XE's ROM at $C000 must not take a write (an 800's 64K upgrade is
+  RAM there); with ANTIC bad, GTIA isn't judged (`--`); POKEY's timer
+  check waits a whole frame (`FRAMES 2`).
 - **Test 1's self-check** covers the dead test's five program banks, not
   the word banks (data, as the hello's bank).

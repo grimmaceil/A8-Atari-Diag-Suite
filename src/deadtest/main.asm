@@ -78,7 +78,29 @@ c_pk	sta $D200,x
 ; sbdone: stage B's results are in the PIA and S: on to the show bank
 ; (phase 0), or in the standalone straight on.
 	.if DTBANK=DEADBK
-sbdone
+; Bank 1 good with its upper 8K left out (nothing answered there, and
+; $3F00 doesn't keep what's written): an 8K machine when nothing answers
+; above it either (DDRB and S $FF); RAM above an empty $2000-$3FFF is a
+; fault, bank 1 NO RAM. (The show bank's row 5 makes the same test.)
+sbdone	lda DDRA
+	bne sb_8x
+	lda #$55
+	sta $3F00
+	cmp $3F00
+	bne sb_8h
+	lda #$AA
+	sta $3F00
+	cmp $3F00
+	beq sb_8x
+sb_8h	lda DDRB
+	cmp #$FF
+	bne sb_8f
+	tsx
+	inx
+	beq sb_8x
+sb_8f	lda #$FF
+	sta DDRA
+sb_8x
 	.ifdef STANDALONE
 	ldy #0
 	jmp phase
@@ -149,23 +171,9 @@ handover lda #0
 	jmp ($FFFC)
 	.endif
 
-; The screen: three blank-line groups, then the rows (mode 2, 40 columns).
-dl	dta $70,$70,$70
-	dta $42,a(scr)
-	dta $02,$02
-	dta $41,a(dl)
-
-scr	dta d' DEAD TEST'*	; row 0: the title bar, the version at the right
-	.if VMIN>9
-	:25 dta $80
-	dta d'V'*,[VMAJ+$90],d'.'*,[VMIN/10+$90],[VMIN-VMIN/10*10+$90]
-	.else
-	:26 dta $80
-	dta d'V'*,[VMAJ+$90],d'.'*,[VMIN+$90]
+	.ifndef STANDALONE
+	icl 'screen0.asm'
 	.endif
-	:40 dta 0		; row 1
-	dta d'TESTING THE RAM'	; row 2
-	:25 dta 0
 
 	.ifdef WORDPG
 	icl 'speak.asm'
@@ -175,3 +183,9 @@ scr	dta d' DEAD TEST'*	; row 0: the title bar, the version at the right
 	.endif
 	org FONTAT
 	ins '../../build/dtfont.bin'
+	.ifdef STANDALONE	; (no room before the font)
+	icl 'screen0.asm'
+	.if *>$BFE0
+	.error "the standalone's start-up screen runs into its header"
+	.endif
+	.endif

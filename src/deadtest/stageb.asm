@@ -23,7 +23,10 @@
 ;   PACTL bit 0 = 1: zero page bad; PBCTL bit 0 = 1: the stack page bad
 ; A mask of $FF: no RAM there (nothing reads back). S can only take a whole
 ; byte while X is free, so bank 3 is done first (both passes, into DDRA),
-; moved to S, and banks 2 and 1 follow (two more passes). ORA and ORB are
+; moved to S, and banks 2 and 1 follow (two more passes). Bank 1's upper 8K
+; ($2000-$3FFF) is checked with bank 3, into DDRB: when nothing answers
+; there it is left out (an 8K machine, or a hole: main.asm's sbdone tells
+; them apart), else its bad bits start bank 1's mask. ORA and ORB are
 ; $FF first, so a direction register's bits change nothing outside: an
 ; output driving 1 is what an input pulled up reads (on the XL/XE PORTB
 ; stays $FF: the OS in, BASIC and the self-test out, the 130XE's main RAM).
@@ -113,12 +116,17 @@ wdone	cpy #0
 	beq chk3
 	jmp chk21
 
-; chk3: bank 3, into DDRA; after pass 1 to S, and banks 2 and 1 begin.
+; chk3: bank 3, into DDRA, and bank 1's upper 8K, into DDRB; after pass 1
+; bank 3's mask to S, and banks 2 and 1 begin.
 chk3	ldx #0
 c3a	txa
 	bvc c3b
 	eor #$FF
 c3b	CHECK $80,$A0,DDRA
+	txa
+	bvc c3c
+	eor #$FF
+c3c	CHECK $20,$40,DDRB
 	inx
 	beq c3d
 	jmp c3a
@@ -128,13 +136,18 @@ c3d	bvs c3s
 	jmp wrall
 c3s	ldx DDRA		; bank 3's mask to S
 	txs
+	lda DDRB		; bank 1's upper 8K: nothing there ($FF) is left
+	cmp #$FF		; out; else its bad bits start bank 1's mask
+	bne c3u
 	lda #0
-	sta DDRA
+c3u	sta DDRA
+	lda #0
+	sta DDRB
 	clv			; pass 0 again, for banks 2 and 1
 	ldy #1
 	jmp wrall
 
-; chk21: bank 2 into DDRB, bank 1 into DDRA.
+; chk21: bank 2 into DDRB, bank 1's lower 8K into DDRA.
 chk21	ldx #0
 c21a	txa
 	bvc c21b
@@ -143,7 +156,7 @@ c21b	CHECK $40,$80,DDRB
 	txa
 	bvc c21c
 	eor #$FF
-c21c	CHECK $00,$40,DDRA
+c21c	CHECK $00,$20,DDRA
 	inx
 	beq c21d
 	jmp c21a

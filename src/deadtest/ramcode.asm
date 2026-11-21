@@ -28,16 +28,24 @@ R_CRCS	= RB+$414		; 3 CRC32s, low byte first
 tmpl
 	org r:RB+$500
 rstart	ldx #0			; the machine: an XL/XE has ROM at $C000 (read
-	stx R_FLT		; the same twice, not just its page number)
-ms_lp	lda $C000,x
+	stx R_FLT		; the same twice, not just its page number), not
+ms_lp	lda $C000,x		; RAM (a 400/800's 64K upgrade takes a write)
 	cmp $C000,x
 	bne m800		; (a moving bus: nothing there)
 	cmp #$C0
 	beq ms_n
-	inc R_FLT
+	lda #1
+	sta R_FLT
 ms_n	inx
 	bne ms_lp
 	lda R_FLT
+	beq m800
+	lda $C000
+	tax
+	eor #$FF
+	sta $C000
+	cmp $C000
+	stx $C000		; (put back)
 	beq m800
 	jmp mxl
 

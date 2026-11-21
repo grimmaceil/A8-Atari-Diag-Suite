@@ -90,6 +90,8 @@ class Atari:
         self.nochip = []         # --nochip: (lo, hi), a 400/800 OS chip pulled
         self.pfcoll = [0, 0, 0, 0]   # P0PF-P3PF (see the docstring)
         self.busnoise = False    # an idle bus reads back anything (a real 800)
+        self.vtop = None         # --vcounttop: VCOUNT stops there (a bad ANTIC)
+        self.ramc000 = False     # --ramc000: a 400/800 with RAM at $C000-$CFFF
         self.slot = False        # --slot: --basic is a cartridge in the slot (XL/XE too)
         self.dmabus = False      # --dmabus: $A000-$BFFF's empty bus reads $00 with DMA on
         self.skctl = 0x13        # SKCTL as an OS load leaves it (main: 3 for a .car)
@@ -172,7 +174,8 @@ class Atari:
             if a == 0xD20A:
                 return random.randrange(256)
             if a == 0xD40B:
-                return (self.line % self.frame_lines) // 2
+                v = (self.line % self.frame_lines) // 2
+                return v if self.vtop is None else min(v, self.vtop)
             if a == 0xD014:
                 return 0x01 if self.pal else 0x0F
             if a == 0xD013:      # TRIG3: XL/XE, 1 = a cartridge in the slot (the
@@ -239,6 +242,8 @@ class Atari:
                 if self.osrom is not None:
                     return self.osrom[a - (0xC000 if len(self.osrom) == 0x4000 else 0xD800)]
                 return ((a * 31) ^ (a >> 3)) & 0xFF    # stand-in ROM bytes
+            if self.ramc000 and a < 0xD000:
+                return self.ram[a]   # --ramc000: an upgrade's RAM there
             if self.busnoise:
                 return random.randrange(256)
             return a >> 8        # 400/800: nothing at $C000-$CFFF
@@ -324,6 +329,9 @@ class Atari:
         if a >= 0xC000 and self.os_out():
             if self.ramtop >= 0xC000:
                 self.ram[a] = v
+            return
+        if self.ramc000 and not self.xl and 0xC000 <= a < 0xD000:
+            self.ram[a] = v
             return
         if a >= self.ramtop or a >= 0xC000 or self.caron and a >= 0xA000:
             return
@@ -888,6 +896,10 @@ def main():
                     help='ADDR=VAL,... (hex): OS ROM bytes changed (a bad chip)')
     ap.add_argument('--carpoke', default='',
                     help='BANK:ADDR=VAL,... (hex address and value): a .car byte changed')
+    ap.add_argument('--vcounttop', type=int, default=None,
+                    help='VCOUNT stops at this value (a bad ANTIC; the frame goes on)')
+    ap.add_argument('--ramc000', action='store_true',
+                    help='400/800: RAM at $C000-$CFFF (a 64K upgrade)')
     ap.add_argument('--hole', action='append', default=[],
                     help='LO-HI (hex): no RAM there; reads float, writes are lost')
     ap.add_argument('--dmabus', action='store_true',
@@ -990,6 +1002,10 @@ def main():
     snaps = sorted(to_line(t) for t in a.snap.split(',') if t)
     hw = Atari(a.ram, stuck, a.mirror, a.xl or a.xe, a.pal, keys, a.xe, xstuck)
     hw.busnoise = a.busnoise
+    hw.vtop = a.vcounttop
+    hw.ramc000 = a.ramc000
+    if a.ramc000:                    # its power-on contents: anything
+        hw.ram[0xC000:0xD000] = bytes((i * 7 + 3) & 0xFF for i in range(0x1000))
     hw.slot = a.slot
     hw.holes = [tuple(int(x, 16) for x in h.split('-')) for h in a.hole]
     hw.nochip = [{'D800': (0xD800, 0xE000), 'E000': (0xE000, 0xF000)}[c.upper()]

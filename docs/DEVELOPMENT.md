@@ -264,7 +264,11 @@ non-RAM storage until the hand-over: DDRA bank 1's bad bits, DDRB bank 2's,
 the stack pointer bank 3's, PACTL/PBCTL bit 0 zero page / stack bad
 (PACTL/PBCTL bit 2 = 0: $D300/$D301 are the direction registers; ORA/ORB
 $FF first, so their bits change nothing outside, PORTB included). `$FF` is
-no RAM.
+no RAM. Bank 1's upper 8K is checked with bank 3 (into DDRB) and left out
+when nothing answers there; `sbdone` then tells an 8K machine (nothing
+above it either) from a hole (RAM above it: bank 1 becomes `$FF`, no RAM)
+by writing $3F00, and the show bank's row 5 makes the same test to show
+`$0000-$1FFF`.
 
 **Stage A** runs when some bank passed: stage B goes to the bank built for
 the first good bank's page B (`SABASE`); it copies `ramcode.asm` (assembled
@@ -510,7 +514,7 @@ These came from the author's direction over the sessions:
 | `src/tape2/` | the memory test (`diag-8k-memtest`, `diag-16k-memtest`, the cartridge's) |
 | `src/system/` | tests 1-7: `main.asm` builds a program from the tests `WANT_*` picks; one file per test (`t_rom`, `t_kb`, `t_con`, `t_joy`, `t_pad`, `t_pok`, `t_gtia` and `t_gtia2`, its video modes page); `common.asm` the flow, the menu and the end of a tape; `tlist.asm` the order; `kbmap.asm` the keyboard map (`tools/gen_kbmap.py`) |
 | `src/cart/` | the cartridge: `romsum.asm` (bank layout, sums), `ldmem.asm` (the long test's loader), `undercart.asm` (the RAM under it), `hello.asm` and `audio/` (the sampled "hello", made by `tools/mkhello.py`) |
-| `src/deadtest/` | the dead test (see [The dead test](#the-dead-test)): `main.asm`, `stageb.asm`, `show.asm`, `stagea.asm`, `ramcode.asm`, `chips.asm`, `speak.asm`, `font.txt`, `text.txt`, `romcrc8.asm`, `crc32tab.asm`, `words/` |
+| `src/deadtest/` | the dead test (see [The dead test](#the-dead-test)): `main.asm`, `screen0.asm` (the start-up screen: in the standalone after the font), `stageb.asm`, `show.asm`, `stagea.asm`, `ramcode.asm`, `chips.asm`, `speak.asm`, `font.txt`, `text.txt`, `romcrc8.asm`, `crc32tab.asm`, `words/` |
 | `src/common/romtab.asm` | the known ROMs' CRC32s and names (test 1 and the dead test) |
 | `src/disk/` | the boot disk's boot sectors (`boot.asm`), loader (`dload.asm`) and the RAM pieces' hand-over (`ramhand.asm`); the disk set's two-program boot (`setboot.asm`) |
 | `src/basic/` | BASCRC: the BASIC listing and the machine code (its disk's boot, and its executable) |
@@ -596,7 +600,9 @@ chips (`--rompoke`, `--nochip`, no RAM), the other chips, the speech, test
 1's self-check (`--carpoke`). `--static` scans stage B's code, `--layout`
 every bank's tail, `--words` the words. The simulator's options for it:
 `--hole LO-HI` (no RAM there), `--nochip D800|E000`, `--rompoke`,
-`--carpoke BANK:ADDR=VAL`; it starts a diag cartridge at ($BFFE), takes a
+`--carpoke BANK:ADDR=VAL`, `--vcounttop N` (VCOUNT stops there: a bad
+ANTIC), `--ramc000` (a 400/800 with RAM at $C000-$CFFF, holding power-on
+junk); it starts a diag cartridge at ($BFFE), takes a
 jump to the OS's reset entry as a cold start, draws display lists the CPU
 rewrites mid-frame (text and pictures) and fonts in the cartridge, and
 approximates GTIA's collisions.
@@ -702,6 +708,11 @@ Notes from the sessions, for whoever works on this next.
   (ORA/ORB $FF first); every page needs its own instructions (no pointer),
   a "call" returns by a register (or, with a RAM page, through a vector
   there), and a sequence is a code path or a table walked by Y.
+- Waiting on VCOUNT: `FRAMES n` (wait for 0, then not 0) is n-1 whole
+  frames at least; begun as VCOUNT turns 0, its first is a line or two. A
+  timer check that needs a frame takes `FRAMES 2`.
+- A test RAM image of all zeros can hide a bug (a 256-byte count wrapped
+  to 0): the simulator's extra RAM holds power-on junk.
 
 ## Contributing
 
