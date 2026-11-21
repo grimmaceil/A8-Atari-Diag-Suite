@@ -51,7 +51,7 @@ Memory decoding:
 
 | Format | Needs | Strengths |
 |---|---|---|
-| Cartridge (`diag-cart.car`, AtariMax 128K; `diag-cart-8mbit.bin`, 8 Mbit MaxFlash) | no RAM for the dead test, 8K for the rest; a flash cartridge | The best test: a dead test first (diag mode, no RAM: docs/superpowers/specs/2026-11-20-dead-test-design.md), then no loading, every test on one menu, runs from ROM, tests the RAM under itself: for RAM too sick to load a program into |
+| Cartridge (`diag-cart.car`, AtariMax 128K, and `diag-cart-1mbit.bin`, the same raw for Maxflash Studio; `diag-cart-8mbit.bin`, 8 Mbit MaxFlash) | no RAM for the dead test, 8K for the rest; a flash cartridge | The best test: a dead test first (diag mode, no RAM: docs/superpowers/specs/2026-11-20-dead-test-design.md), then no loading, every test on one menu, runs from ROM, tests the RAM under itself: for RAM too sick to load a program into |
 | Dead test (`diag-deadtest.car` / `.rom`, standard 8K) | no RAM | The dead test alone, for any 8K cartridge or an EPROM |
 | Boot disk (`diag-disk.atr`) | 8K of RAM, a disk drive or an SIO adapter; no DOS | The most convenient free way: the cartridge's menu, each test loaded as it is picked; the long test and the "hello" with 16K |
 | Disk set (`disk-set/`) | 8K, a disk drive or an SIO adapter | The 8k tapes as disks, one test to a disk, no menu: for when the boot disk can't get far |

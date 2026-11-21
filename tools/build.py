@@ -80,6 +80,7 @@ MEMDEFS = dict(BOUNCE=1, BIGSTAGE=1, OWNTEST=1)
 # memory test is copied to RAM, as it tests the RAM under the cartridge too.
 CAR = 'diag-cart'
 CAR8M = 'diag-cart-8mbit'       # the same on the 8 Mbit MaxFlash: a raw 1 MB .bin
+CAR1M = 'diag-cart-1mbit'       # the 128K .car raw, for Maxflash Studio (it loads .BIN)
 CARMEMBK = 3                    # the memory test's image: from this bank on
 CARDATAPG = 0x1F                # (mkcar.DATAPG)
 
@@ -327,6 +328,8 @@ def build_car(fast, big=False):
                     '--dead-at', str(deadbk),
                     *(['--raw8m', str(raw)] if big else [])],
                    check=True)
+    if not big:                     # the 1 Mbit MaxFlash's raw image: the .car's
+        (BUILD / f'{CAR1M}.bin').write_bytes(car.read_bytes()[16:])   # 128K, no header
     return raw if big else car
 
 
@@ -582,7 +585,7 @@ def main():
         return                      # so they stay in build/
     rel = []                        # the release files, named with the version
     for folder, files in ((CASSETTES, cas), (DISKS, [atr, memdisk, bdisk]), (DISKSET, dset),
-                          (CARTS, [car, car8m, *dstd])):
+                          (CARTS, [car, BUILD / f'{CAR1M}.bin', car8m, *dstd])):
         folder.mkdir(exist_ok=True)
         for f in files:
             if 'FAULT' in f.name:   # fault-injection builds stay in build/

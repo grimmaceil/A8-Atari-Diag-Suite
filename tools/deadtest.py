@@ -6,7 +6,8 @@ rest of the cartridge.
   python tools/deadtest.py b-good     only these
   python tools/deadtest.py --static   stage B's code: no stack, zero page
                                       or indirect use, no OS ROM reads
-  python tools/deadtest.py --layout   every bank's tail in the 8 Mbit image
+  python tools/deadtest.py --layout   every bank's tail in the 8 Mbit and 128K images,
+                                      and the 1 Mbit .bin is the .car's 128K
 
 Checks run images in build/ with the real OS ROM, as carttest.py does
 (the same check format, carttest.run). build/scratch/old42.car is the 8
@@ -280,7 +281,14 @@ def main():
         sys.exit(1 if static() else 0)
     if '--layout' in args:
         n = layout((BUILD / 'diag-cart-8mbit.bin').read_bytes(), 'diag-cart-8mbit.bin')
-        n += layout((BUILD / 'diag-cart.car').read_bytes()[16:], 'diag-cart.car')
+        car = (BUILD / 'diag-cart.car').read_bytes()
+        n += layout(car[16:], 'diag-cart.car')
+        # the 1 Mbit MaxFlash's raw image (Maxflash Studio loads .BIN, not
+        # .car): the .car's 128K without its 16-byte header
+        one = BUILD / 'diag-cart-1mbit.bin'
+        ok = one.exists() and one.read_bytes() == car[16:] and len(car) == 16 + 0x20000
+        print(f"diag-cart-1mbit.bin: the .car's 128K, raw: {'PASS' if ok else 'FAIL'}")
+        n += not ok
         sys.exit(1 if n else 0)
     old42()
     sys.exit(1 if carttest.run(CHECKS, args, step=0.5) else 0)

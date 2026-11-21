@@ -29,6 +29,9 @@ name, and every screen shows it at the right of the title bar.
     "bank two bit four bad", "ROM not there"...
   - **The dead test on its own:** `carts/diag-deadtest.car` (standard 8K)
     and `carts/diag-deadtest.rom` (raw 8K).
+  - **The 1 Mbit MaxFlash:** `carts/diag-cart-1mbit.bin`, the AtariMax 128K
+    cartridge without the `.car` header, for Maxflash Cartridge Studio
+    (it loads `.BIN`, not `.car`): Cartridge, Program, Maxflash 1Mbit.
   - The simulator: the diag start and the cold start at the OS's reset
     entry, `.car` type 1, `--hole`, `--nochip`, `--rompoke`, `--carpoke`,
     `--vcounttop`, `--ramc000`,

@@ -197,7 +197,10 @@ machine itself (`common/boot.asm`: POKEY, ANTIC, the motor).
 
 `carts/diag-cart.car` is an AtariMax 128K (`.car` type 41: 16 banks of 8K
 at $A000-$BFFF; a write to $D500+n selects bank n, $D510 switches the
-cartridge off). `carts/diag-cart-8mbit.bin` is the same cartridge for the
+cartridge off); `carts/diag-cart-1mbit.bin` is its 128K without the
+header, for Maxflash Cartridge Studio (its Load Cartridge Image takes
+`.BIN` and `.ATR` only; `deadtest.py --layout` checks the two match).
+`carts/diag-cart-8mbit.bin` is the same cartridge for the
 8 Mbit MaxFlash (128 banks: $D500-$D57F select, $D580-$D5FF off), the raw
 1 MB image Maxflash Cartridge Studio writes (Cartridge, Program, Maxflash
 8Mbit); `build_car(big=True)` assembles the three code banks again with

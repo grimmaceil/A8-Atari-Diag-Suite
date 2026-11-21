@@ -22,7 +22,7 @@ in when the cartridge port is bad); of those, start with the boot disk:
 
 | Way | File | Needs | What it is |
 |---|---|---|---|
-| **The cartridge** | `carts/diag-cart.car` (AtariMax 128K) or `carts/diag-cart-8mbit.bin` (8 Mbit MaxFlash) | 8K; an AtariMax flash cartridge | the best test: every test on one menu, run from its own ROM: nothing to load, so it works when the RAM is too sick to load a program. See [From the cartridge](#from-the-cartridge) |
+| **The cartridge** | `carts/diag-cart.car` (AtariMax 128K; `carts/diag-cart-1mbit.bin` the same for Maxflash Studio) or `carts/diag-cart-8mbit.bin` (8 Mbit MaxFlash) | 8K; an AtariMax flash cartridge | the best test: every test on one menu, run from its own ROM: nothing to load, so it works when the RAM is too sick to load a program. See [From the cartridge](#from-the-cartridge) |
 | **The boot disk** | `disks/diag-disk.atr` | 8K; a disk drive or an SIO adapter (SIO2PC, SIO2SD, FujiNet); no DOS | the most convenient free way: every test on one menu, each loaded from the disk as you pick it. See [From the boot disk](#from-the-boot-disk) |
 | **The disk set** | `disk-set/diag-8k-*.atr` | 8K; a disk drive or an SIO adapter | the 8k tapes as disks, one test to a disk, no menu: for a machine the boot disk can't get far on. See [The disk set](#the-disk-set) |
 | **Cassettes** | `cassettes/*.cas` | a cassette recorder, or a PC playing the tape | no disk drive needed: a tape still loads where a disk won't boot. See [Cassettes](#cassettes) |
@@ -140,8 +140,12 @@ DISK`.
 ### From the cartridge
 
 `carts/diag-cart.car` is an AtariMax 128K cartridge image (`.car` type
-41): write it to an AtariMax 128K flash cartridge with its own flasher.
-For the 8 Mbit MaxFlash (1 MB) use `carts/diag-cart-8mbit.bin` instead,
+41): write it to an AtariMax 128K flash cartridge (the 1 Mbit MaxFlash)
+with its own flasher. Maxflash Cartridge Studio loads raw images, not
+`.car`: for it use `carts/diag-cart-1mbit.bin`, the same 128K without the
+`.car`'s header (**Cartridge, Program, Maxflash 1Mbit Flash Cartridge**;
+as on the 8 Mbit below, not in a workbook). For the 8 Mbit MaxFlash (1
+MB) use `carts/diag-cart-8mbit.bin` instead,
 the same cartridge laid out for that one (see [On an 8 Mbit
 MaxFlash](#on-an-8-mbit-maxflash)). Either way the cartridge holds only
 the diag tests, with no Maxflash menu in front. The tests run from the
@@ -317,7 +321,8 @@ tape, the disks and the cartridge have it.
 ## Every test, and where to find it
 
 The boot disk and the cartridge have every test on their menu (above);
-`diag-cart.car` below stands for the 8 Mbit `diag-cart-8mbit.bin` too.
+`diag-cart.car` below stands for `diag-cart-1mbit.bin` and the 8 Mbit
+`diag-cart-8mbit.bin` too.
 The tapes and the disk set have each one too. The columns are the RAM a
 file needs, and each cell lists the cartridge, then the disks, then the
 tapes. A machine can use everything in its own column and in the columns
